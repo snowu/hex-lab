@@ -18,7 +18,7 @@ const args = process.argv.slice(2);
 const flag = (n, d) => (args.find((a) => a.startsWith(`--${n}=`)) || '').split('=')[1] ?? d;
 const RUNS = Number(flag('runs', 1));
 const OUT = flag('out', '');
-const DEFAULTS = ['deepseek-v4-flash', 'glm-5.3-flash', 'qwen3.8-flash', 'mimo-v2.6-flash', 'minimax-m2.7', 'kimi-k2.6', 'hy3', 'claude-haiku-5-5'];
+const DEFAULTS = ['deepseek-v4-flash', 'glm-5.3-flash', 'qwen3.8-flash', 'mimo-v2.6-flash', 'kimi-k2.6', 'hy3'];
 const models = args.filter((a) => !a.startsWith('--')); if (!models.length) models.push(...DEFAULTS);
 
 export const SYSTEM = `You are a strict senior interviewer reviewing a candidate's answer. Be specific and honest; never flatter. If the answer is correct, say so briefly and name one real improvement (or none). Never invent bugs.
@@ -42,8 +42,8 @@ function score(fx, obj, raw) {
 async function call(model, fx) {
   const t0 = Date.now();
   const res = await fetch(`${BASE}/chat/completions`, {
-    method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${KEY}` },
-    body: JSON.stringify({ model, max_tokens: 1200, temperature: 0.2, messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: `Question:\n${fx.prompt}\n\nCandidate answer:\n${fx.answer}` }] }),
+    method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${KEY}`, 'x-opencode-session': 'interview-lab-bench' },
+    body: JSON.stringify({ model, max_tokens: 1200, temperature: 0.2, reasoning_effort: 'none', messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: `Question:\n${fx.prompt}\n\nCandidate answer:\n${fx.answer}` }] }),
     signal: AbortSignal.timeout(90_000),
   });
   const ms = Date.now() - t0;

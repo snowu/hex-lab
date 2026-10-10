@@ -55,9 +55,9 @@ export async function askModel(env, p, fetchImpl = fetch) {
   const base = (env.OPENCODE_BASE_URL || 'https://opencode.ai/zen/go/v1').replace(/\/$/, '');
   const call = () => fetchImpl(`${base}/chat/completions`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${env.OPENCODE_API_KEY}` },
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${env.OPENCODE_API_KEY}`, 'x-opencode-session': 'interview-lab' },
     body: JSON.stringify({
-      model: env.LAB_MODEL || 'deepseek-v4-flash', max_tokens: 1200, temperature: 0.2,
+      model: env.LAB_MODEL || 'deepseek-v4-flash', max_tokens: 1200, temperature: 0.2, reasoning_effort: 'none',
       messages: [{ role: 'system', content: systemPrompt(p.kind) }, { role: 'user', content: `Question:\n${p.prompt}\n\nCandidate answer:\n${p.answer}` }],
     }),
     signal: AbortSignal.timeout(40000),

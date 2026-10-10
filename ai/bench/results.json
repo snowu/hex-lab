@@ -2,244 +2,444 @@
  {
   "model": "deepseek-v4-flash",
   "n": 10,
-  "errors": 10,
-  "json": 0,
-  "caught": 0,
-  "avgMs": null,
-  "avgTok": null,
+  "errors": 0,
+  "json": 10,
+  "caught": 10,
+  "avgMs": 1603,
+  "avgTok": 111,
   "rows": [
    {
     "fx": "code-off-by-one",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 495
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 1873,
+    "tokens": 126,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Simple and readable implementation\",\"Uses sum over a slice, easy to understand\"],\"issues\":[\"Off-by-one: range should be len(xs) - k + 1, so the last window is never produced\",\"Uses O(n*k) time instead of the O(n) sliding-window approach typically expected\",\"No handling of edge cases like k > len(xs), k <= 0, or empty input\"],\"next_step\":\"Fix the range bound, then consider the O(n) prefix-sum or sliding-sum version and define behavior for invalid k.\"}"
    },
    {
     "fx": "code-off-by-one",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 446
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 1355,
+    "tokens": 115,
+    "verdict": "partial",
+    "raw": "{\"verdict\":\"partial\",\"strengths\":[\"Computes correct window sums and averages for valid indices\",\"Simple, readable structure\"],\"issues\":[\"Off-by-one: should be range(len(xs) - k + 1), so last window is dropped\",\"No handling of k<=0 or k>len(xs); invalid k silently returns [] instead of raising\"],\"next_step\":\"Fix the loop bound to len(xs) - k + 1 and add explicit validation for k (raise ValueError if k<=0 or k>len(xs)).\"}"
    },
    {
     "fx": "code-quadratic",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 173
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 1611,
+    "tokens": 134,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Correctly returns True for duplicates and False otherwise on small inputs\",\"Handles empty and single-element lists correctly\"],\"issues\":[\"Time complexity is O(n^2), infeasible for 10^6 items\",\"Ignores the explicit 10^6 input scale requirement\",\"Does not use a set/dict approach for O(n) expected time\"],\"next_step\":\"Rewrite using a set for O(n) expected time, and mention the trade-off of O(n) extra memory. Alternatively, if O(1) memory is required, mention sorting (O(n log n)) as an option.\"}"
    },
    {
     "fx": "code-quadratic",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 170
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 1546,
+    "tokens": 95,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Correct for small inputs\",\"Returns early on finding a duplicate\"],\"issues\":[\"O(n²) time is impractical for 10^6 items\",\"Ignores the explicit scale hint in the question\",\"No use of a set or sorting for O(n log n) or O(n)\"],\"next_step\":\"Rewrite using a set to track seen elements, achieving O(n) expected time and O(n) space.\"}"
    },
    {
     "fx": "code-correct",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 189
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 1661,
+    "tokens": 140,
+    "verdict": "pass",
+    "raw": "{\"verdict\":\"pass\",\"strengths\":[\"Correct O(n) average-case solution using a set for O(1) lookups.\",\"Early return on first duplicate is efficient.\",\"Clear, concise, readable code.\"],\"issues\":[\"For 10^6 items, a set of up to 10^6 elements can use significant memory; no mention of this trade-off.\",\"For unhashable elements or worst-case hash collisions, set behavior degrades or errors; not addressed.\"],\"next_step\":\"Ask candidate to discuss memory implications at 10^6 scale and alternatives (e.g., sorting for O(1) extra space when mutation or hashing is problematic).\"}"
    },
    {
     "fx": "code-correct",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 199
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 1492,
+    "tokens": 82,
+    "verdict": "pass",
+    "raw": "{\"verdict\":\"pass\",\"strengths\":[\"Correct O(n) average time solution using a set.\",\"Early exit on first duplicate and handles up to 10^6 items.\"],\"issues\":[\"Works only for hashable elements; unhashable inputs raise TypeError.\"],\"next_step\":\"Clarify input assumptions (hashable types) or discuss sorting fallback for unhashable data.\"}"
    },
    {
     "fx": "design-no-idempotency",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 194
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 1550,
+    "tokens": 112,
+    "verdict": "partial",
+    "raw": "{\"verdict\":\"partial\",\"strengths\":[\"Recognises timeouts happen and mentions retries\",\"Suggests a queue for decoupling and scale\"],\"issues\":[\"No idempotency key: retries will duplicate payments\",\"No state machine or status endpoint; 201 on initiation is misleading\",\"No reconciliation or timeout handling for in-flight scheme calls\"],\"next_step\":\"Add a client-supplied idempotency key with a unique constraint, return 202 plus a payment resource with status, and describe reconciliation for in-flight requests.\"}"
    },
    {
     "fx": "design-no-idempotency",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 174
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 1855,
+    "tokens": 127,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Identifies async queue offload as a scaling option\",\"Simple synchronous design is easy to reason about\"],\"issues\":[\"No idempotency key or dedupe, so retries create duplicate payments\\u2014critical flaw\",\"No distinction between client timeout and downstream outcome; payment may already be committed\",\"No status/GET endpoint or reconciliation for in-flight or unknown-state payments\"],\"next_step\":\"Redesign around an idempotency key: store key with payment state, reject duplicates, return the original result, and add a GET status endpoint for uncertain outcomes.\"}"
    },
    {
     "fx": "story-no-result",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 184
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 1564,
+    "tokens": 88,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[],\"issues\":[\"No specifics: no incident, timeline, symptom, or root cause given\",\"No personal actions or role described; only vague team statements\",\"No measurable impact, resolution detail, or follow-up prevention steps\"],\"next_step\":\"Rewrite using STAR format: name the outage, your specific actions, root cause, time to resolution, and the concrete prevention change you drove.\"}"
    },
    {
     "fx": "story-no-result",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 174
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 1518,
+    "tokens": 91,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Shows team response and stress management\",\"Acknowledges post-incident learning\"],\"issues\":[\"No specifics: what system, what failure, what impact\",\"No personal role or actions described\",\"No concrete resolution, root cause, or prevention steps\"],\"next_step\":\"Prepare a STAR-format story: name the incident, your specific actions, root cause, fix, and prevention follow-up.\"}"
    }
   ]
  },
  {
   "model": "glm-5.3-flash",
   "n": 10,
-  "errors": 10,
-  "json": 0,
-  "caught": 0,
-  "avgMs": null,
-  "avgTok": null,
+  "errors": 0,
+  "json": 10,
+  "caught": 10,
+  "avgMs": 2751,
+  "avgTok": 258,
   "rows": [
    {
     "fx": "code-off-by-one",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 172
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 1882,
+    "tokens": 136,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Correct window slicing and average computation\",\"Readable, simple structure\"],\"issues\":[\"Off-by-one: range(len(xs)-k) drops the last window; should be len(xs)-k+1\",\"No handling of k<=0 or k>len(xs) (would silently return empty or raise)\",\"O(n*k) due to repeated sum; sliding sum would be O(n)\"],\"next_step\":\"Fix the range to len(xs)-k+1, add a guard for invalid k, and consider a running-sum O(n) version.\"}"
    },
    {
     "fx": "code-off-by-one",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 185
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2696,
+    "tokens": 131,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Correct sliding-window idea using slicing\",\"Readable, simple implementation\"],\"issues\":[\"Off-by-one: range(len(xs)-k) skips the final window; should be len(xs)-k+1\",\"No guard for k <= 0 or k > len(xs)\",\"O(n*k) due to repeated sum; could use running sum\"],\"next_step\":\"Fix the range bound, add input validation, and consider a running-sum O(n) version.\"}"
    },
    {
     "fx": "code-quadratic",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 210
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2224,
+    "tokens": 100,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Correct logic; early return on first duplicate found\"],\"issues\":[\"O(n²) time — far too slow for 10^6 items\",\"Ignores hash set approach giving O(n) time\",\"Unnecessary index loops instead of iterating values\"],\"next_step\":\"Rewrite using a set: track seen elements, return True on first repeat — O(n) time, O(n) space.\"}"
    },
    {
     "fx": "code-quadratic",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 163
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2642,
+    "tokens": 241,
+    "verdict": "fail",
+    "raw": "The candidate's answer is a brute-force O(n²) solution. With 10^6 items, that's 10^12 comparisons — completely infeasible. The correct approach is a set-based O(n) solution.\n\nVerdict: fail.\n\nStrengths: correct logic (returns True on first duplicate found, early exit), simple.\n\nIssues: O(n²) time — infeasible for 10^6 items; should use a set for O(n) time and O(n) space.\n\nNext step: rewrite using a seen set, return True when membership hit, else add.{\"verdict\":\"fail\",\"strengths\":[\"Logic is correct: detects any duplicate and exits early on first match.\",\"Handles empty and single-element lists correctly.\"],\"issues\":[\"O(n²) time: ~10^12 comparisons for 10^6 items, far too slow.\",\"Ignores the stated scale constraint; a hash set gives O(n) time.\",\"Nested index loops are unidiomatic Python; enumerate or a set is cleaner.\"],\"next_step\":\"Rewrite using a seen set: iterate once, return True if item already in set, else add it; return False.\"}"
    },
    {
     "fx": "code-correct",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 173
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 3453,
+    "tokens": 298,
+    "verdict": "pass",
+    "raw": "The candidate's answer is a classic correct solution: iterate, check membership in a set, add, early return True on first duplicate, return False otherwise. Time O(n) average, space O(n). Handles 10^6 items fine. Correct.\n\nImprovement: could mention that if elements are hashable this is fine; if unhashable, it fails — but the question doesn't specify. A real improvement: could use `len(set(xs)) < len(xs)` but that's worse (no early exit, more memory). Early exit version is better. One improvement: could note worst-case hash collisions or that for sorted input a sort-based approach uses less memory. Or mention that if the input is a generator it works too. A genuine improvement: none really needed; maybe mention memory could be reduced with a bloom filter for huge data, or if items are bounded integers use a bytearray/bitset. Keep it brief.\n\nVerdict: pass.{\"verdict\":\"pass\",\"strengths\":[\"O(n) average time with early exit on first duplicate\",\"Set membership is O(1) average; handles 10^6 items fine\",\"Works on any iterable, including generators\"],\"issues\":[\"Assumes elements are hashable; unhashable items raise TypeError\",\"O(n) memory; a bitset or sort-based check could reduce it for constrained domains\"],\"next_step\":\"State the hashability assumption and mention a bitset or sorting alternative for memory-constrained cases.\"}"
    },
    {
     "fx": "code-correct",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 174
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2820,
+    "tokens": 308,
+    "verdict": "pass",
+    "raw": "The candidate's answer is a classic correct solution: iterate, check membership in a set, add, return True on first duplicate. O(n) time, O(n) space. Handles 10^6 items fine. Early exit on first duplicate.\n\nIs there any issue? Elements must be hashable — if the list contains unhashable items (e.g., lists), it would raise TypeError. But the question doesn't specify unhashable elements. That's a minor edge case worth noting. Also could mention early exit is good.\n\nVerdict: pass. Strengths: O(n) time, early exit, correct. Improvement: note hashability assumption or memory usage; alternative: for hashable-only fine. One real improvement: mention that it assumes hashable elements; for unhashable, need fallback. Or memory: set of 10^6 items uses ~tens of MB, acceptable.\n\nJSON only, max 3 items per list, each under 25 words.{\"verdict\":\"pass\",\"strengths\":[\"Correct O(n) time, O(n) space solution\",\"Early exit on first duplicate\",\"Set lookup is O(1) average, fine for 10^6 items\"],\"issues\":[\"Assumes elements are hashable; unhashable items (e.g., lists) raise TypeError\",\"No mention of memory footprint (~50-100MB for 10^6 mixed items)\"],\"next_step\":\"State the hashability assumption explicitly and consider a sorted-sort-based fallback for unhashable inputs.\"}"
    },
    {
     "fx": "design-no-idempotency",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 268
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2608,
+    "tokens": 392,
+    "verdict": "fail",
+    "raw": "The candidate answer is about designing a payment initiation endpoint for a bank API that clients retry on timeouts. The key issue: retries on timeouts without idempotency keys cause duplicate payments. The candidate's answer says \"If it times out the client just retries\" — that's a critical flaw: no idempotency key, no deduplication, risk of double payment. Also inserting a row then calling downstream synchronously — no state machine, no handling of downstream outcome (pending status), no idempotency. Adding a queue is mentioned but doesn't address idempotency.\n\nSo verdict: fail (or partial?). The core requirement — safe retries — is completely unaddressed; the answer actually endorses unsafe retries. That's a fail. Strengths: identifies basic request fields, mentions queue for decoupling/scaling. Issues: no idempotency key / dedup, retry can double-pay; synchronous call to scheme with row insert leaves inconsistent states (no pending status/state machine); queue suggestion doesn't fix duplicate risk and adds ordering/consistency concerns.\n\nNext step: redesign with Idempotency-Key header, store key with payment, return same result on replay, use pending status and async completion/webhook.\n\nJSON only, max 3 items per list, each under 25 words.{\"verdict\":\"fail\",\"strengths\":[\"Identifies core request fields (amount, debtor, creditor).\",\"Suggests decoupling downstream calls via a queue.\"],\"issues\":[\"No idempotency key; blind client retries can create duplicate payments—a critical financial bug.\",\"Insert-then-call-synchronously leaves no pending state or reconciliation path when the scheme call times out.\",\"Queue suggestion doesn't address duplicate suppression or downstream outcome handling.\"],\"next_step\":\"Redesign with an Idempotency-Key header, persist it with the payment, return the stored result on replay, and track payment status asynchronously.\"}"
    },
    {
     "fx": "design-no-idempotency",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 177
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 4948,
+    "tokens": 535,
+    "verdict": "fail",
+    "raw": "The candidate's answer is about designing a payment initiation endpoint that clients retry on timeouts. The key issue: retrying a non-idempotent payment creation can cause duplicate payments. The correct design requires idempotency keys — client supplies an Idempotency-Key header, server stores it, deduplicates retries, returns the same result. Also, the answer says \"inserts a row, then calls the downstream scheme\" — synchronous call to scheme, timeout handling unclear. The queue suggestion is vague and doesn't address idempotency or consistency (at-least-once delivery to scheme still needs dedup). Also no mention of state machine (PENDING/ACCEPTED/REJECTED), no mention of returning 409 or replayed response, no mention of key expiry/TTL, no mention of what happens if scheme call fails after row insert.\n\nSo verdict: fail (or partial?). The core requirement — safe retries — is completely unaddressed; \"client just retries\" is actively wrong (duplicate payments). The queue suggestion is a non-sequitur. I'd say fail, since the central design requirement (idempotency) is missing and the answer endorses unsafe retries.\n\nJSON format: verdict, strengths (max 3, <25 words each), issues (max 3, <25 words each), next_step.\n\nStrengths: identifies basic request fields; mentions decoupling via queue (though vague). Maybe: \"Correctly identifies core request fields (amount, debtor, creditor).\" \"Aware that decoupling via queue can help scale.\"\n\nIssues: \"No idempotency key; blind retries cause duplicate payments — the core flaw.\" \"Synchronous scheme call with unclear failure state after row insert.\" \"Queue suggestion is vague; doesn't solve duplicate delivery to scheme.\"\n\nNext step: \"Redesign with client-supplied Idempotency-Key, dedup store, payment state machine, and async scheme submission with idempotent consumer.\"\n\nKeep each under 25 words.{\"verdict\":\"fail\",\"strengths\":[\"Identifies basic request fields (amount, debtor, creditor).\",\"Shows awareness that decoupling via a queue can aid scaling.\"],\"issues\":[\"No idempotency key; endorsing blind retries causes duplicate payments—the core requirement is missed.\",\"Row inserted before scheme call with no defined failure or pending state handling.\",\"Queue suggestion is vague and doesn't address duplicate delivery to the scheme.\"],\"next_step\":\"Redesign with client-supplied Idempotency-Key, dedup storage returning the original response, a PENDING/SETTLED state machine, and idempotent scheme submission.\"}"
    },
    {
     "fx": "story-no-result",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 160
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 1926,
+    "tokens": 194,
+    "verdict": "fail",
+    "raw": "The candidate gave a vague, non-specific answer to a behavioral question about handling a production incident. No specifics: no role, no incident details, no actions taken, no outcome metrics, no lessons learned. This is a fail for a senior interviewer standard. The answer lacks STAR structure entirely.\n\nVerdict: fail. Strengths: maybe shows teamwork awareness, acknowledges stress/learning. Issues: no specifics, no personal role, no measurable outcome, no concrete lessons. Next step: ask for STAR-format retelling with specific incident, their actions, and measurable results.{\"verdict\":\"fail\",\"strengths\":[\"Shows awareness of teamwork under pressure\",\"Acknowledges post-incident learning\"],\"issues\":[\"No specific incident, role, or actions described\",\"No root cause, resolution steps, or timeline\",\"No measurable outcome or concrete lessons learned\"],\"next_step\":\"Ask candidate to retell using STAR: specific incident, their individual actions, resolution, and quantified impact.\"}"
    },
    {
     "fx": "story-no-result",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 192
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2308,
+    "tokens": 244,
+    "verdict": "fail",
+    "raw": "The candidate's answer is extremely vague. No specific incident, no role, no actions, no metrics, no root cause, no follow-up. As a strict senior interviewer, this is a fail — no STAR structure, no ownership, no specifics. I must reply with only JSON, no markdown fence. Max 3 items per list, each under 25 words.\n\nVerdict: fail.\n\nStrengths: maybe \"Shows teamwork awareness\" — but honestly it's weak. I can note it acknowledges collaboration. Keep it honest.\n\nIssues: no specific incident or role; no actions taken or decisions made; no root cause, resolution steps, or prevention follow-up.\n\nNext step: ask for a specific incident using STAR: their role, actions, timeline, root cause, and preventive changes made afterward.{\"verdict\":\"fail\",\"strengths\":[\"Acknowledges team collaboration under pressure\"],\"issues\":[\"No specific incident, role, or personal actions described\",\"No root cause, resolution steps, or timeline mentioned\",\"No prevention measures or lessons concretely identified\"],\"next_step\":\"Re-answer using STAR: pick one real incident, state your specific role, actions taken, root cause, resolution time, and preventive changes.\"}"
    }
   ]
  },
  {
   "model": "qwen3.8-flash",
   "n": 10,
-  "errors": 10,
-  "json": 0,
-  "caught": 0,
-  "avgMs": null,
-  "avgTok": null,
+  "errors": 0,
+  "json": 10,
+  "caught": 9,
+  "avgMs": 2168,
+  "avgTok": 74,
   "rows": [
    {
     "fx": "code-off-by-one",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 190
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2627,
+    "tokens": 102,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Correct logic for interior windows\"],\"issues\":[\"Off-by-one error: range should be len(xs) - k + 1 to include the last window.\",\"Fails if k > len(xs) (returns empty instead of handling edge case).\",\"O(n*k) time complexity; could use sliding sum for O(n).\"],\"next_step\":\"Fix the loop range to `range(len(xs) - k + 1)` and handle cases where k > len(xs).\"}"
    },
    {
     "fx": "code-off-by-one",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 182
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2437,
+    "tokens": 72,
+    "verdict": "partial",
+    "raw": "{\"verdict\":\"partial\",\"strengths\":[\"Correct logic for window summation.\",\"Clear and readable implementation.\"],\"issues\":[\"Off-by-one error: range excludes the last valid window.\",\"Fails if k > len(xs) or k <= 0 (no guards).\"],\"next_step\":\"Fix range to len(xs)-k+1 and add input validation.\"}"
    },
    {
     "fx": "code-quadratic",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 185
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 1657,
+    "tokens": 65,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Correct logic for small inputs\"],\"issues\":[\"O(n^2) complexity fails 10^6 items (timeout)\",\"Ignores constraint on input size\",\"No use of hash set or sorting\"],\"next_step\":\"Implement O(n) solution using a set to track seen elements\"}"
    },
    {
     "fx": "code-quadratic",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 174
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 1608,
+    "tokens": 53,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Correct logic for small inputs\"],\"issues\":[\"O(n^2) complexity fails 10^6 items\",\"Use set for O(n) time and space\"],\"next_step\":\"Replace nested loops with a set-based approach\"}"
    },
    {
     "fx": "code-correct",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 194
+    "json": true,
+    "hit": false,
+    "bad": false,
+    "ms": 2053,
+    "tokens": 55,
+    "verdict": "pass",
+    "raw": "{\"verdict\":\"pass\",\"strengths\":[\"Correct logic for duplicate detection.\",\"Early exit on first duplicate found.\"],\"issues\":[\"No explicit handling of unhashable types (e.g., lists).\"],\"next_step\":\"Confirm input elements are hashable or add type validation.\"}"
    },
    {
     "fx": "code-correct",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 180
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 1887,
+    "tokens": 80,
+    "verdict": "pass",
+    "raw": "{\"verdict\":\"pass\",\"strengths\":[\"Correct logic with O(n) time and early exit.\",\"Uses set for efficient membership checks.\"],\"issues\":[\"No handling of unhashable types (e.g., lists), which would raise TypeError.\",\"Assumes all elements are hashable without validation or fallback strategy.\"],\"next_step\":\"Discuss how to handle unhashable items if input constraints allow them.\"}"
    },
    {
     "fx": "design-no-idempotency",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 197
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2660,
+    "tokens": 81,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Identifies need for async processing via queue\"],\"issues\":[\"Ignores idempotency keys, causing duplicate payments on retry\",\"No transactional outbox or state machine to handle partial failures\",\"201 implies success before downstream confirmation is guaranteed\"],\"next_step\":\"Explain how you prevent duplicate charges using idempotency keys and manage eventual consistency.\"}"
    },
    {
     "fx": "design-no-idempotency",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 175
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2507,
+    "tokens": 87,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Identifies basic endpoint structure and downstream integration.\",\"Mentions queueing for scalability.\"],\"issues\":[\"Ignores idempotency, causing duplicate payments on retry.\",\"No transactional integrity or state management described.\",\"Queue addition does not solve client-side timeout/retry logic.\"],\"next_step\":\"Explain how to implement idempotency keys to safely handle retries without duplicating transactions.\"}"
    },
    {
     "fx": "story-no-result",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 187
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2065,
+    "tokens": 77,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Acknowledges team collaboration during the incident.\"],\"issues\":[\"Lacks specific details on root cause, actions taken, or resolution steps.\",\"No mention of post-incident review or concrete lessons learned.\",\"Vague narrative fails to demonstrate technical competence or ownership.\"],\"next_step\":\"Ask candidate to describe a specific incident using STAR method with technical details.\"}"
    },
    {
     "fx": "story-no-result",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 202
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2178,
+    "tokens": 65,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[],\"issues\":[\"Lacks specific technical details, root cause, or resolution steps.\",\"No mention of individual contribution or decision-making process.\",\"Vague reflection on lessons learned without concrete outcomes.\"],\"next_step\":\"Ask candidate to describe a specific incident using the STAR method with technical depth.\"}"
    }
   ]
  },
  {
   "model": "mimo-v2.6-flash",
   "n": 10,
-  "errors": 10,
-  "json": 0,
-  "caught": 0,
-  "avgMs": null,
-  "avgTok": null,
+  "errors": 0,
+  "json": 10,
+  "caught": 10,
+  "avgMs": 5332,
+  "avgTok": 93,
   "rows": [
    {
     "fx": "code-off-by-one",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 176
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 11246,
+    "tokens": 88,
+    "verdict": "partial",
+    "raw": "{\"verdict\":\"partial\",\"strengths\":[\"Correct handling of windows and integer/float division\",\"Clean, readable implementation\"],\"issues\":[\"Loop bound is off by one: should be range(len(xs) - k + 1)\",\"Last valid window starting at index n-k is omitted\"],\"next_step\":\"Ask candidate to fix the off-by-one and verify on a small example like xs=[1,2,3], k=2.\"}"
    },
    {
     "fx": "code-off-by-one",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 189
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2437,
+    "tokens": 83,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Correct approach using slicing and sum\",\"Clear, readable structure\"],\"issues\":[\"Off-by-one: range should be len(xs) - k + 1 to include the final window\",\"Missing edge-case handling for k <= 0 or k > len(xs)\"],\"next_step\":\"Fix the loop bound to include the last window and explain behavior when k exceeds len(xs).\"}"
    },
    {
     "fx": "code-quadratic",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 183
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 4040,
+    "tokens": 96,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Correct on small inputs\",\"Early exit on finding a duplicate\"],\"issues\":[\"O(n^2) time, infeasible for 10^6 items (~10^12 comparisons)\",\"Should use a set with O(n) time and O(n) space\",\"Nested loop approach ignores the scalability requirement\"],\"next_step\":\"Rewrite using a set: iterate once, return True when an element is already in the set.\"}"
    },
    {
     "fx": "code-quadratic",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 179
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2992,
+    "tokens": 68,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[],\"issues\":[\"O(n²) nested loops will not finish on 10^6 items.\",\"Should use a set for O(n) average time and O(n) space.\"],\"next_step\":\"Rewrite using a hash set: iterate once, return True on first seen duplicate.\"}"
    },
    {
     "fx": "code-correct",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 172
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2662,
+    "tokens": 87,
+    "verdict": "pass",
+    "raw": "{\"verdict\":\"pass\",\"strengths\":[\"Correct O(n) solution with early exit\",\"Handles 10^6 items efficiently with average O(n) time\"],\"issues\":[\"Assumes elements are hashable; unhashable items like lists would raise TypeError\",\"No mention of worst-case O(n²) hash collision edge case\"],\"next_step\":\"Ask about non-hashable inputs or memory tradeoffs for unhashable types.\"}"
    },
    {
     "fx": "code-correct",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 330
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 3016,
+    "tokens": 83,
+    "verdict": "pass",
+    "raw": "{\"verdict\":\"pass\",\"strengths\":[\"Correct O(n) average time, O(n) space set-based solution\",\"Early return on first duplicate found\"],\"issues\":[\"Assumes elements are hashable; should note this constraint\",\"No mention of worst-case O(n²) behavior for adversarial inputs\"],\"next_step\":\"Ask about handling unhashable elements or memory constraints at 10^6 scale.\"}"
    },
    {
     "fx": "design-no-idempotency",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 172
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 10335,
+    "tokens": 125,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Correctly identifies POST semantics and required payment fields.\",\"Notices scalability needs with an asynchronous queue layer.\"],\"issues\":[\"No idempotency key or deduplication—retries will create duplicate payments.\",\"Returns 201 before confirming scheme acceptance; timeout handling is hand-waved.\",\"No mention of transactional outbox, status codes, or reconciliation for at-least-once delivery.\"],\"next_step\":\"Ask how you'd guarantee exactly-one payment creation across client retries on timeout, with concrete mechanism (idempotency key, unique constraint, status codes).\"}"
    },
    {
     "fx": "design-no-idempotency",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 199
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 7269,
+    "tokens": 111,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Identifies retry and scaling concerns; proposes queueing to decouple.\",\"Covers core payment fields and basic flow.\"],\"issues\":[\"No idempotency key, so retries create duplicate payments.\",\"Returns 201 before scheme confirmation; no status model or failure handling.\",\"Queue helps throughput but doesn't address timeouts or duplicate suppression.\"],\"next_step\":\"Ask how you'd make retries safe end-to-end: idempotency keys, deduplication, and final vs. pending status codes.\"}"
    },
    {
     "fx": "story-no-result",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 174
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 3433,
+    "tokens": 96,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Acknowledges teamwork and a positive takeaway from the incident.\"],\"issues\":[\"No specifics: system, impact, timeline, or concrete actions taken.\",\"Lacks root cause, debugging steps, or how the outage was resolved.\",\"Missing postmortem details, prevention measures, and the candidate's individual role.\"],\"next_step\":\"Ask for a specific incident using STAR: what broke, their exact actions, resolution, and measurable prevention improvements.\"}"
    },
    {
     "fx": "story-no-result",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 180
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 5894,
+    "tokens": 90,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Mentions teamwork and eventual recovery during the incident\"],\"issues\":[\"No specifics: timeline, impact, root cause, or your exact actions\",\"Lacks technical detail: tools used, mitigation steps, or diagnostics\",\"No follow-up on what was learned or changed post-incident\"],\"next_step\":\"Ask a follow-up demanding concrete detail: what broke, how you diagnosed it, and what prevention was implemented.\"}"
    }
   ]
  },
@@ -254,175 +454,275 @@
   "rows": [
    {
     "fx": "code-off-by-one",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 344
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"ModelProtocolUnsupported\",\"message\":\"Model does not support this protocol.\"}}",
+    "ms": 218
    },
    {
     "fx": "code-off-by-one",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 166
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"ModelProtocolUnsupported\",\"message\":\"Model does not support this protocol.\"}}",
+    "ms": 466
    },
    {
     "fx": "code-quadratic",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 216
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"ModelProtocolUnsupported\",\"message\":\"Model does not support this protocol.\"}}",
+    "ms": 258
    },
    {
     "fx": "code-quadratic",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 180
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"ModelProtocolUnsupported\",\"message\":\"Model does not support this protocol.\"}}",
+    "ms": 228
    },
    {
     "fx": "code-correct",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 170
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"ModelProtocolUnsupported\",\"message\":\"Model does not support this protocol.\"}}",
+    "ms": 243
    },
    {
     "fx": "code-correct",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 217
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"ModelProtocolUnsupported\",\"message\":\"Model does not support this protocol.\"}}",
+    "ms": 280
    },
    {
     "fx": "design-no-idempotency",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 189
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"ModelProtocolUnsupported\",\"message\":\"Model does not support this protocol.\"}}",
+    "ms": 279
    },
    {
     "fx": "design-no-idempotency",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 164
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"ModelProtocolUnsupported\",\"message\":\"Model does not support this protocol.\"}}",
+    "ms": 256
    },
    {
     "fx": "story-no-result",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 186
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"ModelProtocolUnsupported\",\"message\":\"Model does not support this protocol.\"}}",
+    "ms": 229
    },
    {
     "fx": "story-no-result",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 175
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"ModelProtocolUnsupported\",\"message\":\"Model does not support this protocol.\"}}",
+    "ms": 205
    }
   ]
  },
  {
   "model": "kimi-k2.6",
   "n": 10,
-  "errors": 10,
-  "json": 0,
-  "caught": 0,
-  "avgMs": null,
-  "avgTok": null,
+  "errors": 0,
+  "json": 10,
+  "caught": 10,
+  "avgMs": 4215,
+  "avgTok": 86,
   "rows": [
    {
     "fx": "code-off-by-one",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 191
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 3824,
+    "tokens": 125,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Simple, readable sliding-window logic\",\"Correctly uses integer k as window size\"],\"issues\":[\"Off-by-one: range(len(xs)-k) skips the final valid window; needs range(len(xs)-k+1)\",\"Empty list or k=0 not handled, causing errors or silent wrong output\",\"Missing k>len(xs) guard, producing empty output instead of clear failure\"],\"next_step\":\"Fix the range bound, add input validation for k (k>0, k<=len(xs)), and test edge cases like k=1 and k=len(xs).\"}"
    },
    {
     "fx": "code-off-by-one",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 176
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2492,
+    "tokens": 94,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Simple loop structure\",\"Correct sum and division logic\"],\"issues\":[\"Off-by-one: range(len(xs)-k) misses final valid window.\",\"No handling of empty list or k=0 edge cases.\",\"Inefficient O(n*k) due to repeated slicing/summing.\"],\"next_step\":\"Fix range to len(xs)-k+1, add edge-case guards, then optimize with running sum.\"}"
    },
    {
     "fx": "code-quadratic",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 184
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2790,
+    "tokens": 78,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Correct logic for detecting duplicates\",\"Simple and easy to understand\"],\"issues\":[\"O(n²) time complexity fails 10^6 constraint\",\"No early termination analysis mentioned\",\"No consideration of space-time tradeoff with hash set\"],\"next_step\":\"Ask candidate to optimize for O(n) time using a set and discuss memory constraints.\"}"
    },
    {
     "fx": "code-quadratic",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 175
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 11811,
+    "tokens": 83,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Correct logic for detecting duplicates\",\"Simple, easy to understand implementation\"],\"issues\":[\"O(n²) time complexity fails 10⁶ constraint\",\"No early handling of edge cases like empty list\",\"Wastes memory on range objects in Python 2\"],\"next_step\":\"Implement with hash set for O(n) time and ask about space-memory tradeoffs.\"}"
    },
    {
     "fx": "code-correct",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 195
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 3457,
+    "tokens": 84,
+    "verdict": "pass",
+    "raw": "{\"verdict\":\"pass\",\"strengths\":[\"Correct O(n) average time algorithm\",\"Early termination on first duplicate found\",\"Handles 10^6 items with O(n) space\"],\"issues\":[\"Worst-case O(n²) if hash collisions occur for malicious input\"],\"next_step\":\"Discuss using `len(set(xs)) != len(xs)` tradeoffs or frozenset for unhashable inputs.\"}"
    },
    {
     "fx": "code-correct",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 171
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2544,
+    "tokens": 56,
+    "verdict": "pass",
+    "raw": "{\"verdict\":\"pass\",\"strengths\":[\"Correct O(n) time and space solution.\",\"Early exit on first duplicate found.\",\"Handles large inputs efficiently.\"],\"issues\":[],\"next_step\":\"Ask how to optimize space for sorted or integer-bounded inputs.\"}"
    },
    {
     "fx": "design-no-idempotency",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 255
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 3947,
+    "tokens": 82,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Identifies retry requirement\",\"Mentions queue for scalability\"],\"issues\":[\"No idempotency key means retries create duplicate payments\",\"No status query or idempotency handling for timeout ambiguity\",\"Queue suggestion doesn't solve core retry-safety problem\"],\"next_step\":\"Explain how to make POST idempotent with idempotency-key and how client handles ambiguous timeouts.\"}"
    },
    {
     "fx": "design-no-idempotency",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 168
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 4264,
+    "tokens": 82,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Recognizes timeout retry scenario\",\"Suggests queue for scaling\"],\"issues\":[\"No idempotency key means retries create duplicate payments\",\"201 on retry would mislead client into thinking new payment created\",\"No mention of idempotency-key header or unique constraint\"],\"next_step\":\"How would you prevent duplicate payments when the client retries after a timeout?\"}"
    },
    {
     "fx": "story-no-result",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 178
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 4101,
+    "tokens": 88,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Acknowledged teamwork during crisis\"],\"issues\":[\"Zero specifics: no role, tech, timeline, or actions taken\",\"No measurable impact or root cause mentioned\",\"Vague 'learned some things' with no concrete follow-up\"],\"next_step\":\"Re-answer with STAR format: your specific role, technical diagnosis, actions taken, and one concrete process change implemented post-incident.\"}"
    },
    {
     "fx": "story-no-result",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 165
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2915,
+    "tokens": 86,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Acknowledged team collaboration\"],\"issues\":[\"Zero specifics: no role, system, timeline, or actions taken\",\"No measurable impact or root cause mentioned\",\"Vague 'learned some things' with no concrete follow-up\"],\"next_step\":\"Ask candidate to walk through one specific incident with their exact responsibilities, the technical diagnosis steps, and one concrete process change that resulted.\"}"
    }
   ]
  },
  {
   "model": "hy3",
   "n": 10,
-  "errors": 10,
-  "json": 0,
-  "caught": 0,
-  "avgMs": null,
-  "avgTok": null,
+  "errors": 0,
+  "json": 10,
+  "caught": 10,
+  "avgMs": 2532,
+  "avgTok": 71,
   "rows": [
    {
     "fx": "code-off-by-one",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 167
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2463,
+    "tokens": 65,
+    "verdict": "partial",
+    "raw": "{\"verdict\":\"partial\",\"strengths\":[\"Correctly computes window sums and averages.\"],\"issues\":[\"range uses len(xs)-k, missing last window; should be len(xs)-k+1.\"],\"next_step\":\"Fix loop bound to include the final window of k elements.\"}"
    },
    {
     "fx": "code-off-by-one",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 168
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2297,
+    "tokens": 68,
+    "verdict": "partial",
+    "raw": "{\"verdict\":\"partial\",\"strengths\":[\"Correctly computes window sums and averages.\"],\"issues\":[\"range uses len(xs)-k, missing last window; should be len(xs)-k+1.\"],\"next_step\":\"Fix loop bound to include final window at index len(xs)-k.\"}"
    },
    {
     "fx": "code-quadratic",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 230
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2389,
+    "tokens": 66,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Correctly detects duplicates when present.\"],\"issues\":[\"O(n^2) time fails for 10^6 items; use a set for O(n) time.\"],\"next_step\":\"Rewrite using a set to track seen elements in a single pass.\"}"
    },
    {
     "fx": "code-quadratic",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 169
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2368,
+    "tokens": 65,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Correctly detects duplicates when present.\"],\"issues\":[\"O(n^2) time fails for 10^6 items; use a set for O(n) time.\"],\"next_step\":\"Rewrite using a set to track seen elements in one pass.\"}"
    },
    {
     "fx": "code-correct",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 193
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2588,
+    "tokens": 66,
+    "verdict": "pass",
+    "raw": "{\"verdict\":\"pass\",\"strengths\":[\"Correct O(n) time and O(n) space solution\",\"Handles 10^6 items efficiently\"],\"issues\":[\"No input validation for None/non-iterable\"],\"next_step\":\"Consider edge cases like None input or non-hashable elements.\"}"
    },
    {
     "fx": "code-correct",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 299
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2249,
+    "tokens": 59,
+    "verdict": "pass",
+    "raw": "{\"verdict\":\"pass\",\"strengths\":[\"Correct O(n) time and space solution\",\"Handles 10^6 items efficiently via set\"],\"issues\":[\"No input validation for None\"],\"next_step\":\"Consider edge cases like None or non-iterable input.\"}"
    },
    {
     "fx": "design-no-idempotency",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 182
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 3029,
+    "tokens": 84,
+    "verdict": "partial",
+    "raw": "{\n  \"verdict\": \"partial\",\n  \"strengths\": [\"Identifies need for retry handling and proposes queue for scaling.\"],\n  \"issues\": [\"No idempotency key or deduplication; retries can cause duplicate payments.\"],\n  \"next_step\": \"Add idempotency key support and explain exactly-once or at-least-once with dedupe.\"\n}"
    },
    {
     "fx": "design-no-idempotency",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 182
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2886,
+    "tokens": 81,
+    "verdict": "partial",
+    "raw": "{\n  \"verdict\": \"partial\",\n  \"strengths\": [\"Identifies need for retry handling and proposes queue for scaling.\"],\n  \"issues\": [\"No idempotency key or deduplication; retries can cause duplicate payments.\"],\n  \"next_step\": \"Add idempotency-key support and explain exactly-once or at-least-once downstream semantics.\"\n}"
    },
    {
     "fx": "story-no-result",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 173
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2602,
+    "tokens": 71,
+    "verdict": "fail",
+    "raw": "{\n  \"verdict\": \"fail\",\n  \"strengths\": [\"Candidate acknowledges teamwork and post-incident learning.\"],\n  \"issues\": [\"No specific incident details, actions taken, or concrete outcome described.\"],\n  \"next_step\": \"Describe one real incident: root cause, your specific actions, and the resolution.\"\n}"
    },
    {
     "fx": "story-no-result",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 163
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 2448,
+    "tokens": 82,
+    "verdict": "fail",
+    "raw": "{\n  \"verdict\": \"fail\",\n  \"strengths\": [\"Candidate acknowledged teamwork and post-incident learning.\"],\n  \"issues\": [\"No specific incident described.\", \"No actions taken or outcomes stated.\", \"Lacks root cause or concrete role.\"],\n  \"next_step\": \"Describe one real incident: your role, actions, root cause, and resolution with metrics.\"\n}"
    }
   ]
  },
@@ -437,53 +737,53 @@
   "rows": [
    {
     "fx": "code-off-by-one",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 186
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"ModelProtocolUnsupported\",\"message\":\"Model does not support this protocol.\"}}",
+    "ms": 380
    },
    {
     "fx": "code-off-by-one",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 185
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"ModelProtocolUnsupported\",\"message\":\"Model does not support this protocol.\"}}",
+    "ms": 546
    },
    {
     "fx": "code-quadratic",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 193
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"ModelProtocolUnsupported\",\"message\":\"Model does not support this protocol.\"}}",
+    "ms": 217
    },
    {
     "fx": "code-quadratic",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 171
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"ModelProtocolUnsupported\",\"message\":\"Model does not support this protocol.\"}}",
+    "ms": 279
    },
    {
     "fx": "code-correct",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 172
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"ModelProtocolUnsupported\",\"message\":\"Model does not support this protocol.\"}}",
+    "ms": 415
    },
    {
     "fx": "code-correct",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 171
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"ModelProtocolUnsupported\",\"message\":\"Model does not support this protocol.\"}}",
+    "ms": 279
    },
    {
     "fx": "design-no-idempotency",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 182
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"ModelProtocolUnsupported\",\"message\":\"Model does not support this protocol.\"}}",
+    "ms": 217
    },
    {
     "fx": "design-no-idempotency",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 187
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"ModelProtocolUnsupported\",\"message\":\"Model does not support this protocol.\"}}",
+    "ms": 443
    },
    {
     "fx": "story-no-result",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 175
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"ModelProtocolUnsupported\",\"message\":\"Model does not support this protocol.\"}}",
+    "ms": 220
    },
    {
     "fx": "story-no-result",
-    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
-    "ms": 175
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"ModelProtocolUnsupported\",\"message\":\"Model does not support this protocol.\"}}",
+    "ms": 259
    }
   ]
  }

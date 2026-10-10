@@ -69,7 +69,7 @@ fix and one thing to practise. The model key lives only in the Worker. The butto
 `assets/feedback-config.js` has a URL.
 
 - Benchmark candidate models first (key in a gitignored repo-root `.env` as `OPENCODE_API_KEY=...`): `node ai/bench/bench.mjs --runs=2` (5 seeded-flaw answers per model).
-- Deploy: `cd worker && npx wrangler login && npx wrangler secret put OPENCODE_API_KEY && npx wrangler deploy`,
+- Deploy (the key never touches the terminal): `cd worker && npx wrangler login && grep '^OPENCODE_API_KEY=' ../.env | cut -d= -f2- | npx wrangler secret put OPENCODE_API_KEY && npx wrangler deploy`,
   then put the printed `*.workers.dev` URL in `assets/feedback-config.js`.
 - Change the model with `LAB_MODEL` in `worker/wrangler.jsonc` (default is a placeholder until benchmarked).
 - Protection: CORS only for `https://snowu.github.io`, 10 reviews/min/IP, 6000-char answer cap, JSON-only output.

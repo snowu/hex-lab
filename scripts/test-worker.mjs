@@ -47,7 +47,7 @@ await t('provider failure and junk replies become 502, not leaks', async () => {
 await t('sends the key as a bearer token to the configured model only', async () => {
   let seen;
   await handle(req(ok), { ...env, LAB_MODEL: 'glm-5.3-flash' }, async (u, init) => { seen = { u, init }; return new Response(JSON.stringify({ choices: [{ message: { content: GOOD } }] })); });
-  assert.equal(seen.init.headers.authorization, 'Bearer k'); assert.equal(JSON.parse(seen.init.body).model, 'glm-5.3-flash');
+  assert.equal(seen.init.headers.authorization, 'Bearer k'); assert.equal(seen.init.headers['x-opencode-session'], 'interview-lab'); assert.equal(JSON.parse(seen.init.body).model, 'glm-5.3-flash');
   assert.match(seen.u, /^https:\/\/opencode\.ai\/zen\/go\/v1\/chat\/completions$/);
 });
 await t('health never reveals the key', async () => {
