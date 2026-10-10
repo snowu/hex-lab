@@ -5,6 +5,7 @@ const FAKE = 'https://fake-feedback.example';
 export default async function ({ url, browser, ok, section }) {
   section('unconfigured: no buttons');
   let page = await newPage(browser);
+  await page.route('**/assets/feedback-config.js', (route) => route.fulfill({ contentType: 'text/javascript', body: "window.FEEDBACK_CONFIG={url:''}" }));
   await page.goto(url + '#/'); await page.waitForTimeout(500);
   await page.go(url, '#/lesson/py-arrays', 600);
   const lessonId = await page.evaluate(() => TRACKS.flatMap((t) => t.lessons).find((l) => l.sections.some((s) => s.type === 'code')).id);
