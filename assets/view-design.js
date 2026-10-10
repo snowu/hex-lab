@@ -36,9 +36,9 @@
     let timer = null, hintsUsed = 0, finished = false;
     app.innerHTML = `
       <div class="crumbs"><a href="#/design">${ic('home', 14)} Design lab</a> ${ic('arrow', 12)} <span>${esc(d.title)}</span></div>
-      <section class="dprompt tc brk"><span class="chip">${esc(d.level)}</span> <span class="chip">${ic('clock', 12)} ${d.minutes} min</span>
+      <section class="dprompt tc brk has-ask">${H.askBtn(`Design exercise "${d.title}": ${d.prompt}\n\nDo not solve it. Based on what I have written so far, tell me what I am missing or should clarify first, and what to tackle next.`, 'Ask AI')}<span class="chip">${esc(d.level)}</span> <span class="chip">${ic('clock', 12)} ${d.minutes} min</span>
         <h1>${esc(d.title)}</h1><p class="lead">${esc(d.prompt)}</p>
-        <div class="dbar"><button class="btn primary" id="dstart">${ic('play', 15)} Start the clock</button><span class="dclock" id="dclock">${fmtClock(limit)}</span><span class="sp"></span><button class="btn" id="dhint">${ic('bulb', 15)} Hint <small id="dhn">(0/${d.hints.length})</small></button>${H.askBtn(`Design exercise "${d.title}": ${d.prompt}\n\nDo not solve it. Based on what I have written so far, tell me what I am missing or should clarify first, and what to tackle next.`, 'Ask AI')}<button class="btn" id="dfinish">${ic('check', 15)} Finish &amp; compare</button></div>
+        <div class="dbar"><button class="btn primary" id="dstart">${ic('play', 15)} Start the clock</button><span class="dclock" id="dclock">${fmtClock(limit)}</span><span class="sp"></span><button class="btn" id="dhint">${ic('bulb', 15)} Hint <small id="dhn">(0/${d.hints.length})</small></button><button class="btn" id="dfinish">${ic('check', 15)} Finish &amp; compare</button></div>
         <div id="dhints"></div></section>
       <div id="dsteps">${STEPS.map((s) => `<details class="wstep" open><summary>${esc(s.title)} <span class="wc" data-w="${s.id}"></span></summary><p class="muted wask">${esc(s.ask)}</p><textarea data-s="${s.id}" rows="5" spellcheck="false" placeholder="Your notes…">${esc(saved[s.id] || '')}</textarea></details>`).join('')}</div>
       <div id="dcompare"></div>`;

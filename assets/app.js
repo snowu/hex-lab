@@ -13,9 +13,9 @@ try { if (!localStorage.getItem('sil:pyMigrated')) { Object.keys(localStorage).f
 const TRACKS = window.TRACKS, CARDS = window.CARDS || [], MOCK = window.MOCK || [], RES = window.RESOURCES || [];
 
 /* ---------- icons ---------- */
-/* "Ask AI" button: opens the tutor chat with this question already sent (the chat adds the open page and editor as context).
-   Renders nothing when the feedback Worker is not configured. */
-const askBtn = (prompt, text = 'Ask AI', cls = 'btn ask') => (window.FEEDBACK && FEEDBACK.enabled() ? `<button type="button" class="${cls}" data-ask="${esc(String(prompt).slice(0, 1800))}" title="Ask the tutor chat about this">${ic('chat', 15)} ${text}</button>` : '');
+/* Corner "Ask AI" button for any card: give the card the class `has-ask` and put ${askBtn(prompt)} first inside it. Clicking opens the
+   tutor chat with that question already sent (the chat adds the open page and editor as context). Renders nothing when the Worker is not configured. */
+const askBtn = (prompt, title = 'Ask AI about this') => (window.FEEDBACK && FEEDBACK.enabled() ? `<button type="button" class="ask-mini" data-ask="${esc(String(prompt).slice(0, 1800))}" title="${esc(title)}" aria-label="${esc(title)}">${ic('chat', 13)}<span>AI</span></button>` : '');
 const P = {
   playbook: '<circle cx="12" cy="12" r="9"/><polygon points="15.5 8.5 13.5 13.5 8.5 15.5 10.5 10.5 15.5 8.5"/>',
   coding: '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
@@ -273,7 +273,7 @@ function viewLesson(id) {
       <aside class="outline"><p class="oh">In this lesson</p><ol>${outline}</ol><div class="sm"><b id="lpct">${lessonPct(l)}%</b> complete<br>${nQuiz} quick check${nQuiz === 1 ? '' : 's'}${nCode ? ` · ${nCode} challenge${nCode === 1 ? '' : 's'}` : ''}${nSim ? ` · ${nSim} simulation${nSim === 1 ? '' : 's'}` : ''}</div></aside>
       <article>
         <div class="crumbs"><a href="#/">${ic('home', 14)}</a> ${ic('arrow', 12)} <a href="#/track/${t.id}">${esc(t.title)}</a> ${ic('arrow', 12)} <span>Lesson ${i + 1}</span></div>
-        <header class="lhead"><span class="chip tc" style="--h:${h}">${ic(t.id, 13)} ${esc(t.title)}</span><h1>${esc(l.title)}</h1><p class="sum">${esc(l.summary || '')}</p>${askBtn(`I am reading the lesson "${l.title}". Summarise the key ideas in 5 bullets, then tell me the 3 things interviewers most often probe on this topic and the classic mistakes.`, 'Ask AI about this lesson')}
+        <header class="lhead has-ask">${askBtn(`I am reading the lesson "${l.title}". Summarise the key ideas in 5 bullets, then tell me the 3 things interviewers most often probe on this topic and the classic mistakes.`, 'Ask AI about this lesson')}<span class="chip tc" style="--h:${h}">${ic(t.id, 13)} ${esc(t.title)}</span><h1>${esc(l.title)}</h1><p class="sum">${esc(l.summary || '')}</p>
           <div class="metas"><span class="chip">${ic('clock', 12)} ${l.minutes} min</span>${nQuiz ? `<span class="chip">${ic('target', 12)} ${nQuiz} quick check${nQuiz === 1 ? '' : 's'}</span>` : ''}${nCode ? `<span class="chip">${ic('terminal', 12)} ${nCode} challenge${nCode === 1 ? '' : 's'}</span>` : ''}${nSim ? `<span class="chip">${ic('sim', 12)} ${nSim} simulation${nSim === 1 ? '' : 's'}</span>` : ''}</div>
           <div class="seg" role="group" aria-label="Lesson view"><button data-m="all" class="${mode === 'all' ? 'on' : ''}">text + practice</button><button data-m="read" class="${mode === 'read' ? 'on' : ''}">read</button><button data-m="practice" class="${mode === 'practice' ? 'on' : ''}">practice</button></div></header>
         <div class="lbody" id="body"></div>
@@ -319,7 +319,7 @@ function rText(el, s) { el.innerHTML = `<div class="html">${s.html}</div>`; }
 function rReveal(el, s) { el.innerHTML = `<details><summary>${esc(s.title)}</summary><div class="html">${s.html}</div></details>`; }
 function rQuiz(el, s, l, idx, sync) {
   const key = keysOf(l)[idx], sh = shuffleOpts(s); let done = false;
-  el.innerHTML = `${label('target', 'Quick check')}<div class="quiz"><div class="q">${s.q}</div>${sh.options.map((o, i) => `<button class="opt" data-i="${i}"><span class="l">${'ABCD'[i]}</span><span>${o}</span></button>`).join('')}<div class="explain" hidden></div><div class="ask-row">${askBtn(`Quick check question: ${strip(s.q)}\nOptions: ${sh.options.map((o, i) => 'ABCD'[i] + ') ' + strip(o)).join(' | ')}\nThe correct option is ${'ABCD'[sh.answer]}.\n\nExplain in more depth why that is correct, why each other option is wrong, and what a senior interviewer might ask next.`, 'Ask AI why')}</div></div>`;
+  el.innerHTML = `${label('target', 'Quick check')}<div class="quiz has-ask">${askBtn(`Quick check question: ${strip(s.q)}\nOptions: ${sh.options.map((o, i) => 'ABCD'[i] + ') ' + strip(o)).join(' | ')}\nThe correct option is ${'ABCD'[sh.answer]}.\n\nExplain in more depth why that is correct, why each other option is wrong, and what a senior interviewer might ask next.`, 'Ask AI why')}<div class="q">${s.q}</div>${sh.options.map((o, i) => `<button class="opt" data-i="${i}"><span class="l">${'ABCD'[i]}</span><span>${o}</span></button>`).join('')}<div class="explain" hidden></div></div>`;
   const ex = $('.explain', el);
   if ((progress[l.id] || {})[key]) { /* already solved earlier: show the answer */
     const b = $(`.opt[data-i="${sh.answer}"]`, el); b.classList.add('right'); $$('.opt', el).forEach((x) => (x.disabled = true)); ex.hidden = false; ex.classList.add('ok'); ex.innerHTML = s.explain; done = true;
@@ -405,12 +405,12 @@ const LOADING = '<div class="sumbar"><b>Loading the Python runtime…</b><span c
 function rCode(el, s, l, idx, sync, hue, disposers) {
   const isSql = s.kind === 'sql' || s.kind === 'ddl';
   const key = keysOf(l)[idx], dk = 'pydraft:' + l.id + ':' + key.slice(1), solved = () => !!(progress[l.id] || {})[key];
-  el.innerHTML = `${label('terminal', 'Challenge')}<div class="ex tc brk">
+  el.innerHTML = `${label('terminal', 'Challenge')}<div class="ex tc brk has-ask">${askBtn(`I am working on the exercise "${s.title}". Look at my current code and the test results, and help me: give a hint first, not the full solution, unless I ask for it.`, 'Ask AI')}
     <div class="ex-head"><div class="ex-title">${esc(s.title)}</div>${s.level ? `<span class="chip">${esc(s.level)} · ${s.minutes || 20} min</span>` : `<span class="chip">${s.minutes || 20} min</span>`}<span class="chip best" hidden></span><span class="chip st ${solved() ? 'good' : ''}">${solved() ? ic('check', 12, 3) + ' Solved' : 'Unsolved'}</span></div>
     <div class="ex-prompt">${s.prompt}</div>
     ${isSql ? `<details class="schema"><summary>Schema &amp; sample data</summary><pre><code>${esc(s.schema)}</code></pre>${s.seed ? `<pre><code>${esc(s.seed.split('\n').slice(0, 14).join('\n'))}${s.seed.split('\n').length > 14 ? '\n-- … more rows' : ''}</code></pre>` : ''}<p class="muted">Runs on SQLite in your browser. A second, hidden dataset checks that you did not hard-code the answer.</p></details>` : ''}
     <div class="ex-win"><div class="ex-tab"><span class="tl3"><i></i><i></i><i></i></span><span class="file">${isSql ? 'query.sql' : 'solution.py'}</span><span class="sp"></span><span class="tclock" hidden></span><span class="vmode"></span><button type="button" class="vimbtn" title="Toggle Vim keybindings">vim: off</button><span><kbd>Ctrl</kbd> <kbd>↵</kbd> run</span></div><div class="editor"></div><div class="vimhint" hidden>h j k l move · w b e words · 0 $ line · gg G file · i a o insert · x dd yy p edit · u undo · ciw · / search · <b>:run</b> or <b>:w</b> runs the tests</div></div>
-    <div class="ex-actions"><button class="btn primary run">${ic('play', 15)} Run tests</button><button class="btn timed" title="Timed attempt: countdown, hints locked">${ic('clock', 15)} Timed</button><button class="btn hint">${ic('bulb', 15)} Hint</button><button class="btn sol">${ic('eye', 15)} Solution</button>${askBtn(`I am working on the exercise "${s.title}". Look at my current code and the test results, and help me: give a hint first, not the full solution, unless I ask for it.`, 'Ask AI')}<span class="sp"></span><button class="btn ghost reset">${ic('rotate', 15)} Reset</button></div>
+    <div class="ex-actions"><button class="btn primary run">${ic('play', 15)} Run tests</button><button class="btn timed" title="Timed attempt: countdown, hints locked">${ic('clock', 15)} Timed</button><button class="btn hint">${ic('bulb', 15)} Hint</button><button class="btn sol">${ic('eye', 15)} Solution</button><span class="sp"></span><button class="btn ghost reset">${ic('rotate', 15)} Reset</button></div>
     <div class="out" aria-live="polite"></div><div class="fbk-slot"></div></div>`;
   const host = $('.editor', el), start = store.get(dk, s.starter);
   let get, set;
@@ -508,11 +508,11 @@ function rSim(el, s, l, idx, sync, hue, disposers) {
 function rBug(el, s, l, idx, sync, hue) {
   const key = keysOf(l)[idx], lines = s.code.split('\n'), sel = new Set(), solved = () => !!(progress[l.id] || {})[key];
   const bugLines = s.bugs.map((b) => b.line), okLines = s.ok || [];
-  el.innerHTML = `${label('bug', 'Bug hunt')}<div class="ex bugbox tc brk">
+  el.innerHTML = `${label('bug', 'Bug hunt')}<div class="ex bugbox tc brk has-ask">${askBtn(`Bug hunt "${s.title}". Do NOT tell me the bugs. Give me a nudge on where to look and what category of bug to suspect, then let me try again.`, 'Ask AI for a nudge')}
     <div class="ex-head"><div class="ex-title">${esc(s.title)}</div><span class="chip st ${solved() ? 'good' : ''}">${solved() ? ic('check', 12, 3) + ' Found' : `${bugLines.length} bug${bugLines.length > 1 ? 's' : ''}`}</span></div>
     <div class="ex-prompt">${s.prompt}</div>
     <div class="bug-code" role="group" aria-label="Code. Click the lines that contain bugs.">${lines.map((t, i) => `<button type="button" class="bl" data-n="${i + 1}" aria-pressed="false"><span class="ln">${i + 1}</span><code>${esc(t) || ' '}</code></button>`).join('')}</div>
-    <div class="ex-actions"><button class="btn primary bcheck">${ic('check', 15)} Check my answer</button><button class="btn hint">${ic('bulb', 15)} Hint</button><button class="btn show">${ic('eye', 15)} Show answer</button>${askBtn(`Bug hunt "${s.title}". Do NOT tell me the bugs. Give me a nudge on where to look and what category of bug to suspect, then let me try again.`, 'Ask AI for a nudge')}<span class="sp"></span><span class="selc muted"></span></div>
+    <div class="ex-actions"><button class="btn primary bcheck">${ic('check', 15)} Check my answer</button><button class="btn hint">${ic('bulb', 15)} Hint</button><button class="btn show">${ic('eye', 15)} Show answer</button><span class="sp"></span><span class="selc muted"></span></div>
     <div class="out" aria-live="polite"></div></div>`;
   const out = $('.out', el), cnt = $('.selc', el);
   const paint = (n, cls) => { const b = $(`.bl[data-n="${n}"]`, el); if (b) b.classList.add(cls); };
@@ -544,11 +544,11 @@ function rBug(el, s, l, idx, sync, hue) {
 /* ---------- predict the output ---------- */
 function rPredict(el, s, l, idx, sync) {
   const key = keysOf(l)[idx], sh = shuffleOpts(s); let done = false;
-  el.innerHTML = `${label('bulb', 'Predict the output')}<div class="quiz"><div class="ex-title" style="margin-bottom:8px">${esc(s.title)}</div>${s.intro ? `<div class="ex-prompt" style="padding:0 0 8px">${s.intro}</div>` : ''}
+  el.innerHTML = `${label('bulb', 'Predict the output')}<div class="quiz has-ask">${askBtn(`Predict-the-output exercise "${s.title}". Code:\n${s.code.slice(0, 1200)}\nQuestion: ${strip(s.question)}\n\nWalk me through, step by step, how to reason about this without running it.`, 'Ask AI to walk me through')}<div class="ex-title" style="margin-bottom:8px">${esc(s.title)}</div>${s.intro ? `<div class="ex-prompt" style="padding:0 0 8px">${s.intro}</div>` : ''}
     <pre><code>${esc(s.code)}</code></pre><div class="q" style="margin-top:14px">${s.question}</div>
     ${sh.options.map((o, i) => `<button class="opt" data-i="${i}"><span class="l">${'ABCD'[i]}</span><span>${o}</span></button>`).join('')}
     <div class="explain" hidden></div>
-    <div class="ex-actions" style="padding:12px 0 0"><button class="btn run">${ic('play', 15)} Run it for real</button>${askBtn(`Predict-the-output exercise "${s.title}". Code:\n${s.code.slice(0, 1200)}\nQuestion: ${strip(s.question)}\n\nWalk me through, step by step, how to reason about this without running it.`, 'Ask AI to walk me through')}<span class="muted">executes the snippet in the sandbox and shows its actual output</span></div><div class="out" style="padding:0"></div></div>`;
+    <div class="ex-actions" style="padding:12px 0 0"><button class="btn run">${ic('play', 15)} Run it for real</button><span class="muted">executes the snippet in the sandbox and shows its actual output</span></div><div class="out" style="padding:0"></div></div>`;
   const ex = $('.explain', el), out = $('.out', el);
   const finish = (b) => { done = true; if (b) b.classList.add('right'); $$('.opt', el).forEach((x) => (x.disabled = true)); ex.hidden = false; ex.classList.add('ok'); ex.innerHTML = s.explain; };
   if ((progress[l.id] || {})[key]) finish($(`.opt[data-i="${sh.answer}"]`, el));
@@ -582,9 +582,8 @@ function viewReview() {
     else {
       const c = deck[cur], h = trackHue(c.track);
       body = `<div class="deck tc" style="--h:${h}"><div class="pgl"><span>Card ${Math.min(cur + 1, total)} of ${total}</span><span>${deck.length - cur} left</span></div><div class="pg"><i style="width:${(cur / Math.max(1, total)) * 100}%"></i></div>
-        <div class="fc-wrap"><div class="fc ${flipped ? 'flipped' : ''}" id="fc" tabindex="0" role="button" aria-label="Flip card"><div class="face front"><span class="chip tc tagl" style="--h:${h}">${esc(c.track)}</span><div class="qq">${c.q}</div><div class="hint">Click or press <kbd>Space</kbd> to reveal</div></div><div class="face back"><span class="chip tc tagl" style="--h:${h}">Answer</span><div class="aa">${c.a}</div></div></div></div>
-        <div class="rate" ${flipped ? '' : 'hidden'}><button class="r0" data-r="0">Again<small>1 · soon</small></button><button class="r1" data-r="1">Hard<small>2 · 1 day</small></button><button class="r2" data-r="2">Good<small>3 · days</small></button><button class="r3" data-r="3">Easy<small>4 · weeks</small></button></div>
-        <div class="fc-tools">${askBtn(`Flashcard (${strip(c.track)}). Question: ${strip(c.q)}\nCard answer: ${strip(c.a)}\n\nThat answer is too terse. Explain it properly: the intuition, a concrete example with numbers or code, why it matters in an interview, common misconceptions, and one follow-up a senior interviewer might ask.`, 'Ask AI to explain this card')}</div></div>`;
+        <div class="fc-wrap has-ask">${askBtn(`Flashcard (${strip(c.track)}). Question: ${strip(c.q)}\nCard answer: ${strip(c.a)}\n\nThat answer is too terse. Explain it properly: the intuition, a concrete example with numbers or code, why it matters in an interview, common misconceptions, and one follow-up a senior interviewer might ask.`, 'Ask AI to explain this card')}<div class="fc ${flipped ? 'flipped' : ''}" id="fc" tabindex="0" role="button" aria-label="Flip card"><div class="face front"><span class="chip tc tagl" style="--h:${h}">${esc(c.track)}</span><div class="qq">${c.q}</div><div class="hint">Click or press <kbd>Space</kbd> to reveal</div></div><div class="face back"><span class="chip tc tagl" style="--h:${h}">Answer</span><div class="aa">${c.a}</div></div></div></div>
+        <div class="rate" ${flipped ? '' : 'hidden'}><button class="r0" data-r="0">Again<small>1 · soon</small></button><button class="r1" data-r="1">Hard<small>2 · 1 day</small></button><button class="r2" data-r="2">Good<small>3 · days</small></button><button class="r3" data-r="3">Easy<small>4 · weeks</small></button></div></div>`;
     }
     app.innerHTML = `<div class="page-h"><h1>Flashcards</h1><p>Say the answer out loud before flipping. Cards you miss come back sooner.</p></div>${filters}${body}`;
     $$('.fchip').forEach((b) => (b.onclick = () => { filter = b.dataset.f; build(false); }));
@@ -645,11 +644,11 @@ function viewMock() {
     app.innerHTML = `<div class="mock"><div class="page-h"><h1>Mock interview</h1><p>Pick a type, answer out loud (or jot bullets), then check yourself against the rubric. Think aloud, state assumptions, name trade-offs. Your results are saved on this device.</p></div>
       <div id="mstats"></div>
       <div class="filters"><button class="fchip ${!kind ? 'on' : ''}" data-k="">Any</button>${kinds.map((k) => `<button class="fchip ${kind === k ? 'on' : ''}" data-k="${esc(k)}">${esc(k)}</button>`).join('')}</div>
-      ${q ? `<div class="qcard tc brk" style="--h:${kh(q.kind)}"><span class="chip tc">${esc(q.kind)}</span> <span class="chip">${ic('clock', 12)} suggested ${q.minutes} min</span>
+      ${q ? `<div class="qcard tc brk has-ask" style="--h:${kh(q.kind)}">${askBtn(`Mock interview question (${strip(q.kind)}): ${strip(q.q)}\n\nHow would a strong senior candidate answer this? Give a structure for the answer, the key points, trade-offs and common mistakes. Then ask me to try it myself.`, 'Ask AI how to answer')}<span class="chip tc">${esc(q.kind)}</span> <span class="chip">${ic('clock', 12)} suggested ${q.minutes} min</span>
         <div class="qq">${q.q}</div>
         <div class="timer"><span class="tm" id="tm">00:00</span><span class="tb" id="tb"><i style="width:0"></i></span></div>
         <textarea class="notes" placeholder="Your notes: assumptions, structure, trade-offs…"></textarea>
-        <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><button id="done" class="btn primary">${ic('check', 16)} I'm done: show rubric</button><button id="skip" class="btn">${ic('rotate', 16)} Another question</button>${askBtn(`Mock interview question (${strip(q.kind)}): ${strip(q.q)}\n\nHow would a strong senior candidate answer this? Give a structure for the answer, the key points, trade-offs and common mistakes. Then ask me to try it myself.`, 'Ask AI how to answer')}</div>
+        <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><button id="done" class="btn primary">${ic('check', 16)} I'm done: show rubric</button><button id="skip" class="btn">${ic('rotate', 16)} Another question</button></div>
         <div id="rub"></div></div>` : `<div class="empty"><div class="big">${ic('mic', 30)}</div><h2 style="margin:0 0 6px">Ready when you are</h2><p style="color:var(--muted);margin:0 0 18px">You'll get a random question (unseen ones first) and a timer.</p><button class="btn primary" id="go">${ic('play', 16)} Give me a question</button></div>`}</div>`;
     renderStats();
     $$('.fchip').forEach((b) => (b.onclick = () => { kind = b.dataset.k; pick(); }));

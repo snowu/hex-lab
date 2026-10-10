@@ -73,8 +73,8 @@ export default async function ({ url, browser, ok, section }) {
   section('Ask AI buttons');
   await page.locator('#chatX').click();
   await page.go(url, '#/review', 600);
-  const ask = page.locator('.fc-tools .ask').first();
-  ok(await ask.count() === 1, 'a flashcard has an "Ask AI to explain this card" button');
+  const ask = page.locator('.fc-wrap .ask-mini');
+  ok(await ask.count() === 1, 'a flashcard has a small corner Ask AI button');
   const before = chatReqs.length;
   await ask.click();
   await page.waitForFunction(() => document.querySelectorAll('.chat-msg.assistant h4').length > 0);
@@ -89,7 +89,7 @@ export default async function ({ url, browser, ok, section }) {
   await page.locator('#chatWide').click();
   await page.locator('#chatX').click();
   await page.go(url, '#/lesson/' + lessonId, 600);
-  ok(await page.locator('.lhead .ask').count() === 1 && await page.locator('.ex-actions .ask').count() >= 1, 'lesson header and code challenges have Ask AI buttons');
+  ok(await page.locator('.lhead .ask-mini').count() === 1 && await page.locator('.ex .ask-mini').count() >= 1, 'lesson header and code challenges have Ask AI buttons');
   await page.go(url, '#/mock', 400); await page.locator('.fchip').first().click().catch(() => {});
 
   section('story and design hooks');

@@ -116,14 +116,14 @@
     app.innerHTML = `<div class="crumbs"><a href="#/katas">${ic('home', 14)} Katas</a> ${ic('arrow', 12)} <span>${esc(k.name)}</span></div>
       <header class="lhead"><span class="chip tc" style="--h:${hue}">difficulty ${k.difficulty}/10 · ${band(k.difficulty)}</span><h1>${esc(k.name)}</h1><p class="sum">${esc(k.blurb)}</p></header>
       <div id="kcode"></div>
-      <section class="kother tc brk"><h3>${ic('terminal', 16)} Practice it in another language</h3>
+      <section class="kother tc brk has-ask">${askBtn(`Code kata "${k.name}": ${k.blurb}\n\nGive me the approach to solve this well (not the code), the edge cases to test, and how you would explain the solution in an interview.`, 'Ask AI about the approach')}<h3>${ic('terminal', 16)} Practice it in another language</h3>
         <p class="muted">Download the same exercise with the <a href="https://exercism.org/cli-walkthrough" target="_blank" rel="noopener">Exercism CLI</a>, solve and test it locally, then paste your solution here for feedback.</p>
         <div class="cs-row"><select id="ktrack" class="inp" aria-label="Language">${TRACKS.map(([t, n]) => `<option value="${t}">${n}</option>`).join('')}</select>
           <a id="klink" class="btn ghost" target="_blank" rel="noopener">Open on exercism.org</a></div>
         <pre class="kcmd"><code id="kcmd"></code></pre>
         <textarea id="kpaste" class="inp" rows="8" spellcheck="false" placeholder="Paste your solution here (any language)…"></textarea>
         <div id="kfb"></div>
-        <div class="dbar"><button class="btn" id="kdone">${ic('check', 15)} I solved it locally</button><span class="sp"></span>${askBtn(`Code kata "${k.name}": ${k.blurb}\n\nGive me the approach to solve this well (not the code), the edge cases to test, and how you would explain the solution in an interview.`, 'Ask AI about the approach')}</div>
+        <div class="dbar"><button class="btn" id="kdone">${ic('check', 15)} I solved it locally</button><span class="sp"></span></div>
       </section>
       <div class="dbar kpn">${prev ? `<a class="btn ghost" href="#/kata/${prev.slug}">${ic('arrow', 14)} ${esc(prev.name)}</a>` : '<span></span>'}<span class="sp"></span>${nxt ? `<a class="btn" href="#/kata/${nxt.slug}">${esc(nxt.name)} ${ic('arrow', 14)}</a>` : ''}</div>
       <p class="muted kcredit">Exercise by ${esc((k.authors || []).join(', ') || 'Exercism contributors')}${(k.contributors || []).length ? ` and ${k.contributors.length} contributor${k.contributors.length > 1 ? 's' : ''}` : ''}, from <a href="https://github.com/${esc(DATA.source)}/tree/${esc(DATA.ref)}/exercises/practice/${esc(slug)}" target="_blank" rel="noopener">Exercism</a> (MIT licence).</p>`;

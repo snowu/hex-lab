@@ -672,10 +672,6 @@ body{--chat-w:min(100vw,clamp(440px,34vw,640px))}body.chat-wide{--chat-w:min(100
 .chat-msg.assistant h4{margin:10px 0 4px;font-size:14px;color:var(--accent)}
 .chat-msg.assistant ul,.chat-msg.assistant ol{margin:4px 0 8px;padding-left:20px}.chat-msg.assistant li{margin:2px 0}
 .chat-msg{font-size:14.5px}
-.fc-tools{display:flex;justify-content:center;margin-top:14px}
-.ask-row{margin-top:10px}
-.btn.ask{border-color:var(--line2);color:var(--accent)}
-.lhead .btn.ask{margin-top:10px}
 
 /* ---- katas ---- */
 .kstats{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 14px;border:1px solid var(--line);margin:14px 0}
@@ -693,3 +689,13 @@ body{--chat-w:min(100vw,clamp(440px,34vw,640px))}body.chat-wide{--chat-w:min(100
 .kother{margin:18px 0;padding:14px}.kother h3{margin:0 0 6px}
 .kcmd{margin:10px 0}.kother textarea{width:100%;margin-top:6px}
 .kpn{margin-top:18px}.kcredit{font-size:12.5px;margin-top:16px}
+
+/* ---- reusable corner "Ask AI" button: card gets .has-ask, button goes first inside it ---- */
+.has-ask{position:relative}
+.ask-mini{position:absolute;top:10px;right:12px;z-index:3;display:inline-flex;align-items:center;gap:4px;padding:2px 7px;font:inherit;font-size:11px;font-weight:700;letter-spacing:.08em;line-height:1.5;background:var(--panel2);color:var(--accent);border:1px solid var(--line2);cursor:pointer}
+.ask-mini:hover,.ask-mini:focus-visible{background:var(--accent);color:var(--on-grad);border-color:var(--accent)}
+.ask-mini .ic{margin:0}
+.has-ask .ex-head{padding-right:58px}
+.lhead.has-ask h1,.dprompt.has-ask h1{padding-right:58px}
+.quiz.has-ask>.q,.quiz.has-ask>.ex-title{padding-right:58px}
+.ex .fbk{margin-top:0;padding:0 20px 18px}
