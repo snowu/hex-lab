@@ -96,3 +96,13 @@ the matching `exercism download` command plus a paste box for AI feedback.
 Flashcards, quick checks, predict-the-output, bug hunts, code challenges, mock questions, design reps, lessons and katas have an
 "Ask AI" button. It opens the tutor chat and sends a prepared question; the chat adds the open page and your editor as context.
 `⇔` in the chat header makes the panel wider.
+
+## AI mock interviewer and usage counter
+
+On the mock page, **Interview me (AI)** turns a question into a conversation: the interviewer asks follow-ups (up to 4 answers, probing gaps
+in a hidden rubric), then grades the transcript and pre-ticks the rubric, which you can correct. Results save to the normal mock history.
+Worker route `/interview` (modes `turn` and `grade`), general model only.
+
+Every Worker response reports provider token counts; the browser keeps a per-day counter (`silu:usage`, device-local, not synced) and the
+Plan page shows today / this month / 60 days, per model, with the share of the OpenCode Go monthly cap. Prices are list prices (DeepSeek doubles at peak hours), so
+it is headroom, not a bill.

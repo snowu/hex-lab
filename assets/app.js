@@ -648,15 +648,63 @@ function viewMock() {
         <div class="qq">${q.q}</div>
         <div class="timer"><span class="tm" id="tm">00:00</span><span class="tb" id="tb"><i style="width:0"></i></span></div>
         <textarea class="notes" placeholder="Your notes: assumptions, structure, trade-offs…"></textarea>
-        <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><button id="done" class="btn primary">${ic('check', 16)} I'm done: show rubric</button><button id="skip" class="btn">${ic('rotate', 16)} Another question</button></div>
-        <div id="rub"></div></div>` : `<div class="empty"><div class="big">${ic('mic', 30)}</div><h2 style="margin:0 0 6px">Ready when you are</h2><p style="color:var(--muted);margin:0 0 18px">You'll get a random question (unseen ones first) and a timer.</p><button class="btn primary" id="go">${ic('play', 16)} Give me a question</button></div>`}</div>`;
+        <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><button id="done" class="btn primary">${ic('check', 16)} I'm done: show rubric</button><button id="skip" class="btn">${ic('rotate', 16)} Another question</button>${window.FEEDBACK && FEEDBACK.enabled() ? `<button id="aibtn" class="btn" title="An AI interviewer asks follow-ups, then grades you against the rubric">${ic('mic', 16)} Interview me (AI)</button>` : ''}</div>
+        <div id="aiint" class="aiint"></div><div id="rub"></div></div>` : `<div class="empty"><div class="big">${ic('mic', 30)}</div><h2 style="margin:0 0 6px">Ready when you are</h2><p style="color:var(--muted);margin:0 0 18px">You'll get a random question (unseen ones first) and a timer.</p><button class="btn primary" id="go">${ic('play', 16)} Give me a question</button></div>`}</div>`;
     renderStats();
     $$('.fchip').forEach((b) => (b.onclick = () => { kind = b.dataset.k; pick(); }));
     const go = $('#go'); if (go) go.onclick = pick;
     const sk = $('#skip'); if (sk) sk.onclick = pick;
+    const ab = $('#aibtn'); if (ab) ab.onclick = startAI;
     const dn = $('#done'); if (dn) dn.onclick = showRubric;
     if (q) tick();
   };
+  /* ---- AI interviewer: follow-up questions, then the rubric is graded from the transcript ---- */
+  const AI_TURNS = 4;
+  let ai = null;
+  const answersGiven = () => ai.msgs.filter((m) => m.role === 'candidate').length;
+  const lis = (items) => (items && items.length ? `<ul>${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="muted">Nothing noted.</p>');
+  const drawAI = () => {
+    const box = $('#aiint'); if (!box || !ai) return;
+    const n = answersGiven(), g = ai.graded;
+    box.innerHTML = `<div class="ai-log"><div class="chat-msg assistant">${esc(strip(q.q))}</div>${ai.msgs.map((m) => `<div class="chat-msg ${m.role === 'candidate' ? 'user' : 'assistant'}">${esc(m.content)}</div>`).join('')}${ai.busy ? '<div class="chat-msg assistant wait">…</div>' : ''}${ai.err ? `<div class="chat-msg assistant err">${esc(ai.err)}</div>` : ''}</div>
+      ${g ? `<div class="ai-grade"><h3>Interviewer's verdict</h3><p>${esc(g.summary)}</p><div class="ai-cols"><div><h4>What worked</h4>${lis(g.strengths)}</div><div><h4>Gaps</h4>${lis(g.gaps)}</div></div>${g.next_step ? `<p><b>Practise next:</b> ${esc(g.next_step)}</p>` : ''}<p class="muted">The rubric below is pre-ticked from your answers. Click an item if you disagree.</p></div>`
+        : ai.over || ai.busy && ai.grading ? '' : `<div class="ai-in"><textarea id="aiin" rows="3" placeholder="Your answer (${Math.min(n + 1, AI_TURNS)} of ${AI_TURNS}). Think aloud, state assumptions, name trade-offs."${ai.busy ? ' disabled' : ''}></textarea>
+        <div class="dbar"><button class="btn primary" id="aisend"${ai.busy ? ' disabled' : ''}>${ic('arrow', 15)} Send</button><button class="btn" id="aifin"${ai.busy || !n ? ' disabled' : ''}>${ic('check', 15)} Finish &amp; grade</button><span class="muted">Ctrl+Enter sends</span></div></div>`}`;
+    const log = $('.ai-log', box); if (log) log.scrollTop = log.scrollHeight;
+    const inp = $('#aiin', box);
+    if (inp) { inp.value = ai.draft || ''; inp.oninput = () => { ai.draft = inp.value; }; inp.onkeydown = (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendAI(); } }; if (!ai.busy) inp.focus(); }
+    const sb = $('#aisend', box); if (sb) sb.onclick = sendAI;
+    const fb = $('#aifin', box); if (fb) fb.onclick = gradeAI;
+  };
+  const startAI = () => { if (ai) return; ai = { msgs: [], busy: false, over: false, graded: null, draft: '', err: '' }; drawAI(); };
+  const payload = (mode) => ({ mode, question: strip(q.q), rubric: q.rubric.map(strip), kind: q.kind, maxTurns: AI_TURNS, transcript: ai.msgs });
+  async function sendAI() {
+    if (!ai || ai.busy) return;
+    const text = ($('#aiin') ? $('#aiin').value : ai.draft).trim(); if (!text) return;
+    const cur = ai; cur.err = ''; cur.msgs.push({ role: 'candidate', content: text }); cur.draft = ''; cur.busy = true; drawAI();
+    try {
+      const r = await FEEDBACK.interview(payload('turn'));
+      if (ai !== cur) return; /* the learner moved to another question */
+      cur.msgs.push({ role: 'interviewer', content: r.reply }); cur.busy = false;
+      if (r.done) { cur.over = true; drawAI(); gradeAI(); return; }
+    } catch (e) { if (ai !== cur) return; cur.msgs.pop(); cur.draft = text; cur.err = e.message; cur.busy = false; }
+    drawAI();
+  }
+  async function gradeAI() {
+    if (!ai || !answersGiven() || ai.graded) return;
+    const cur = ai; cur.err = ''; cur.busy = true; cur.grading = true; drawAI();
+    try {
+      cur.graded = await FEEDBACK.interview(payload('grade'));
+      if (ai !== cur) return;
+      cur.busy = false; cur.grading = false; cur.over = true; drawAI();
+      showRubric();
+      $$('.rubric li').forEach((li, i) => li.classList.toggle('hit', !!cur.graded.hits[i]));
+      const n = $$('.rubric li.hit').length, all = mockHist(), r = all.find((a) => a.ts === rec.ts);
+      if (r) { r.hit = n; r.ai = true; store.set('mockhist', all); rec.hit = n; }
+      $('#cov').textContent = `Covered ${n}/${q.rubric.length}.`; renderStats();
+      $('#rub').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (e) { if (ai !== cur) return; cur.err = e.message; cur.busy = false; cur.grading = false; drawAI(); }
+  }
   const showRubric = () => {
     clearInterval(iv);
     if (!rec) {
@@ -678,7 +726,7 @@ function viewMock() {
   const pick = () => {
     const pool = MOCK.filter((m) => !kind || m.kind === kind), seen = mockSummary().seen, fresh = pool.filter((m) => !seen.has(cid(m))), src = fresh.length ? fresh : pool;
     let n; do { n = src[Math.floor(Math.random() * src.length)]; } while (src.length > 1 && n === q);
-    q = n; t0 = Date.now(); secs = 0; rec = null; draw();
+    q = n; t0 = Date.now(); secs = 0; rec = null; ai = null; draw();
   };
   cleanup = () => clearInterval(iv);
   draw();

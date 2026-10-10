@@ -70,7 +70,7 @@
       <button class="icon-btn" id="chatClear" title="Clear the conversation" aria-label="Clear the conversation">⌫</button>
       <button class="icon-btn" id="chatX" title="Close (Esc)" aria-label="Close chat">✕</button></div>
     <div class="chat-log" id="chatLog" aria-live="polite"></div>
-    <div class="chat-foot"><label class="chat-ctx"><input type="checkbox" id="chatCtx" checked> <span id="chatCtxL">Include this page</span></label>
+    <div class="chat-foot"><label class="chat-ctx"><input type="checkbox" id="chatCtx" checked> <span id="chatCtxL">Include this page</span><span class="sp"></span><a href="#/plan" class="chat-use" id="chatUse" title="AI usage today (estimated)"></a></label>
       <div class="chat-row"><textarea id="chatIn" rows="2" placeholder="Ask about this page… (Enter to send, Shift+Enter for a new line)" maxlength="2000"></textarea><button class="btn primary" id="chatSend">Send</button></div></div>`;
   document.body.appendChild(panel);
   const log = $('#chatLog'), input = $('#chatIn'), sendBtn = $('#chatSend'), st = $('#chatSt');
@@ -93,6 +93,11 @@
     const n = gather().length;
     $('#chatCtxL').textContent = useCtx ? `Include this page (${n > 1000 ? (n / 1000).toFixed(1) + 'k' : n} chars)` : 'Page not included';
   }
+  function usageLine() {
+    const t = FEEDBACK.usage().today;
+    $('#chatUse').textContent = t.calls ? `today: ${t.calls} call${t.calls === 1 ? '' : 's'} · ${t.cost < 0.01 ? '<$0.01' : '$' + t.cost.toFixed(2)}` : '';
+  }
+  addEventListener('lab-usage', usageLine);
   async function test() {
     st.textContent = 'checking…'; st.dataset.ok = '';
     const h = await FEEDBACK.health();
@@ -116,7 +121,7 @@
     save(); busy = false; sendBtn.disabled = false; log.scrollTop = log.scrollHeight; input.focus();
   }
   function open() {
-    panel.hidden = false; document.body.classList.add('chat-open'); draw(); ctxLabel(); input.focus(); test();
+    panel.hidden = false; document.body.classList.add('chat-open'); draw(); ctxLabel(); usageLine(); input.focus(); test();
   }
   function close() { panel.hidden = true; document.body.classList.remove('chat-open'); }
   const toggle = () => (panel.hidden ? open() : close());

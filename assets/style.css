@@ -699,3 +699,21 @@ body{--chat-w:min(100vw,clamp(440px,34vw,640px))}body.chat-wide{--chat-w:min(100
 .lhead.has-ask h1,.dprompt.has-ask h1{padding-right:58px}
 .quiz.has-ask>.q,.quiz.has-ask>.ex-title{padding-right:58px}
 .ex .fbk{margin-top:0;padding:0 20px 18px}
+
+/* ---- AI mock interviewer ---- */
+.aiint:empty{display:none}
+.aiint{margin-top:14px}
+.ai-log{display:flex;flex-direction:column;gap:10px;max-height:420px;overflow:auto;padding-right:4px}
+.ai-log .chat-msg{white-space:pre-wrap}
+.ai-in{margin-top:10px}.ai-in textarea{width:100%;font:inherit;padding:8px;background:var(--bg);color:var(--ink);border:1px solid var(--line2)}
+.ai-grade{margin-top:12px;border:1px solid var(--line2);padding:12px 14px}.ai-grade h3,.ai-grade h4{margin:0 0 6px}.ai-grade h4{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.ai-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}.ai-cols ul{margin:0;padding-left:18px}
+@media(max-width:700px){.ai-cols{grid-template-columns:1fr}}
+
+/* ---- AI usage ---- */
+.ugrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.utile{border:1px solid var(--line);padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.utile span{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}.utile b{font-size:1.5rem;color:var(--accent);line-height:1.1}.utile small{color:var(--muted)}
+.utable{width:100%;border-collapse:collapse;font-size:13.5px;margin:6px 0 10px}.utable th,.utable td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line)}.utable th{color:var(--muted);font-weight:600;font-size:12px}
+@media(max-width:700px){.ugrid{grid-template-columns:1fr}.utable{display:block;overflow:auto}}
+.chat-ctx .sp{flex:1}.chat-use{color:var(--muted);text-decoration:none;font-size:11.5px}.chat-use:hover{color:var(--accent)}

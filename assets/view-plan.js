@@ -76,6 +76,7 @@
       </section>
       <section class="ready"><div class="ph"><h2>Readiness</h2><span class="muted">lessons + diagnostic</span></div>${readinessHtml()}${statsHtml()}${heatmapHtml()}</section>
       <section class="cloud"><div class="ph"><h2>Cloud sync</h2><span class="muted">optional · this device always wins unless you choose otherwise</span></div><div id="cloudpanel"></div></section>
+      ${window.FEEDBACK && FEEDBACK.enabled() ? `<section class="usage"><div class="ph"><h2>AI usage</h2><span class="muted">estimated from token counts · kept on this device only</span></div><div id="aiusage"></div></section>` : ''}
       <section class="backup"><div class="ph"><h2>Backup</h2><span class="muted">your data lives only in this browser</span></div>
         <p class="muted">Export a file to move to another browser or device, or to keep a copy before clearing site data.</p>
         <div class="dbar"><button class="btn" id="bexp">${ic('arrow', 15)} Export progress</button><label class="btn" for="bimp">${ic('arrowL', 15)} Import progress</label><input type="file" id="bimp" accept="application/json" hidden></div></section>`;
@@ -84,8 +85,23 @@
     $('#dgo').onclick = startDiag;
     $('#bexp').onclick = exportData; $('#bimp').onchange = importData;
     if (window.CLOUD) window.CLOUD.mount($('#cloudpanel'));
+    if ($('#aiusage')) drawUsage();
   }
 
+  const money = (n) => (n < 0.01 ? (n === 0 ? '$0' : '<$0.01') : '$' + n.toFixed(n < 1 ? 3 : 2));
+  const tok = (n) => (n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : String(n));
+  const FLABEL = { review: 'answer reviews', chat: 'tutor chat', interview: 'AI interviews' };
+  function drawUsage() {
+    const el = $('#aiusage'); if (!el) return;
+    const u = FEEDBACK.usage();
+    const tile = (name, b) => `<div class="utile"><span>${name}</span><b>${b.calls}</b><small>${b.calls === 1 ? 'call' : 'calls'} · ${tok(b.tin + b.tout)} tokens · ${money(b.cost)}</small></div>`;
+    const models = Object.entries(u.month.byModel);
+    el.innerHTML = `<div class="ugrid">${tile('Today', u.today)}${tile('This month', u.month)}${tile('Last 60 days', u.all)}</div>
+      ${models.length ? `<table class="utable"><thead><tr><th>Model (this month)</th><th>Calls</th><th>Tokens in / out</th><th>Est. cost</th><th>Of plan cap</th></tr></thead><tbody>${models.map(([m, x]) => { const cap = u.caps[m]; return `<tr><td>${esc(m)}</td><td>${x.calls}</td><td>${tok(x.tin)} / ${tok(x.tout)}</td><td>${money(x.cost)}</td><td>${cap ? (x.cost / cap * 100 < 0.1 ? '<0.1' : (x.cost / cap * 100).toFixed(1)) + '% of $' + cap : 'n/a'}</td></tr>`; }).join('')}</tbody></table>` : '<p class="muted">No AI calls yet this month.</p>'}
+      ${Object.keys(u.month.byFeature).length ? `<p class="muted">This month: ${Object.entries(u.month.byFeature).map(([f, n]) => `${n} ${FLABEL[f] || f}`).join(' · ')}</p>` : ''}
+      <p class="muted">Prices are per-token list prices for OpenCode Go (DeepSeek costs double at peak hours). Go is a flat subscription, so this shows headroom, not what you pay. ${u.all.calls ? '<button class="linkbtn" id="ureset">reset counter</button>' : ''}</p>`;
+    const r = $('#ureset'); if (r) r.onclick = () => { if (confirm('Reset the AI usage counter on this device?')) { FEEDBACK.resetUsage(); drawUsage(); } };
+  }
   const readinessHtml = () => `<div class="rdy">${TRACKS.map((t) => { const m = mastery(t), d = diagResult() && diagResult().tracks[t.id]; return `<div class="rrow tc" style="--h:${hueOf(t.id)}"><span class="rt">${esc(t.title)}</span><span class="rbar"><i style="width:${m}%"></i></span><span class="rv">${m}%${d ? ` <small>diag ${d.right}/${d.total}</small>` : ''}</span></div>`; }).join('')}</div>`;
 
   function statsHtml() {
