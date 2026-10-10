@@ -48,5 +48,21 @@
       btn.disabled = false;
     };
   }
-  window.FEEDBACK = { enabled, ask, mount };
+  async function chat(messages, context) {
+    let res;
+    try { res = await fetch(cfg() + '/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ messages, context }), signal: AbortSignal.timeout(70000) }); }
+    catch (e) { throw new Error(e && e.name === 'TimeoutError' ? 'The tutor took too long.' : 'Could not reach the tutor. Are you offline?'); }
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error((data && data.error) || 'The tutor failed (' + res.status + ').');
+    return data.reply;
+  }
+  /** Connection check: resolves {ok, model, codeModel} or {ok:false, error}. */
+  async function health() {
+    try {
+      const res = await fetch(cfg() + '/health', { signal: AbortSignal.timeout(8000) });
+      const d = await res.json();
+      return d && d.ok && d.configured ? { ok: true, model: d.model, codeModel: d.codeModel } : { ok: false, error: d && !d.configured ? 'Worker has no model key' : 'Unexpected reply' };
+    } catch { return { ok: false, error: 'Unreachable' }; }
+  }
+  window.FEEDBACK = { enabled, ask, mount, chat, health };
 })();

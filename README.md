@@ -72,6 +72,7 @@ fix and one thing to practise. The model key lives only in the Worker. The butto
 - Deploy (the key never touches the terminal): `cd worker && npx wrangler login && grep '^OPENCODE_API_KEY=' ../.env | cut -d= -f2- | npx wrangler secret put OPENCODE_API_KEY && npx wrangler deploy`,
   then put the printed `*.workers.dev` URL in `assets/feedback-config.js`.
 - Change the model with `LAB_MODEL` in `worker/wrangler.jsonc` (default is a placeholder until benchmarked).
+- Chat: a side panel (header icon or Ctrl+J) answers questions with the open page and your editor contents as context (non-training model). It has a connection test.
 - Protection: CORS only for `https://snowu.github.io`, 10 reviews/min/IP, 6000-char answer cap, JSON-only output.
   `node scripts/test-worker.mjs` runs the Worker's tests offline.
 

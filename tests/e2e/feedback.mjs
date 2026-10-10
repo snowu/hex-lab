@@ -35,6 +35,39 @@ export default async function ({ url, browser, ok, section }) {
   mode = 'err'; await page.waitForTimeout(4200); await btn.click(); await page.waitForFunction(() => /Slow down/.test(document.querySelector('.fbk-box').textContent));
   ok(true, 'worker error message is shown to the user');
 
+
+  section('tutor chat panel');
+  const chatReqs = [];
+  await page.route(FAKE + '/health', (route) => route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ ok: true, configured: true, model: 'fake-model' }) }));
+  await page.route(FAKE + '/chat', async (route) => {
+    const body = JSON.parse(route.request().postData()); chatReqs.push(body);
+    if (/boom/.test(body.messages.at(-1).content)) return route.fulfill({ status: 502, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ error: 'The tutor could not answer. Try again.' }) });
+    return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ reply: 'Try a `set`.\n\n```python\nseen = set()\n```\n<img src=x onerror=window.__pwned2=1>' }) });
+  });
+  await page.go(url, '#/lesson/' + lessonId, 700);
+  await page.evaluate(() => { const cm = document.querySelector('#app .CodeMirror'); if (cm) cm.CodeMirror.setValue('def my_unique_draft(): pass'); });
+  ok(await page.locator('#chatBtn').isVisible(), 'the chat button is in the header when the Worker is configured');
+  await page.locator('#chatBtn').click();
+  await page.waitForFunction(() => document.querySelector('#chatSt').dataset.ok === '1');
+  ok((await page.locator('#chatSt').innerText()).includes('fake-model'), 'the panel shows the connection test result (model name)');
+  await page.locator('#chatIn').fill('why is my code slow?'); await page.keyboard.press('Enter');
+  await page.waitForSelector('.chat-msg.assistant:not(.wait)');
+  const first = chatReqs[0];
+  ok(first && first.messages.at(-1).content === 'why is my code slow?', 'sends the question');
+  ok(first.context.includes('my_unique_draft') && first.context.includes('Route: #/lesson/') && first.context.length > 300, 'context carries the page text and the live editor contents');
+  ok(await page.locator('.chat-msg.assistant pre code').first().innerText() === 'seen = set()', 'fenced code renders as a code block');
+  ok(await page.evaluate(() => !window.__pwned2 && !document.querySelector('.chat-msg img')), 'reply markup is shown as text, not executed');
+  await page.locator('#chatCtx').uncheck(); await page.locator('#chatIn').fill('second'); await page.keyboard.press('Enter');
+  await page.waitForFunction(() => document.querySelectorAll('.chat-msg.assistant:not(.wait)').length >= 2);
+  ok(chatReqs[1].context === '' && chatReqs[1].messages.length === 3, 'with page context off nothing is attached, and the history is sent');
+  await page.locator('#chatIn').fill('boom'); await page.keyboard.press('Enter');
+  await page.waitForSelector('.chat-msg.err');
+  ok((await page.locator('.chat-msg.err').innerText()).includes('could not answer') && (await page.locator('#chatIn').inputValue()) === 'boom', 'errors are shown and the message is kept for retry');
+  await page.keyboard.press('Escape');
+  ok(await page.locator('#chat').isHidden(), 'Escape closes the panel');
+  await page.keyboard.press('Control+j');
+  ok(await page.locator('#chat').isVisible() && (await page.locator('.chat-msg').count()) >= 4, 'Ctrl+J reopens it with the conversation kept');
+
   section('story and design hooks');
   await page.go(url, '#/stories', 400);
   await page.locator('#snew, [id*="new"]').first().click().catch(() => {});
