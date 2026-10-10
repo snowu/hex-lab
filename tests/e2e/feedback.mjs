@@ -108,6 +108,17 @@ export default async function ({ url, browser, ok, section }) {
   await page.waitForSelector('.ai-grade', { timeout: 15000 });
   ok(ivReqs.some((r) => r.mode === 'grade' && r.transcript.length === 4 && r.transcript[3].role === 'interviewer'), 'when the interviewer ends the interview, grading starts automatically');
 
+
+  section('AI interviewer entry points');
+  await page.go(url, '#/', 500);
+  ok(await page.locator('a.tool[href="#/mock/ai"]').count() === 1, 'the home page has an AI interviewer tile');
+  await page.go(url, '#/mock', 500);
+  ok(await page.locator('#goai').count() === 1, 'the mock landing page has a "Start an AI interview" button');
+  await page.locator('#goai').click(); await page.waitForSelector('#aiin');
+  ok(await page.locator('.qq').count() === 1 && (await page.locator('#aiint .chat-msg.assistant').first().innerText()).length > 10, 'it picks a question and starts the interview');
+  await page.go(url, '#/mock/ai', 700);
+  ok(await page.locator('#aiin').isVisible() && await page.locator('nav a[data-nav="mock"].on').count() === 1, '#/mock/ai opens straight into an interview');
+
   section('Ask AI buttons');
   await page.locator('#chatX').click();
   await page.go(url, '#/review', 600);

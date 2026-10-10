@@ -20,8 +20,12 @@ export default async function ({ url, browser, ok, section }) {
 
   section('running a kata');
   await page.go(url, '#/kata/two-fer', 1200);
-  ok((await page.locator('.ex-prompt').innerText()).includes('One for you, one for me'), 'the exercise instructions are shown');
+  ok((await page.locator('.kd-body').innerText()).includes('One for you, one for me'), 'the exercise instructions are shown');
   ok(await page.locator('.CodeMirror').count() === 1, 'the editor is there');
+  const box = await page.evaluate(() => { const d = document.querySelector('.kata-desc').getBoundingClientRect(), e = document.querySelector('.kata-work .CodeMirror').getBoundingClientRect(); return { dRight: d.right, eLeft: e.left, dTop: d.top, eTop: e.top, eBottom: e.bottom, vh: innerHeight }; });
+  ok(box.dRight <= box.eLeft + 1 && Math.abs(box.dTop - box.eTop) < 400 && box.eTop < box.vh - 150, `desktop layout: description left, editor right, editor visible without scrolling (editor top ${Math.round(box.eTop)}px of ${box.vh})`);
+  const narrow = await page.evaluate(() => getComputedStyle(document.querySelector('.kata-split')).gridTemplateColumns.split(' ').length);
+  ok(narrow === 2, 'two columns on a wide screen');
   await page.locator('.run').click();
   await page.waitForSelector('.res', { timeout: 90000 });
   const failing = await page.locator('.res.fail').count();
@@ -40,13 +44,14 @@ export default async function ({ url, browser, ok, section }) {
 
   section('other languages');
   await page.go(url, '#/kata/two-fer', 800);
+  await page.locator('.kother summary').click();
   await page.locator('#ktrack').selectOption('go');
   ok((await page.locator('#kcmd').innerText()).startsWith('exercism download --track=go --exercise=two-fer'), 'shows the Exercism CLI command for the chosen language');
   ok((await page.locator('#klink').getAttribute('href')) === 'https://exercism.org/tracks/go/exercises/two-fer', 'links to the exercise on exercism.org');
   await page.go(url, '#/kata/bob', 1000);
-  ok(await page.locator('.ex-prompt a[href*="collinsdictionary"]').count() === 1 && !(await page.locator('.ex-prompt').innerText()).includes('[lackadaisical]'), 'reference-style links in instructions become real links');
+  ok(await page.locator('.kd-body a[href*="collinsdictionary"]').count() === 1 && !(await page.locator('.kd-body').innerText()).includes('[lackadaisical]'), 'reference-style links in instructions become real links');
   await page.go(url, '#/kata/ledger', 1200);
-  ok((await page.locator('.ex-prompt').innerText()).includes('Refactoring kata'), 'a refactoring kata says so');
+  ok((await page.locator('.kata-desc').innerText()).includes('Refactoring kata'), 'a refactoring kata says so');
   ok(page.errors.length === 0, 'no page errors ' + page.errors.slice(0, 2).join(' | '));
   await page.context().close();
 }

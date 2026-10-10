@@ -717,3 +717,20 @@ body{--chat-w:min(100vw,clamp(440px,34vw,640px))}body.chat-wide{--chat-w:min(100
 .utable{width:100%;border-collapse:collapse;font-size:13.5px;margin:6px 0 10px}.utable th,.utable td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line)}.utable th{color:var(--muted);font-weight:600;font-size:12px}
 @media(max-width:700px){.ugrid{grid-template-columns:1fr}.utable{display:block;overflow:auto}}
 .chat-ctx .sp{flex:1}.chat-use{color:var(--muted);text-decoration:none;font-size:11.5px}.chat-use:hover{color:var(--accent)}
+
+/* ---- kata page: description left, code right (stacked on narrow screens) ---- */
+main.kata-wide{max-width:1640px}
+.kata-split{display:grid;grid-template-columns:minmax(340px,5fr) 7fr;gap:18px;align-items:start;margin-top:10px}
+.kata-desc{position:sticky;top:70px;max-height:calc(100vh - 90px);overflow:auto;padding:16px 20px}
+.kata-desc h1{margin:8px 0 4px;font-size:1.7rem}.kata-desc .sum{margin:0 0 10px}
+.kata-desc .kd-body{padding:0}
+.kata-work{min-width:0}
+.kata-work .CodeMirror{height:clamp(340px,56vh,720px)}
+.kata-work .kother{margin-top:16px}.kother>summary{cursor:pointer;font-weight:600;padding-right:56px}
+.ex-prompt:empty{display:none}
+@media(max-width:1000px){.kata-split{grid-template-columns:1fr}.kata-desc{position:static;max-height:none}}
+
+/* ---- header fit: the nav grew (katas) and gained a chat button, so give it room and compact it on mid-size screens ---- */
+.top-in{max-width:1400px}
+@media(max-width:1420px){.search-btn .s-t,.search-btn kbd,.xp .xb{display:none}.search-btn{min-width:0}.top-in{gap:14px}}
+@media(max-width:1180px){.top-in{flex-wrap:wrap;gap:10px;padding:10px 14px}.top nav{order:3;width:100%;margin:0;overflow:auto}.top nav a{padding:6px 10px}}

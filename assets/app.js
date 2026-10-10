@@ -143,7 +143,8 @@ const routes = [
   [/^#\/track\/([\w-]+)$/, viewTrack],
   [/^#\/lesson\/([\w-]+)$/, viewLesson],
   [/^#\/review$/, viewReview],
-  [/^#\/mock$/, viewMock],
+  [/^#\/mock$/, () => viewMock()],
+  [/^#\/mock\/ai$/, () => viewMock(true)],
   [/^#\/resources$/, viewResources],
 ];
 let cleanup = null;
@@ -224,6 +225,7 @@ function viewHome() {
     <div class="tools">
       <a class="tool" href="#/review"><span class="si">${ic('cards', 22)}</span><div><b>Flashcards</b><span>${CARDS.length} cards · spaced repetition</span></div></a>
       <a class="tool" href="#/mock"><span class="si">${ic('mic', 22)}</span><div><b>Mock interview</b><span>${MOCK.length} questions · timer · rubric</span></div></a>
+      ${window.FEEDBACK && FEEDBACK.enabled() ? `<a class="tool" href="#/mock/ai"><span class="si">${ic('chat', 22)}</span><div><b>AI interviewer</b><span>follow-ups, then graded</span></div></a>` : ''}
       <a class="tool" href="#/resources"><span class="si">${ic('link', 22)}</span><div><b>Free resources</b><span>${RES.length} hand-picked links</span></div></a>
     </div>`;
   const wk = $('#weak'); if (wk) wk.onclick = () => store.set('mockkind', mockSummary().weakest.kind);
@@ -622,7 +624,7 @@ function mockSummary() {
 }
 const ago = (ts) => { const m = Math.round((Date.now() - ts) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' d ago'; };
 const MOCK_HUE = { 'Full-stack': 100, Databases: 200, 'Coding under pressure': 165, Behavioral: 255, 'System Design': 150, 'Neonomics / Open Banking': 44, 'Scale & Cloud': 215, 'AI Era': 320 };
-function viewMock() {
+function viewMock(autoAI) {
   document.title = 'Mock interview · Senior Interview Lab';
   let kind = store.get('mockkind', ''), q = null, t0 = 0, iv = null, secs = 0, rec = null;
   store.set('mockkind', '');
@@ -649,12 +651,13 @@ function viewMock() {
         <div class="timer"><span class="tm" id="tm">00:00</span><span class="tb" id="tb"><i style="width:0"></i></span></div>
         <textarea class="notes" placeholder="Your notes: assumptions, structure, trade-offs…"></textarea>
         <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><button id="done" class="btn primary">${ic('check', 16)} I'm done: show rubric</button><button id="skip" class="btn">${ic('rotate', 16)} Another question</button>${window.FEEDBACK && FEEDBACK.enabled() ? `<button id="aibtn" class="btn" title="An AI interviewer asks follow-ups, then grades you against the rubric">${ic('mic', 16)} Interview me (AI)</button>` : ''}</div>
-        <div id="aiint" class="aiint"></div><div id="rub"></div></div>` : `<div class="empty"><div class="big">${ic('mic', 30)}</div><h2 style="margin:0 0 6px">Ready when you are</h2><p style="color:var(--muted);margin:0 0 18px">You'll get a random question (unseen ones first) and a timer.</p><button class="btn primary" id="go">${ic('play', 16)} Give me a question</button></div>`}</div>`;
+        <div id="aiint" class="aiint"></div><div id="rub"></div></div>` : `<div class="empty"><div class="big">${ic('mic', 30)}</div><h2 style="margin:0 0 6px">Ready when you are</h2><p style="color:var(--muted);margin:0 0 18px">You'll get a random question (unseen ones first) and a timer.</p><button class="btn primary" id="go">${ic('play', 16)} Give me a question</button>${window.FEEDBACK && FEEDBACK.enabled() ? ` <button class="btn" id="goai">${ic('mic', 16)} Start an AI interview</button><p class="muted" style="margin:14px 0 0">An AI interviewer asks follow-ups, then grades you against the rubric.</p>` : ''}</div>`}</div>`;
     renderStats();
     $$('.fchip').forEach((b) => (b.onclick = () => { kind = b.dataset.k; pick(); }));
     const go = $('#go'); if (go) go.onclick = pick;
     const sk = $('#skip'); if (sk) sk.onclick = pick;
     const ab = $('#aibtn'); if (ab) ab.onclick = startAI;
+    const gai = $('#goai'); if (gai) gai.onclick = () => { pick(); startAI(); };
     const dn = $('#done'); if (dn) dn.onclick = showRubric;
     if (q) tick();
   };
@@ -730,6 +733,7 @@ function viewMock() {
   };
   cleanup = () => clearInterval(iv);
   draw();
+  if (autoAI && window.FEEDBACK && FEEDBACK.enabled()) { pick(); startAI(); }
 }
 
 /* ---------- resources ---------- */

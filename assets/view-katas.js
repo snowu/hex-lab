@@ -106,27 +106,36 @@
     const hue = hueOf(band(k.difficulty));
     const lesson = { id: lid(slug), title: k.name, sections: [] };
     const sec = {
-      type: 'code', id: lid(slug), title: k.name, level: band(k.difficulty), minutes: Math.min(45, 8 + k.difficulty * 4),
-      prompt: (k.refactor ? '<div class="callout tip"><b>Refactoring kata.</b> The starter already passes the tests. Make the code cleaner without breaking them.</div>' : '') + md(k.instructions),
+      type: 'code', id: lid(slug), title: 'Your solution', level: band(k.difficulty), minutes: Math.min(45, 8 + k.difficulty * 4),
+      prompt: '', /* the instructions live in the left pane */
       starter: k.stub, solution: k.example, tests: `#!unittest:${k.module}\n${k.tests}`,
       hint: k.hints ? md(k.hints) : 'Run the tests first and read the first failure. Make that one pass, then the next.',
       notes: k.source ? `Source: ${esc(k.source)}${k.source_url ? ` (<a href="${esc(k.source_url)}" target="_blank" rel="noopener">link</a>)` : ''}` : '',
     };
     lesson.sections.push(sec);
+    app.classList.add('kata-wide'); disposers.push(() => app.classList.remove('kata-wide'));
     app.innerHTML = `<div class="crumbs"><a href="#/katas">${ic('home', 14)} Katas</a> ${ic('arrow', 12)} <span>${esc(k.name)}</span></div>
-      <header class="lhead"><span class="chip tc" style="--h:${hue}">difficulty ${k.difficulty}/10 · ${band(k.difficulty)}</span><h1>${esc(k.name)}</h1><p class="sum">${esc(k.blurb)}</p></header>
-      <div id="kcode"></div>
-      <section class="kother tc brk has-ask">${askBtn(`Code kata "${k.name}": ${k.blurb}\n\nGive me the approach to solve this well (not the code), the edge cases to test, and how you would explain the solution in an interview.`, 'Ask AI about the approach')}<h3>${ic('terminal', 16)} Practice it in another language</h3>
-        <p class="muted">Download the same exercise with the <a href="https://exercism.org/cli-walkthrough" target="_blank" rel="noopener">Exercism CLI</a>, solve and test it locally, then paste your solution here for feedback.</p>
-        <div class="cs-row"><select id="ktrack" class="inp" aria-label="Language">${TRACKS.map(([t, n]) => `<option value="${t}">${n}</option>`).join('')}</select>
-          <a id="klink" class="btn ghost" target="_blank" rel="noopener">Open on exercism.org</a></div>
-        <pre class="kcmd"><code id="kcmd"></code></pre>
-        <textarea id="kpaste" class="inp" rows="8" spellcheck="false" placeholder="Paste your solution here (any language)…"></textarea>
-        <div id="kfb"></div>
-        <div class="dbar"><button class="btn" id="kdone">${ic('check', 15)} I solved it locally</button><span class="sp"></span></div>
-      </section>
-      <div class="dbar kpn">${prev ? `<a class="btn ghost" href="#/kata/${prev.slug}">${ic('arrow', 14)} ${esc(prev.name)}</a>` : '<span></span>'}<span class="sp"></span>${nxt ? `<a class="btn" href="#/kata/${nxt.slug}">${esc(nxt.name)} ${ic('arrow', 14)}</a>` : ''}</div>
-      <p class="muted kcredit">Exercise by ${esc((k.authors || []).join(', ') || 'Exercism contributors')}${(k.contributors || []).length ? ` and ${k.contributors.length} contributor${k.contributors.length > 1 ? 's' : ''}` : ''}, from <a href="https://github.com/${esc(DATA.source)}/tree/${esc(DATA.ref)}/exercises/practice/${esc(slug)}" target="_blank" rel="noopener">Exercism</a> (MIT licence).</p>`;
+      <div class="kata-split">
+        <section class="kata-desc tc brk">
+          <span class="chip tc" style="--h:${hue}">difficulty ${k.difficulty}/10 · ${band(k.difficulty)}</span><h1>${esc(k.name)}</h1><p class="sum">${esc(k.blurb)}</p>
+          ${k.refactor ? '<div class="callout tip"><b>Refactoring kata.</b> The starter already passes the tests. Make the code cleaner without breaking them.</div>' : ''}
+          <div class="kd-body ex-prompt">${md(k.instructions)}</div>
+          <p class="muted kcredit">Exercise by ${esc((k.authors || []).join(', ') || 'Exercism contributors')}${(k.contributors || []).length ? ` and ${k.contributors.length} contributor${k.contributors.length > 1 ? 's' : ''}` : ''}, from <a href="https://github.com/${esc(DATA.source)}/tree/${esc(DATA.ref)}/exercises/practice/${esc(slug)}" target="_blank" rel="noopener">Exercism</a> (MIT licence).</p>
+          <div class="dbar kpn">${prev ? `<a class="btn ghost" href="#/kata/${prev.slug}">${ic('arrowL', 14)} ${esc(prev.name)}</a>` : '<span></span>'}<span class="sp"></span>${nxt ? `<a class="btn" href="#/kata/${nxt.slug}">${esc(nxt.name)} ${ic('arrow', 14)}</a>` : ''}</div>
+        </section>
+        <div class="kata-work">
+          <div id="kcode"></div>
+          <details class="kother tc brk has-ask">${askBtn(`Code kata "${k.name}": ${k.blurb}\n\nGive me the approach to solve this well (not the code), the edge cases to test, and how you would explain the solution in an interview.`, 'Ask AI about the approach')}<summary>${ic('terminal', 16)} Practise it in another language</summary>
+            <p class="muted">Download the same exercise with the <a href="https://exercism.org/cli-walkthrough" target="_blank" rel="noopener">Exercism CLI</a>, solve and test it locally, then paste your solution here for feedback.</p>
+            <div class="cs-row"><select id="ktrack" class="inp" aria-label="Language">${TRACKS.map(([t, n]) => `<option value="${t}">${n}</option>`).join('')}</select>
+              <a id="klink" class="btn ghost" target="_blank" rel="noopener">Open on exercism.org</a></div>
+            <pre class="kcmd"><code id="kcmd"></code></pre>
+            <textarea id="kpaste" class="inp" rows="8" spellcheck="false" placeholder="Paste your solution here (any language)…"></textarea>
+            <div id="kfb"></div>
+            <div class="dbar"><button class="btn" id="kdone">${ic('check', 15)} I solved it locally</button></div>
+          </details>
+        </div>
+      </div>`;
     H.rCode($('#kcode'), sec, lesson, 0, () => {}, hue, disposers);
     const cmd = () => {
       const t = $('#ktrack').value;

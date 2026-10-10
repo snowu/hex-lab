@@ -11,5 +11,13 @@ export default async function ({ url, browser, ok }) {
   ok(page.errors.length === 0, 'no uncaught errors while visiting every route ' + JSON.stringify(page.errors.slice(0, 2)));
   const nav = await page.evaluate(() => [...document.querySelectorAll('.top nav a')].map((a) => a.textContent.trim()));
   ok(nav.length === 8 && nav.includes('katas'), 'main navigation has 8 entries: ' + nav.join(' '));
+
+  /* the header must never overflow: every control stays on screen at common widths */
+  for (const w of [1000, 1280, 1440, 1920]) {
+    await page.setViewportSize({ width: w, height: 800 }); await page.goto(url + '#/'); await page.waitForTimeout(400);
+    const r = await page.evaluate(() => { const t = document.querySelector('.top-in'); return { fits: t.scrollWidth <= t.clientWidth + 1, themeRight: document.querySelector('#themeBtn').getBoundingClientRect().right, vw: innerWidth }; });
+    ok(r.fits && r.themeRight <= r.vw, `header controls fit at ${w}px wide (theme button right edge ${Math.round(r.themeRight)})`);
+  }
+  await page.setViewportSize({ width: 1280, height: 1000 });
   await page.close();
 }
