@@ -37,6 +37,9 @@ end $$;
 alter table public.lab_progress enable row level security;
 
 -- Stated explicitly so the schema does not depend on the project's default privileges.
+-- Supabase grants anon access to new public tables by default; RLS would hide every row anyway,
+-- but anon has no business touching this table at all.
+revoke all on public.lab_progress from anon;
 grant select, insert, update, delete on public.lab_progress to authenticated;
 
 drop policy if exists "users read their own progress" on public.lab_progress;
