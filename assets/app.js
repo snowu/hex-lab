@@ -191,6 +191,7 @@ function viewHome() {
       <a class="stat" href="#/review"><span class="si">${ic('cards', 20)}</span><div><div class="v">${due}</div><div class="l">flashcards due</div></div></a>
     </section>
     ${nx ? `<a class="cont tc" style="--h:${hueOf(nx.t.id)}" href="#/lesson/${nx.l.id}">${ring(lessonPct(nx.l), 52, 5)}<div class="tx"><div class="k">${nx.resume || nx.started ? 'Continue where you left off' : 'Up next'}</div><div class="tt">${esc(nx.l.title)}</div><div class="sub">${esc(nx.t.title)} · ${nx.l.minutes} min</div></div>${ic('arrow', 22)}</a>` : `<div class="cont tc" style="--h:150">${ic('trophy', 28)}<div class="tx"><div class="tt">Every lesson complete. Go run some mock interviews.</div></div></div>`}
+    ${(() => { const ms = mockSummary(); return ms.weakest && ms.weakest.avg < 80 ? `<a class="cont tc" id="weak" style="--h:${MOCK_HUE[ms.weakest.kind] ?? 255};margin-top:12px" href="#/mock"><span class="si" style="width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--panel2);color:var(--c)">${ic('target', 22)}</span><div class="tx"><div class="k">Weak spot from your mock interviews</div><div class="tt">${esc(ms.weakest.kind)} · ${ms.weakest.avg}% rubric coverage</div><div class="sub">${ms.weakest.n} attempt${ms.weakest.n === 1 ? '' : 's'}. Practice it again.</div></div>${ic('arrow', 22)}</a>` : ''; })()}
     <div class="sec-h"><h2>Tracks</h2><span>${total} lessons · ${Math.round(TRACKS.reduce((a, t) => a + trackMin(t), 0) / 60)} hours</span></div>
     <div class="tgrid">${TRACKS.map((t) => `
       <a class="tcard tc ${t.hot ? 'feat' : ''}" style="--h:${hueOf(t.id)}" href="#/track/${t.id}">
@@ -206,6 +207,7 @@ function viewHome() {
       <a class="tool" href="#/resources"><span class="si">${ic('link', 22)}</span><div><b>Free resources</b><span>${RES.length} hand-picked links</span></div></a>
     </div>`;
   $('#heroSearch').onclick = openPalette;
+  const wk = $('#weak'); if (wk) wk.onclick = () => store.set('mockkind', mockSummary().weakest.kind);
 }
 
 /* ---------- track ---------- */
@@ -410,34 +412,75 @@ function viewReview() {
 }
 
 /* ---------- mock interview ---------- */
+const mockHist = () => store.get('mockhist', []);
+function mockSummary() {
+  const h = mockHist(), by = {};
+  h.forEach((a) => { const b = (by[a.kind] = by[a.kind] || { n: 0, sum: 0 }); b.n++; b.sum += a.total ? a.hit / a.total : 0; });
+  Object.values(by).forEach((b) => (b.avg = Math.round((b.sum / b.n) * 100)));
+  const w = Object.entries(by).sort((x, y) => x[1].avg - y[1].avg)[0];
+  const avg = h.length ? Math.round((h.reduce((s, a) => s + (a.total ? a.hit / a.total : 0), 0) / h.length) * 100) : 0;
+  return { h, by, seen: new Set(h.map((a) => a.id)), avg, weakest: w && { kind: w[0], n: w[1].n, avg: w[1].avg } };
+}
+const ago = (ts) => { const m = Math.round((Date.now() - ts) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' d ago'; };
+const MOCK_HUE = { Behavioral: 255, 'System Design': 150, 'Neonomics / Open Banking': 44, 'Scale & Cloud': 215, 'AI Era': 320 };
 function viewMock() {
   document.title = 'Mock interview · Senior Interview Lab';
-  let kind = '', q = null, t0 = 0, iv = null, secs = 0, shown = false;
+  let kind = store.get('mockkind', ''), q = null, t0 = 0, iv = null, secs = 0, rec = null;
+  store.set('mockkind', '');
   const kinds = [...new Set(MOCK.map((m) => m.kind))];
-  const kh = (k) => ({ Behavioral: 255, 'System Design': 150, 'Neonomics / Open Banking': 44, 'Scale & Cloud': 215, 'AI Era': 320 }[k] ?? hueOf(k));
+  const kh = (k) => MOCK_HUE[k] ?? hueOf(k);
   const fmtT = (s) => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+  const renderStats = () => {
+    const el = $('#mstats'); if (!el) return;
+    const s = mockSummary(); if (!s.h.length) { el.innerHTML = ''; return; }
+    const weak = s.weakest && s.weakest.avg < 80 ? s.weakest : null;
+    el.innerHTML = `<div class="mst"><div class="mst-top">
+        <div><b>${s.h.length}</b><span>attempts</span></div><div><b>${s.avg}%</b><span>avg rubric coverage</span></div><div><b>${s.seen.size}/${MOCK.length}</b><span>questions tried</span></div>
+        ${weak ? `<button class="btn sm primary" id="pw">${ic('target', 14)} Practice weakest: ${esc(weak.kind)}</button>` : ''}</div>
+      <div class="mrows">${kinds.map((k) => { const b = s.by[k]; return `<div class="mrow tc" style="--h:${kh(k)}"><span class="mk">${esc(k)}</span><span class="mbar"><i style="width:${b ? b.avg : 0}%"></i></span><span class="mv">${b ? `${b.avg}% · ${b.n}×` : 'not tried'}</span></div>`; }).join('')}</div>
+      <details><summary>Recent attempts</summary>${s.h.slice(-6).reverse().map((a) => { const m = MOCK.find((x) => cid(x) === a.id); return `<div class="mhist"><span class="chip">${a.hit}/${a.total}</span><span class="mq">${esc(m ? strip(m.q) : 'Question')}</span><span class="mt">${ago(a.ts)}</span></div>`; }).join('')}</details></div>`;
+    const pw = $('#pw'); if (pw) pw.onclick = () => { kind = weak.kind; pick(); };
+  };
   const draw = () => {
-    app.innerHTML = `<div class="mock"><div class="page-h"><h1>Mock interview</h1><p>Pick a type, answer out loud (or jot bullets), then check yourself against the rubric. Think aloud, state assumptions, name trade-offs.</p></div>
+    app.innerHTML = `<div class="mock"><div class="page-h"><h1>Mock interview</h1><p>Pick a type, answer out loud (or jot bullets), then check yourself against the rubric. Think aloud, state assumptions, name trade-offs. Your results are saved on this device.</p></div>
+      <div id="mstats"></div>
       <div class="filters"><button class="fchip ${!kind ? 'on' : ''}" data-k="">Any</button>${kinds.map((k) => `<button class="fchip ${kind === k ? 'on' : ''}" data-k="${esc(k)}">${esc(k)}</button>`).join('')}</div>
       ${q ? `<div class="qcard tc" style="--h:${kh(q.kind)}"><span class="chip tc">${esc(q.kind)}</span> <span class="chip">${ic('clock', 12)} suggested ${q.minutes} min</span>
         <div class="qq">${q.q}</div>
         <div class="timer"><span class="tm" id="tm">00:00</span><span class="tb" id="tb"><i style="width:0"></i></span></div>
         <textarea class="notes" placeholder="Your notes: assumptions, structure, trade-offs…"></textarea>
         <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><button id="done" class="btn primary">${ic('check', 16)} I'm done: show rubric</button><button id="skip" class="btn">${ic('rotate', 16)} Another question</button></div>
-        <div id="rub"></div></div>` : `<div class="empty"><div class="big">${ic('mic', 30)}</div><h2 style="margin:0 0 6px">Ready when you are</h2><p style="color:var(--muted);margin:0 0 18px">You'll get a random question and a timer.</p><button class="btn primary" id="go">${ic('play', 16)} Give me a question</button></div>`}</div>`;
+        <div id="rub"></div></div>` : `<div class="empty"><div class="big">${ic('mic', 30)}</div><h2 style="margin:0 0 6px">Ready when you are</h2><p style="color:var(--muted);margin:0 0 18px">You'll get a random question (unseen ones first) and a timer.</p><button class="btn primary" id="go">${ic('play', 16)} Give me a question</button></div>`}</div>`;
+    renderStats();
     $$('.fchip').forEach((b) => (b.onclick = () => { kind = b.dataset.k; pick(); }));
     const go = $('#go'); if (go) go.onclick = pick;
     const sk = $('#skip'); if (sk) sk.onclick = pick;
-    const dn = $('#done'); if (dn) dn.onclick = () => {
-      clearInterval(iv);
-      $('#rub').innerHTML = `<h3>A strong answer covers</h3><p style="color:var(--muted);margin:0 0 6px;font-size:.9rem">Tick what you covered. Took ${fmtT(secs)}.</p><ul class="rubric">${q.rubric.map((r) => `<li><span class="cb">${ic('check', 12, 3.4)}</span><span>${r}</span></li>`).join('')}</ul><p style="color:var(--muted);font-size:.9rem">Missed points are your study list. Revisit the matching lesson.</p>`;
-      $$('.rubric li').forEach((li) => (li.onclick = () => { li.classList.toggle('hit'); }));
-      if (!shown) { shown = true; addXp(15, 'Mock interview done'); }
-    };
+    const dn = $('#done'); if (dn) dn.onclick = showRubric;
     if (q) tick();
   };
+  const showRubric = () => {
+    clearInterval(iv);
+    if (!rec) {
+      rec = { id: cid(q), kind: q.kind, ts: Date.now(), secs, hit: 0, total: q.rubric.length };
+      const all = mockHist(); all.push(rec); store.set('mockhist', all.slice(-200));
+      addXp(15, 'Mock interview done'); renderStats();
+    }
+    const rev = (q.lessons || []).map((id) => findLesson(id)).filter(Boolean);
+    $('#rub').innerHTML = `<h3>A strong answer covers</h3><p style="color:var(--muted);margin:0 0 6px;font-size:.9rem">Tick what you covered. Took ${fmtT(secs)}. <span id="cov"></span></p><ul class="rubric">${q.rubric.map((r) => `<li><span class="cb">${ic('check', 12, 3.4)}</span><span>${r}</span></li>`).join('')}</ul>
+      ${rev.length ? `<div class="revisit"><span>Revisit what you missed:</span>${rev.map((f) => `<a class="chip tc" style="--h:${hueOf(f.t.id)}" href="#/lesson/${f.l.id}">${ic(f.t.id, 12)} ${esc(f.l.title)}</a>`).join('')}</div>` : ''}`;
+    $$('.rubric li').forEach((li) => (li.onclick = () => {
+      li.classList.toggle('hit');
+      const n = $$('.rubric li.hit').length, all = mockHist(), r = all.find((a) => a.ts === rec.ts);
+      if (r) { r.hit = n; store.set('mockhist', all); rec.hit = n; }
+      $('#cov').textContent = `Covered ${n}/${q.rubric.length}.`; renderStats();
+    }));
+  };
   const tick = () => { clearInterval(iv); iv = setInterval(() => { secs = Math.floor((Date.now() - t0) / 1000); const tm = $('#tm'); if (!tm) return; tm.textContent = fmtT(secs); const pct = Math.min(100, (secs / (q.minutes * 60)) * 100), tb = $('#tb'); tb.firstChild.style.width = pct + '%'; tb.classList.toggle('over', secs > q.minutes * 60); }, 500); };
-  const pick = () => { const pool = MOCK.filter((m) => !kind || m.kind === kind); let n; do { n = pool[Math.floor(Math.random() * pool.length)]; } while (pool.length > 1 && n === q); q = n; t0 = Date.now(); secs = 0; shown = false; draw(); };
+  const pick = () => {
+    const pool = MOCK.filter((m) => !kind || m.kind === kind), seen = mockSummary().seen, fresh = pool.filter((m) => !seen.has(cid(m))), src = fresh.length ? fresh : pool;
+    let n; do { n = src[Math.floor(Math.random() * src.length)]; } while (src.length > 1 && n === q);
+    q = n; t0 = Date.now(); secs = 0; rec = null; draw();
+  };
   cleanup = () => clearInterval(iv);
   draw();
 }

@@ -37,7 +37,11 @@ for (const t of TRACKS) for (const l of t.lessons) {
   }
 }
 CARDS.forEach((c, i) => { if (!c.q || !c.a || !c.track) fail('card ' + i + ' malformed'); });
-MOCK.forEach((m, i) => { if (!m.q || !m.kind || !m.rubric?.length || !m.minutes) fail('mock ' + i + ' malformed'); });
+MOCK.forEach((m, i) => {
+  if (!m.q || !m.kind || !m.rubric?.length || !m.minutes) fail('mock ' + i + ' malformed');
+  if (!m.lessons?.length) fail('mock ' + i + ' has no lessons to revisit');
+  for (const id of m.lessons || []) if (!ids.has(id)) fail('mock ' + i + ' links to unknown lesson ' + id);
+});
 RESOURCES.forEach((r, i) => { if (!/^https:\/\//.test(r.url) || !r.title || !r.cat || !r.note) fail('resource ' + i + ' malformed'); });
 console.log(`${TRACKS.length} tracks, ${ids.size} lessons, ${exercises} exercises, ${quizzes} quizzes, ${CARDS.length} cards, ${MOCK.length} mock questions, ${RESOURCES.length} resources`);
 if (bad) { console.error(bad + ' problem(s)'); process.exit(1); }
