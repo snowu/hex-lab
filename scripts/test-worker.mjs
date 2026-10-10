@@ -44,11 +44,27 @@ await t('provider failure and junk replies become 502, not leaks', async () => {
   const r = await handle(req(ok), env, model('sorry, I cannot')); assert.equal(r.status, 502);
   assert.ok(!(await r.text()).includes('sorry'));
 });
-await t('sends the key as a bearer token to the configured model only', async () => {
-  let seen;
-  await handle(req(ok), { ...env, LAB_MODEL: 'glm-5.3-flash' }, async (u, init) => { seen = { u, init }; return new Response(JSON.stringify({ choices: [{ message: { content: GOOD } }] })); });
-  assert.equal(seen.init.headers.authorization, 'Bearer k'); assert.equal(seen.init.headers['x-opencode-session'], 'interview-lab'); assert.equal(JSON.parse(seen.init.body).model, 'glm-5.3-flash');
-  assert.match(seen.u, /^https:\/\/opencode\.ai\/zen\/go\/v1\/chat\/completions$/);
+await t('routes by kind: code/sql -> muse via /responses, design/story -> deepseek via chat', async () => {
+  const urls = [];
+  const f = async (u, init) => { urls.push([u, JSON.parse(init.body).model, init.headers.authorization, init.headers['x-opencode-session']]); return u.endsWith('/responses')
+    ? new Response(JSON.stringify({ output: [{ type: 'reasoning' }, { type: 'message', content: [{ type: 'output_text', text: GOOD }] }] }))
+    : new Response(JSON.stringify({ choices: [{ message: { content: GOOD } }] })); };
+  for (const kind of ['code', 'sql', 'design', 'story']) assert.equal((await handle(req({ ...ok, kind }), env, f)).status, 200);
+  assert.deepEqual(urls.map((x) => x[0].split('/v1/')[1]), ['responses', 'responses', 'chat/completions', 'chat/completions']);
+  assert.deepEqual(urls.map((x) => x[1]), ['muse-spark-1.3-contributor', 'muse-spark-1.3-contributor', 'deepseek-v4-flash', 'deepseek-v4-flash']);
+  assert.ok(urls.every((x) => x[2] === 'Bearer k' && x[3] === 'interview-lab'));
+});
+await t('personal kinds never reach the training model, even as a fallback', async () => {
+  const models = [];
+  const f = async (u, init) => { models.push(JSON.parse(init.body).model); return new Response('{}', { status: 500 }); };
+  for (const kind of ['design', 'story']) await handle(req({ ...ok, kind }), env, f);
+  assert.ok(models.length > 0 && models.every((m) => !/^muse/.test(m)));
+});
+await t('if the code model fails, the general model answers', async () => {
+  const models = [];
+  const f = async (u, init) => { const m = JSON.parse(init.body).model; models.push(m); return /^muse/.test(m) ? new Response('{}', { status: 500 }) : new Response(JSON.stringify({ choices: [{ message: { content: GOOD } }] })); };
+  const r = await handle(req(ok), env, f);
+  assert.equal(r.status, 200); assert.deepEqual(models, ['muse-spark-1.3-contributor', 'deepseek-v4-flash']);
 });
 await t('health never reveals the key', async () => {
   const r = await handle(req(null, { method: 'GET', path: '/health' }), env); const j = await r.json();

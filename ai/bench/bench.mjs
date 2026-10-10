@@ -18,7 +18,7 @@ const args = process.argv.slice(2);
 const flag = (n, d) => (args.find((a) => a.startsWith(`--${n}=`)) || '').split('=')[1] ?? d;
 const RUNS = Number(flag('runs', 1));
 const OUT = flag('out', '');
-const DEFAULTS = ['deepseek-v4-flash', 'glm-5.3-flash', 'qwen3.8-flash', 'mimo-v2.6-flash', 'kimi-k2.6', 'hy3'];
+const DEFAULTS = ['deepseek-v4-flash', 'glm-5.3-flash', 'qwen3.8-flash', 'mimo-v2.6-flash', 'kimi-k2.6', 'hy3', 'muse-spark-1.3-contributor'];
 const models = args.filter((a) => !a.startsWith('--')); if (!models.length) models.push(...DEFAULTS);
 
 export const SYSTEM = `You are a strict senior interviewer reviewing a candidate's answer. Be specific and honest; never flatter. If the answer is correct, say so briefly and name one real improvement (or none). Never invent bugs.
@@ -39,7 +39,22 @@ function score(fx, obj, raw) {
   const bad = fx.mustNot.some((re) => re.test(flat));
   return { hit, bad };
 }
+const RESPONSES = (m) => /^muse-spark/.test(m); // these models only speak the OpenAI /responses protocol
+async function callResponses(model, fx) {
+  const t0 = Date.now();
+  const res = await fetch(`${BASE}/responses`, {
+    method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${KEY}`, 'x-opencode-session': 'interview-lab-bench' },
+    body: JSON.stringify({ model, instructions: SYSTEM, input: `Question:\n${fx.prompt}\n\nCandidate answer:\n${fx.answer}`, max_output_tokens: 2500, reasoning: { effort: 'low' } }),
+    signal: AbortSignal.timeout(90_000),
+  });
+  const ms = Date.now() - t0;
+  const data = await res.json().catch(() => null);
+  if (!res.ok) return { error: `${res.status} ${JSON.stringify(data).slice(0, 160)}`, ms };
+  const raw = (data.output || []).filter((o) => o.type === 'message').flatMap((o) => o.content || []).map((c) => c.text || '').join('');
+  return { raw, ms, usage: { completion_tokens: data.usage?.output_tokens } };
+}
 async function call(model, fx) {
+  if (RESPONSES(model)) return callResponses(model, fx);
   const t0 = Date.now();
   const res = await fetch(`${BASE}/chat/completions`, {
     method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${KEY}`, 'x-opencode-session': 'interview-lab-bench' },

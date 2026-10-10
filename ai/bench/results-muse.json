@@ -1,0 +1,224 @@
+[
+ {
+  "model": "muse-spark-1.3-contributor",
+  "n": 10,
+  "errors": 0,
+  "json": 10,
+  "caught": 10,
+  "avgMs": 5079,
+  "avgTok": 793,
+  "rows": [
+   {
+    "fx": "code-off-by-one",
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 6538,
+    "tokens": 949,
+    "verdict": "partial",
+    "raw": "{\"verdict\":\"partial\",\"strengths\":[\"Uses slicing and sum correctly for window average\",\"Builds output list in correct order\"],\"issues\":[\"Off-by-one in range(len(xs)-k) omits final window\"],\"next_step\":\"Change range to len(xs)-k+1 and verify with k==1, k==len(xs)\"}"
+   },
+   {
+    "fx": "code-off-by-one",
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 3667,
+    "tokens": 683,
+    "verdict": "partial",
+    "raw": "{\"verdict\":\"partial\",\"strengths\":[\"Uses loop with slice sum divided by k correctly\"],\"issues\":[\"Off-by-one: range(len(xs)-k) misses final window\"],\"next_step\":\"Fix range to len(xs)-k+1 and handle k edge cases\"}"
+   },
+   {
+    "fx": "code-quadratic",
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 6154,
+    "tokens": 984,
+    "verdict": "partial",
+    "raw": "{\"verdict\":\"partial\",\"strengths\":[\"Logic correctly detects duplicates for small inputs\",\"Early exit on first duplicate found\"],\"issues\":[\"O(n^2) time is infeasible for 10^6 items\",\"Ignores stated scale requirement, will time out\"],\"next_step\":\"Rewrite using hash set for O(n) expected time\"}"
+   },
+   {
+    "fx": "code-quadratic",
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 7159,
+    "tokens": 1102,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Correct brute-force logic for equality-comparable inputs\"],\"issues\":[\"Quadratic O(n^2) time is infeasible for 10^6 items\",\"Misses O(n) hash-set solution with early exit\"],\"next_step\":\"Rewrite using a set for O(n) expected time and discuss memory tradeoff\"}"
+   },
+   {
+    "fx": "code-correct",
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 5609,
+    "tokens": 900,
+    "verdict": "pass",
+    "raw": "{\"verdict\":\"pass\",\"strengths\":[\"Correct early-exit set membership check\",\"O(n) average time handles 1e6 items\"],\"issues\":[],\"next_step\":\"Pass; optionally ask about memory vs sort tradeoff\"}"
+   },
+   {
+    "fx": "code-correct",
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 5225,
+    "tokens": 735,
+    "verdict": "pass",
+    "raw": "{\"verdict\":\"pass\",\"strengths\":[\"Correct early-exit logic\",\"O(n) average time suitable for 1e6 items\"],\"issues\":[],\"next_step\":\"Advance to time-space tradeoff discussion\"}"
+   },
+   {
+    "fx": "design-no-idempotency",
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 3419,
+    "tokens": 501,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"States basic POST fields and DB insert\",\"Notes scaling via queue\"],\"issues\":[\"No idempotency key so retries create duplicate payments\",\"Blocking downstream call causes timeouts without safe recovery\",\"Queue does not prevent double execution without deduplication\"],\"next_step\":\"Design Idempotency-Key storage, dedupe check, and state machine for safe retries\"}"
+   },
+   {
+    "fx": "design-no-idempotency",
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 4642,
+    "tokens": 668,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Mentions persisting payment row before downstream call\",\"Recognizes need for decoupling to handle scale\"],\"issues\":[\"No idempotency key allows duplicate payments on client retry\",\"Ignores unknown outcome after timeout following downstream call\",\"Queue alone does not prevent double execution\"],\"next_step\":\"Explain idempotency-key handling with DB unique constraint and state machine\"}"
+   },
+   {
+    "fx": "story-no-result",
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 4014,
+    "tokens": 663,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Acknowledged team effort during incident\"],\"issues\":[\"No specific role, actions, or timeline given\",\"No root cause, impact, or metrics stated\",\"No concrete lessons or follow-up described\"],\"next_step\":\"Describe one incident with your role, actions, and measurable outcome.\"}"
+   },
+   {
+    "fx": "story-no-result",
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 4359,
+    "tokens": 741,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Showed willingness to collaborate under pressure\"],\"issues\":[\"No concrete incident details, timeline, or personal contribution described\",\"Missing technical diagnosis, actions taken, and root cause analysis\",\"No quantified impact, resolution outcome, or preventive follow-up stated\"],\"next_step\":\"Retry using STAR: specify incident, your actions, result, and prevention\"}"
+   }
+  ]
+ },
+ {
+  "model": "muse-spark-1.2-contributor",
+  "n": 10,
+  "errors": 0,
+  "json": 10,
+  "caught": 10,
+  "avgMs": 6519,
+  "avgTok": 772,
+  "rows": [
+   {
+    "fx": "code-off-by-one",
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 10505,
+    "tokens": 1093,
+    "verdict": "partial",
+    "raw": "{\"verdict\":\"partial\",\"strengths\":[\"Clear loop and slice structure is readable\",\"Correct per-window average calculation\"],\"issues\":[\"Off-by-one: range(len(xs)-k) misses last window, need +1\",\"Recomputes sum each window O(n*k) instead of O(n) sliding sum\",\"No validation for k<=0, k>len(xs), or empty input\"],\"next_step\":\"Fix range to len(xs)-k+1, use running sum, and add edge-case validation for k\"}"
+   },
+   {
+    "fx": "code-off-by-one",
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 8570,
+    "tokens": 939,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Loop/slice structure is clear and idiomatic\",\"Correctly uses sum(xs[i:i+k])/k for average\"],\"issues\":[\"Off-by-one: range(len(xs)-k) misses last window, needs +1\",\"Recomputes sum each window: O(n*k) instead of O(n)\",\"No validation for k<=0, k>len(xs), empty xs causing wrong/zero-division\"],\"next_step\":\"Fix range to len(xs)-k+1, add validation for edge cases, then optimize to O(n) sliding sum\"}"
+   },
+   {
+    "fx": "code-quadratic",
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 5798,
+    "tokens": 730,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Functionally correct for small inputs\",\"Simple nested-loop logic easy to follow\"],\"issues\":[\"O(n^2) time infeasible for 10^6 items (~5e11 comparisons)\",\"Fails to use O(n) hash-set approach\",\"No consideration of scalability requirements\"],\"next_step\":\"Rewrite using set for O(n) time and discuss hashable vs unhashable handling\"}"
+   },
+   {
+    "fx": "code-quadratic",
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 5990,
+    "tokens": 870,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Logically correct for small inputs, returns True on duplicate\",\"Simple nested-loop logic easy to understand\"],\"issues\":[\"O(n^2) time - ~5e11 comparisons for 1e6 items, will timeout\",\"Ignores required O(n) hash-set or O(n log n) sort approach\",\"No consideration of scale constraint stated in prompt\"],\"next_step\":\"Reimplement using set for O(n) time: iterate once and check membership.\"}"
+   },
+   {
+    "fx": "code-correct",
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 4333,
+    "tokens": 561,
+    "verdict": "pass",
+    "raw": "{\"verdict\":\"pass\",\"strengths\":[\"Correct O(n) time early-exit using hash set\",\"Optimal for 10^6 hashable items\",\"Clear and idiomatic implementation\"],\"issues\":[\"Assumes hashable items; fails on unhashable types\",\"O(n) extra memory for large input\"],\"next_step\":\"Ask how to handle unhashable items or reduce memory via sorting.\"}"
+   },
+   {
+    "fx": "code-correct",
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 5224,
+    "tokens": 682,
+    "verdict": "pass",
+    "raw": "{\"verdict\":\"pass\",\"strengths\":[\"Correct O(n) early-exit logic\",\"O(1) average lookup via hash set\",\"Scales to 10^6 items\"],\"issues\":[\"Assumes hashable elements; not noted\"],\"next_step\":\"Probe space/time tradeoff: ask sorting alternative for unhashable or memory-constrained case\"}"
+   },
+   {
+    "fx": "design-no-idempotency",
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 5349,
+    "tokens": 673,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Mentions DB persistence before downstream call\",\"Recognizes need to decouple via queue for scale\"],\"issues\":[\"No Idempotency-Key handling causes duplicate payments on retry\",\"No deduplication table or uniqueness constraint described\",\"Ignores retry response semantics: 201 vs 200 vs 409\"],\"next_step\":\"Design POST /payments with Idempotency-Key, DB uniqueness, and safe retry status handling.\"}"
+   },
+   {
+    "fx": "design-no-idempotency",
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 5037,
+    "tokens": 586,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Persists payment row before calling downstream scheme\",\"Recognizes need for async decoupling via queue for scale\"],\"issues\":[\"No Idempotency-Key - client retry creates duplicate payments, unsafe for bank API\",\"No handling of unknown downstream result on timeout; blind retry or 201 is incorrect\",\"Queue without idempotency/deduplication and status polling does not fix safety\"],\"next_step\":\"Add required Idempotency-Key header with unique constraint, store request hash/response, return same result on replay and reconcile downstream state\"}"
+   },
+   {
+    "fx": "story-no-result",
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 7535,
+    "tokens": 783,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Acknowledges teamwork under pressure\"],\"issues\":[\"No specifics: no service, impact, timeline, or technical cause given\",\"No personal role, actions, or decisions described\",\"No root cause, resolution, or preventive follow-up explained\"],\"next_step\":\"Retry with one specific incident using STAR: context, your actions, resolution, and prevention.\"}"
+   },
+   {
+    "fx": "story-no-result",
+    "json": true,
+    "hit": true,
+    "bad": false,
+    "ms": 6848,
+    "tokens": 799,
+    "verdict": "fail",
+    "raw": "{\"verdict\":\"fail\",\"strengths\":[\"Shows willingness to collaborate under pressure during outage.\"],\"issues\":[\"No specifics on incident, timeline, impact, or personal role.\",\"No diagnostic steps, root cause, or concrete resolution actions described.\",\"No measurable outcome or preventive follow-up actions stated.\"],\"next_step\":\"Redo with STAR: one incident, your specific actions, timeline/metrics, and permanent prevention implemented.\"}"
+   }
+  ]
+ }
+]

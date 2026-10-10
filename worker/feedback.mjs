@@ -51,24 +51,45 @@ export function parseFeedback(raw) {
   return { verdict: o.verdict, strengths: list(o.strengths), issues: list(o.issues), next_step: typeof o.next_step === 'string' ? o.next_step.slice(0, 300) : '' };
 }
 
-export async function askModel(env, p, fetchImpl = fetch) {
+/* Routing: code and SQL answers are generic, so they go to the cheapest model (Muse Spark, whose discount is paid for
+   by training on prompts). Design and story answers can contain real work details, so they go to a model that does not
+   train on them. If the code model fails, the general model answers instead. */
+export const DEFAULT_MODEL = 'deepseek-v4-flash';
+export const CODE_MODEL = 'muse-spark-1.3-contributor';
+export const modelFor = (env, kind) => (kind === 'code' || kind === 'sql' ? env.LAB_MODEL_CODE || CODE_MODEL : env.LAB_MODEL || DEFAULT_MODEL);
+const usesResponses = (model) => /^muse-spark/.test(model); // these models only speak the /responses protocol
+
+const userText = (p) => `Question:\n${p.prompt}\n\nCandidate answer:\n${p.answer}`;
+
+async function viaGateway(env, model, p, fetchImpl) {
   const base = (env.OPENCODE_BASE_URL || 'https://opencode.ai/zen/go/v1').replace(/\/$/, '');
-  const call = () => fetchImpl(`${base}/chat/completions`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${env.OPENCODE_API_KEY}`, 'x-opencode-session': 'interview-lab' },
-    body: JSON.stringify({
-      model: env.LAB_MODEL || 'deepseek-v4-flash', max_tokens: 1200, temperature: 0.2, reasoning_effort: 'none',
-      messages: [{ role: 'system', content: systemPrompt(p.kind) }, { role: 'user', content: `Question:\n${p.prompt}\n\nCandidate answer:\n${p.answer}` }],
-    }),
-    signal: AbortSignal.timeout(40000),
+  const headers = { 'content-type': 'application/json', authorization: `Bearer ${env.OPENCODE_API_KEY}`, 'x-opencode-session': 'interview-lab' };
+  const responses = usesResponses(model);
+  const call = () => fetchImpl(`${base}/${responses ? 'responses' : 'chat/completions'}`, {
+    method: 'POST', headers, signal: AbortSignal.timeout(40000),
+    body: JSON.stringify(responses
+      ? { model, instructions: systemPrompt(p.kind), input: userText(p), max_output_tokens: 2500, reasoning: { effort: 'low' } }
+      : { model, max_tokens: 1200, temperature: 0.2, reasoning_effort: 'none', messages: [{ role: 'system', content: systemPrompt(p.kind) }, { role: 'user', content: userText(p) }] }),
   });
   let res = await call();
   if (res.status === 429 || res.status === 503) { await new Promise((r) => setTimeout(r, 1200)); res = await call(); }
   const data = await res.json().catch(() => null);
   if (!res.ok) throw new Error(`provider ${res.status}`);
-  const fb = parseFeedback(data?.choices?.[0]?.message?.content ?? '');
+  const raw = responses
+    ? (data?.output || []).filter((o) => o.type === 'message').flatMap((o) => o.content || []).map((c) => c.text || '').join('')
+    : data?.choices?.[0]?.message?.content ?? '';
+  const fb = parseFeedback(raw);
   if (!fb) throw new Error('unusable reply');
   return fb;
+}
+
+export async function askModel(env, p, fetchImpl = fetch) {
+  const model = modelFor(env, p.kind), fallback = env.LAB_MODEL || DEFAULT_MODEL;
+  try { return await viaGateway(env, model, p, fetchImpl); }
+  catch (e) {
+    if (model === fallback || (e && e.name === 'TimeoutError')) throw e;
+    return viaGateway(env, fallback, p, fetchImpl);
+  }
 }
 
 async function readJson(request, maxBytes) {
@@ -91,7 +112,7 @@ export async function handle(request, env, fetchImpl = fetch) {
   const url = new URL(request.url);
   const cors = corsHeaders(request.headers.get('Origin'), env.LAB_DEV_ORIGIN ? [env.LAB_DEV_ORIGIN] : []);
   const reply = (body, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store', ...cors } });
-  if (url.pathname === '/health') return reply({ ok: true, configured: !!env.OPENCODE_API_KEY, model: env.LAB_MODEL || 'deepseek-v4-flash' });
+  if (url.pathname === '/health') return reply({ ok: true, configured: !!env.OPENCODE_API_KEY, model: env.LAB_MODEL || DEFAULT_MODEL, codeModel: env.LAB_MODEL_CODE || CODE_MODEL });
   if (url.pathname !== '/feedback') return reply({ error: 'Not found.' }, 404);
   if (request.method === 'OPTIONS') return new Response(null, { status: cors['Access-Control-Allow-Origin'] ? 204 : 403, headers: cors });
   if (request.method !== 'POST') return reply({ error: 'POST only.' }, 405);
