@@ -12,3 +12,4 @@ jobs:
       - run: node scripts/validate.mjs
       - run: node scripts/test-sync.mjs
       - run: node scripts/test-worker.mjs
+      - run: node scripts/validate-katas.mjs

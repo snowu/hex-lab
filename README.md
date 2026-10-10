@@ -79,3 +79,20 @@ fix and one thing to practise. The model key lives only in the Worker. The butto
 ## Owner-only track
 
 The open-banking focus track (plus its mock questions, cards and resources) is shown only when the stored sign-in session belongs to the owner email (`assets/owner-gate.js`). It is a cosmetic JS check, not access control: the content is in the public files.
+
+## Katas
+
+`#/katas` lists Exercism's Python practice exercises (139 imported, MIT licence, authors credited per exercise). They run in
+the browser against their own `unittest` suites (harness mode `#!unittest:<module>`), with the same editor, vim mode,
+timer, hints and AI help as the other challenges, and progress counts like everything else. Other languages: each kata shows
+the matching `exercism download` command plus a paste box for AI feedback.
+
+- Import / refresh: `node scripts/import-exercism.mjs [--ref=<sha>]` (pinned commit recorded in `content/katas/index.js`).
+- `node scripts/validate-katas.mjs` checks every reference solution passes and every starter fails (CI runs it).
+- Excluded because they cannot run in one browser worker: `paasio`, `error-handling`, `parallel-letter-frequency`.
+
+## Ask AI buttons
+
+Flashcards, quick checks, predict-the-output, bug hunts, code challenges, mock questions, design reps, lessons and katas have an
+"Ask AI" button. It opens the tutor chat and sends a prepared question; the chat adds the open page and your editor as context.
+`⇔` in the chat header makes the panel wider.

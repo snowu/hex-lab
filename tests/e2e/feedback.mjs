@@ -42,6 +42,7 @@ export default async function ({ url, browser, ok, section }) {
   await page.route(FAKE + '/chat', async (route) => {
     const body = JSON.parse(route.request().postData()); chatReqs.push(body);
     if (/boom/.test(body.messages.at(-1).content)) return route.fulfill({ status: 502, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ error: 'The tutor could not answer. Try again.' }) });
+    if (/^Flashcard/.test(body.messages.at(-1).content)) return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ reply: '## Why it works\n\n- first **point**\n- second point\n\n1. step one\n2. step two' }) });
     return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ reply: 'Try a `set`.\n\n```python\nseen = set()\n```\n<img src=x onerror=window.__pwned2=1>' }) });
   });
   await page.go(url, '#/lesson/' + lessonId, 700);
@@ -67,6 +68,29 @@ export default async function ({ url, browser, ok, section }) {
   ok(await page.locator('#chat').isHidden(), 'Escape closes the panel');
   await page.keyboard.press('Control+j');
   ok(await page.locator('#chat').isVisible() && (await page.locator('.chat-msg').count()) >= 4, 'Ctrl+J reopens it with the conversation kept');
+
+
+  section('Ask AI buttons');
+  await page.locator('#chatX').click();
+  await page.go(url, '#/review', 600);
+  const ask = page.locator('.fc-tools .ask').first();
+  ok(await ask.count() === 1, 'a flashcard has an "Ask AI to explain this card" button');
+  const before = chatReqs.length;
+  await ask.click();
+  await page.waitForFunction(() => document.querySelectorAll('.chat-msg.assistant h4').length > 0);
+  const sent = chatReqs[before];
+  ok(/^Flashcard \(/.test(sent.messages.at(-1).content) && sent.messages.at(-1).content.includes('Card answer:') && sent.messages.at(-1).content.includes('too terse'), 'clicking it opens the chat and sends the card question and answer');
+  ok(sent.context.includes('Route: #/review'), 'with the page as context');
+  ok(await page.locator('.chat-msg.assistant li').count() === 4 && await page.locator('.chat-msg.assistant strong').innerText() === 'point' && await page.locator('.chat-msg.assistant ol').count() === 1, 'replies render headings, lists and bold');
+  const w1 = await page.locator('#chat').evaluate((e) => e.getBoundingClientRect().width);
+  await page.locator('#chatWide').click();
+  const w2 = await page.locator('#chat').evaluate((e) => e.getBoundingClientRect().width);
+  ok(w2 > w1 + 100, `the width toggle makes the chat wider (${Math.round(w1)} -> ${Math.round(w2)}px)`);
+  await page.locator('#chatWide').click();
+  await page.locator('#chatX').click();
+  await page.go(url, '#/lesson/' + lessonId, 600);
+  ok(await page.locator('.lhead .ask').count() === 1 && await page.locator('.ex-actions .ask').count() >= 1, 'lesson header and code challenges have Ask AI buttons');
+  await page.go(url, '#/mock', 400); await page.locator('.fchip').first().click().catch(() => {});
 
   section('story and design hooks');
   await page.go(url, '#/stories', 400);

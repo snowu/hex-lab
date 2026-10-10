@@ -645,9 +645,10 @@ details.schema{margin:0 14px 10px;background:var(--panel2)}details.schema pre{fo
 .fbk-note{font-size:12px;margin-top:12px}
 
 /* ---- tutor chat side panel ---- */
-#chat{position:fixed;top:0;right:0;bottom:0;z-index:90;width:min(420px,100vw);display:flex;flex-direction:column;background:var(--panel);border-left:1px solid var(--line2);box-shadow:-8px 0 30px rgba(0,0,0,.35)}
+#chat{position:fixed;top:0;right:0;bottom:0;z-index:90;width:var(--chat-w);display:flex;flex-direction:column;background:var(--panel);border-left:1px solid var(--line2);box-shadow:-8px 0 30px rgba(0,0,0,.35)}
 #chat[hidden]{display:none}
-@media(min-width:1100px){body.chat-open{padding-right:420px}body.chat-open .cmdk{padding-right:420px}}
+body{--chat-w:min(100vw,clamp(440px,34vw,640px))}body.chat-wide{--chat-w:min(100vw,clamp(560px,54vw,980px))}
+@media(min-width:1100px){body.chat-open{padding-right:var(--chat-w)}body.chat-open .cmdk{padding-right:var(--chat-w)}}
 .chat-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
 .chat-head .sp{flex:1}
 .chat-st{font-size:12px;color:var(--muted)}
@@ -667,3 +668,28 @@ details.schema{margin:0 14px 10px;background:var(--panel2)}details.schema pre{fo
 .chat-row textarea{flex:1;resize:vertical;min-height:44px;max-height:180px;font:inherit;font-size:14px;padding:8px;background:var(--bg);color:var(--ink);border:1px solid var(--line2)}
 /* With the chat panel open the page is narrower: use the compact header (nav wraps under the controls) so nothing hides under the panel */
 @media(min-width:1100px){body.chat-open .top-in{flex-wrap:wrap;gap:10px;padding:10px 14px}body.chat-open .top nav{order:3;width:100%;margin:0;overflow:auto}body.chat-open .top nav a{padding:6px 10px}}
+
+.chat-msg.assistant h4{margin:10px 0 4px;font-size:14px;color:var(--accent)}
+.chat-msg.assistant ul,.chat-msg.assistant ol{margin:4px 0 8px;padding-left:20px}.chat-msg.assistant li{margin:2px 0}
+.chat-msg{font-size:14.5px}
+.fc-tools{display:flex;justify-content:center;margin-top:14px}
+.ask-row{margin-top:10px}
+.btn.ask{border-color:var(--line2);color:var(--accent)}
+.lhead .btn.ask{margin-top:10px}
+
+/* ---- katas ---- */
+.kstats{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 14px;border:1px solid var(--line);margin:14px 0}
+.kstats b{font-size:1.4rem;color:var(--accent);margin-right:6px}.kstats span{color:var(--muted)}
+.kstats .mbar{flex:1;min-width:120px;height:6px;background:var(--panel2);display:block}.kstats .mbar i{display:block;height:100%;background:var(--accent)}
+.kfilters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+.kfilters .inp{max-width:240px}.ksep{width:1px;height:20px;background:var(--line2);margin:0 4px}
+.klist{display:flex;flex-direction:column;border:1px solid var(--line)}
+.krow{display:grid;grid-template-columns:22px minmax(150px,230px) 1fr 70px;gap:12px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line);color:var(--ink);text-decoration:none}
+.krow:last-child{border-bottom:0}.krow:hover{background:var(--panel2)}
+.krow .kn{font-weight:600}.krow .kb{color:var(--muted);font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.krow .kd{font-size:11px;letter-spacing:1px;color:var(--accent);text-align:right}
+.kck{width:16px;height:16px;border:1px solid var(--line2);display:grid;place-items:center;color:var(--accent)}.krow.done .kck{border-color:var(--accent)}
+@media(max-width:700px){.krow{grid-template-columns:22px 1fr 60px}.krow .kb{display:none}}
+.kother{margin:18px 0;padding:14px}.kother h3{margin:0 0 6px}
+.kcmd{margin:10px 0}.kother textarea{width:100%;margin-top:6px}
+.kpn{margin-top:18px}.kcredit{font-size:12.5px;margin-top:16px}

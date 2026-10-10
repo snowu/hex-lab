@@ -10,6 +10,6 @@ export default async function ({ url, browser, ok }) {
   ok(thin.length === 0, `${routes.length} routes render content` + (thin.length ? ' (thin: ' + thin.join(', ') + ')' : ''));
   ok(page.errors.length === 0, 'no uncaught errors while visiting every route ' + JSON.stringify(page.errors.slice(0, 2)));
   const nav = await page.evaluate(() => [...document.querySelectorAll('.top nav a')].map((a) => a.textContent.trim()));
-  ok(nav.length === 7, 'main navigation has 7 entries: ' + nav.join(' '));
+  ok(nav.length === 8 && nav.includes('katas'), 'main navigation has 8 entries: ' + nav.join(' '));
   await page.close();
 }

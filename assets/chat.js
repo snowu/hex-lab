@@ -9,6 +9,9 @@
   const load = () => { try { const v = JSON.parse(localStorage.getItem(KEY)); return Array.isArray(v) ? v : []; } catch { return []; } };
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(msgs.slice(-MAX_KEPT))); } catch { /* ignore */ } };
   let msgs = load(), busy = false, useCtx = true;
+  const WIDE = 'silc:wide';
+  const wide = () => { try { return localStorage.getItem(WIDE) === '1'; } catch { return false; } };
+  const applyWide = () => document.body.classList.toggle('chat-wide', wide());
 
   const SUGGEST = ['Explain this page in simple terms', 'Quiz me on this, one question at a time', 'What would a senior interviewer push on here?', 'Review what I have written so far'];
 
@@ -23,7 +26,15 @@
     return parts.join('\n\n');
   }
 
-  /* ---------- safe rich text: fenced code and `inline code`, everything else as text ---------- */
+  /* ---------- safe rich text: headings, lists, fenced code, `inline code`, **bold**; everything else is text ---------- */
+  function inline(parent, text) {
+    text.split(/(`[^`\n]+`|\*\*[^*\n]+\*\*|\*[^*\s][^*\n]*\*)/g).forEach((bit) => {
+      if (bit.length > 2 && bit.startsWith('`') && bit.endsWith('`')) { const c = document.createElement('code'); c.textContent = bit.slice(1, -1); parent.appendChild(c); }
+      else if (bit.length > 4 && bit.startsWith('**') && bit.endsWith('**')) { const b = document.createElement('strong'); b.textContent = bit.slice(2, -2); parent.appendChild(b); }
+      else if (bit.length > 2 && bit.startsWith('*') && bit.endsWith('*')) { const i = document.createElement('em'); i.textContent = bit.slice(1, -1); parent.appendChild(i); }
+      else if (bit) parent.appendChild(document.createTextNode(bit));
+    });
+  }
   function rich(el, text) {
     el.replaceChildren();
     text.split(/(```[\s\S]*?```)/g).forEach((chunk) => {
@@ -32,14 +43,20 @@
         const pre = document.createElement('pre'), code = document.createElement('code');
         code.textContent = chunk.slice(3, -3).replace(/^[a-zA-Z0-9_+-]*\n/, '').replace(/\n$/, ''); pre.appendChild(code); el.appendChild(pre); return;
       }
-      chunk.split(/\n{2,}/).forEach((para) => {
-        if (!para.trim()) return;
-        const p = document.createElement('p');
-        para.split(/(`[^`\n]+`)/g).forEach((bit) => {
-          if (bit.length > 2 && bit.startsWith('`') && bit.endsWith('`')) { const c = document.createElement('code'); c.textContent = bit.slice(1, -1); p.appendChild(c); }
-          else p.appendChild(document.createTextNode(bit));
-        });
-        el.appendChild(p);
+      let list = null, para = null;
+      const flush = () => { list = null; para = null; };
+      chunk.split('\n').forEach((line) => {
+        const h = /^#{1,4}\s+(.*)$/.exec(line), ul = /^\s*[-*•]\s+(.*)$/.exec(line), ol = /^\s*\d+[.)]\s+(.*)$/.exec(line);
+        if (!line.trim()) { flush(); return; }
+        if (h) { flush(); const e = document.createElement('h4'); inline(e, h[1]); el.appendChild(e); return; }
+        if (ul || ol) {
+          const tag = ul ? 'UL' : 'OL';
+          if (!list || list.tagName !== tag) { list = document.createElement(tag.toLowerCase()); el.appendChild(list); para = null; }
+          const li = document.createElement('li'); inline(li, (ul || ol)[1]); list.appendChild(li); return;
+        }
+        list = null;
+        if (!para) { para = document.createElement('p'); el.appendChild(para); } else para.appendChild(document.createElement('br'));
+        inline(para, line);
       });
     });
   }
@@ -49,6 +66,7 @@
   panel.id = 'chat'; panel.hidden = true; panel.setAttribute('aria-label', 'Tutor chat');
   panel.innerHTML = `<div class="chat-head"><b>Tutor</b><span class="chat-st" id="chatSt">checking…</span><span class="sp"></span>
       <button class="icon-btn" id="chatTest" title="Test the connection" aria-label="Test the connection">↻</button>
+      <button class="icon-btn" id="chatWide" title="Wider / narrower" aria-label="Toggle chat width">⇔</button>
       <button class="icon-btn" id="chatClear" title="Clear the conversation" aria-label="Clear the conversation">⌫</button>
       <button class="icon-btn" id="chatX" title="Close (Esc)" aria-label="Close chat">✕</button></div>
     <div class="chat-log" id="chatLog" aria-live="polite"></div>
@@ -105,6 +123,8 @@
 
   $('#chatX').onclick = close;
   $('#chatTest').onclick = test;
+  $('#chatWide').onclick = () => { try { localStorage.setItem(WIDE, wide() ? '0' : '1'); } catch { /* ignore */ } applyWide(); };
+  applyWide();
   $('#chatClear').onclick = () => { if (!msgs.length || confirm('Clear this conversation?')) { msgs = []; save(); draw(); } };
   $('#chatCtx').onchange = (e) => { useCtx = e.target.checked; ctxLabel(); };
   sendBtn.onclick = () => send(input.value);
@@ -112,6 +132,16 @@
   panel.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
   document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'j') { e.preventDefault(); toggle(); } });
   addEventListener('hashchange', () => { if (!panel.hidden) setTimeout(ctxLabel, 400); });
+
+  /* Any element with data-ask="…" (see askBtn in app.js) opens the chat and sends that question, with the page as context. */
+  function ask(prompt) {
+    if (panel.hidden) open();
+    if (busy) return;
+    useCtx = true; $('#chatCtx').checked = true; ctxLabel();
+    send(prompt);
+  }
+  document.addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('[data-ask]'); if (b) { e.preventDefault(); ask(b.dataset.ask); } });
+  window.CHAT = { open, close, ask };
 
   const btn = $('#chatBtn');
   if (btn) { btn.hidden = false; btn.innerHTML = (window.LAB ? LAB.ic('chat', 18) : 'Ask'); btn.onclick = toggle; }

@@ -11,6 +11,9 @@ import io
 import json
 import math
 import sqlite3
+import sys
+import types
+import unittest
 
 
 class _Raises:
@@ -76,7 +79,69 @@ async def _exec(src, filename, ns):
         await result
 
 
+
+# ---------------------------------------------------------------- unittest katas (Exercism style)
+# tests start with "#!unittest:<module>\n": the user's code becomes importable module <module>, then the TestCase
+# classes found in the test source run one method at a time and each becomes a result row.
+
+_UNITTEST_HEADER = "#!unittest:"
+
+
+def _test_label(name):
+    return name[5:].replace("_", " ") if name.startswith("test_") else name
+
+
+def _short_error(tb_text):
+    """The exception line(s) of a traceback, without the frames."""
+    lines = tb_text.strip().splitlines()
+    for i, line in enumerate(lines):
+        head = line.split(":", 1)[0]
+        if head and " " not in head and (head.endswith(("Error", "Exception", "Exit")) or head == "AssertionError"):
+            return "\n".join(lines[i:])[:600]
+    return (lines[-1] if lines else "failed")[:600]
+
+
+def _case_names(cls):
+    ordered = [n for n in cls.__dict__ if n.startswith("test") and callable(getattr(cls, n, None))]
+    rest = [n for n in unittest.TestLoader().getTestCaseNames(cls) if n not in ordered]
+    return ordered + rest
+
+
+def run_unittest(code, tests):
+    header, _, test_src = tests.partition("\n")
+    module = header[len(_UNITTEST_HEADER):].strip() or "solution"
+    out = io.StringIO()
+    mod = types.ModuleType(module)
+    sys.modules[module] = mod
+    results = []
+    try:
+        with contextlib.redirect_stdout(out):
+            try:
+                exec(compile(code, "<solution>", "exec"), mod.__dict__)
+                ns = {"__name__": "__kata_tests__"}
+                exec(compile(test_src, "<tests>", "exec"), ns)
+            except BaseException as e:  # noqa: BLE001
+                return {"fatal": _describe(e), "logs": out.getvalue().splitlines(), "results": []}
+            classes = [v for v in ns.values() if isinstance(v, type) and issubclass(v, unittest.TestCase) and v is not unittest.TestCase and v.__module__ == "__kata_tests__"]
+            for cls in classes:
+                for name in _case_names(cls):
+                    res = unittest.TestResult()
+                    cls(name).run(res)
+                    bad = (res.failures + res.errors)
+                    row = {"name": _test_label(name), "pass": not bad}
+                    if bad:
+                        row["err"] = _short_error(bad[0][1])
+                    results.append(row)
+    finally:
+        sys.modules.pop(module, None)
+    if not results:
+        return {"fatal": "No tests were found.", "logs": out.getvalue().splitlines(), "results": []}
+    return {"logs": out.getvalue().splitlines(), "results": results}
+
+
 async def run(code, tests="", allow_empty=False, test_timeout=2.0, extra=None):
+    if tests.startswith(_UNITTEST_HEADER):
+        return run_unittest(code, tests)
     registry = []
     out = io.StringIO()
 
