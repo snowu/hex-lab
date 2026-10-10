@@ -15,7 +15,9 @@ for (const m of html.matchAll(/<script src="(content\/[^"]+)"/g)) {
 }
 const { TRACKS, CARDS = [], MOCK = [], RESOURCES = [] } = vm.runInContext('({TRACKS, CARDS: window.CARDS||[], MOCK: window.MOCK||[], RESOURCES: window.RESOURCES||[]})', ctx);
 
-let bad = 0, exercises = 0, quizzes = 0;
+const simIds = new Set([...fs.readFileSync(path.join(root, 'assets/sims.js'), 'utf8').matchAll(/SIMS\.(\w+)\s*=/g)].map((m) => m[1]));
+const pids = new Set();
+let bad = 0, exercises = 0, quizzes = 0, bugs = 0, predicts = 0, sims = 0;
 const fail = (m) => { bad++; console.error('✗', m); };
 const ids = new Set();
 for (const t of TRACKS) for (const l of t.lessons) {
@@ -27,6 +29,28 @@ for (const t of TRACKS) for (const l of t.lessons) {
       quizzes++;
       if (!(s.answer >= 0 && s.answer < s.options.length)) fail(where + ' quiz answer out of range');
     }
+    if (s.type === 'bug') {
+      const n = s.code.split('\n').length;
+      if (!s.pid) fail(where + ' bug section needs a pid');
+      if (!s.bugs?.length) fail(where + ' bug section has no bugs');
+      for (const b of s.bugs || []) { if (!(b.line >= 1 && b.line <= n)) fail(where + ' bug line ' + b.line + ' out of range'); if (!b.why) fail(where + ' bug line ' + b.line + ' has no explanation'); }
+      for (const o of s.ok || []) if (!(o >= 1 && o <= n)) fail(where + ' ok line ' + o + ' out of range');
+      bugs++;
+    }
+    if (s.type === 'predict') {
+      if (!s.pid) fail(where + ' predict section needs a pid');
+      if (!(s.answer >= 0 && s.answer < s.options.length)) fail(where + ' predict answer out of range');
+      const r = await ctx.runTests(s.code + "\n;test('run', () => new Promise((r) => setTimeout(r, 80)));");
+      if (r.fatal) fail(where + ' predict snippet errors: ' + r.fatal);
+      else if (JSON.stringify(r.logs) !== JSON.stringify(s.output)) fail(where + ' predict output mismatch. declared ' + JSON.stringify(s.output) + ' actual ' + JSON.stringify(r.logs));
+      predicts++;
+    }
+    if (s.type === 'sim') {
+      if (!s.pid) fail(where + ' sim section needs a pid');
+      if (!simIds.has(s.id)) fail(where + ' sim "' + s.id + '" has no implementation in assets/sims.js');
+      sims++;
+    }
+    if (s.pid) { if (pids.has(l.id + ':' + s.pid)) fail(where + ' duplicate pid ' + s.pid); pids.add(l.id + ':' + s.pid); }
     if (s.type === 'code') {
       exercises++;
       const sol = await ctx.runTests(s.solution + '\n;\n' + s.tests);
@@ -43,6 +67,6 @@ MOCK.forEach((m, i) => {
   for (const id of m.lessons || []) if (!ids.has(id)) fail('mock ' + i + ' links to unknown lesson ' + id);
 });
 RESOURCES.forEach((r, i) => { if (!/^https:\/\//.test(r.url) || !r.title || !r.cat || !r.note) fail('resource ' + i + ' malformed'); });
-console.log(`${TRACKS.length} tracks, ${ids.size} lessons, ${exercises} exercises, ${quizzes} quizzes, ${CARDS.length} cards, ${MOCK.length} mock questions, ${RESOURCES.length} resources`);
+console.log(`${TRACKS.length} tracks, ${ids.size} lessons, ${exercises} exercises, ${bugs} bug hunts, ${predicts} predicts, ${sims} sims, ${quizzes} quizzes, ${CARDS.length} cards, ${MOCK.length} mock questions, ${RESOURCES.length} resources`);
 if (bad) { console.error(bad + ' problem(s)'); process.exit(1); }
 console.log('All content valid ✓');

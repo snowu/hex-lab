@@ -7,6 +7,11 @@ Pure static site (no build step), hosted on GitHub Pages.
 - **7 tracks, 26 lessons**: Senior Playbook, Coding Fluency, System Design, Distributed Systems & Reliability, AI-Era Engineering, Neonomics & Open Banking, Scale/Kafka/AWS/Terraform
 - **24 in-browser coding exercises** with a CodeMirror editor, tests running in a sandboxed Web Worker (with timeout), hints and reference solutions
 - **Interactive lessons**: quizzes, step-through walkthroughs, reveal-and-self-check blocks
+- **5 live simulations**: Kafka partitions/consumer groups, circuit breaker, consistent-hash ring, token bucket, and a bank-outage simulator (shared pool vs timeout / bulkhead / breaker)
+- **6 bug hunts** (click the buggy lines) and **4 predict-the-output** snippets that you can then run for real
+- **Every lesson works as text, as practice, or both** (switch at the top of a lesson)
+- **Vim motions** in the editor (toggle, remembered), with `:run` / `:w` to run the tests
+- **Reset all progress** from the footer
 - **56 flashcards** with Leitner spaced repetition
 - **Mock interview**: random question, timer, rubric
 - **36 curated free resources** and full-text search (press `/`)
@@ -20,7 +25,8 @@ node scripts/validate.mjs     # every exercise's solution must pass, every start
 
 ## Add content
 Lessons live in `content/t*.js` as plain objects (`text`, `quiz`, `reveal`, `steps`, `code` sections).
-A `code` section needs `starter`, `tests` (uses `test`, `eq`, `assert`, `throws`), and `solution`; CI checks them.
+Interactive sections (`sim`, `bug`, `predict`) are added with `INSERT(lessonId, position, section)` in `content/t8-interactive.js`, each with a unique `pid`; simulations are implemented in `assets/sims.js`.
+A `code` section needs `starter`, `tests` (uses `test`, `eq`, `assert`, `throws`), and `solution`. A `predict` section declares its expected `output`. CI (`scripts/validate.mjs`) runs all of them for real.
 
 ## Accuracy note
 Neonomics details come from their public docs and general PSD2 knowledge, not insider information. Verify against <https://docs.neonomics.io>.

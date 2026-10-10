@@ -44,6 +44,8 @@ const P = {
   route: '<circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h6a4 4 0 0 0 0-8h-4a4 4 0 0 1 0-8h6"/>',
   list: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/>',
   home: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',
+  bug: '<rect x="8" y="6" width="8" height="14"/><path d="M19 7l-3 2M5 7l3 2M19 19l-3-2M5 19l3-2M20 13h-4M4 13h4M12 20V10M9 6a3 3 0 0 1 6 0"/>',
+  sim: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
 };
 const ic = (n, s = 18, sw = 1.8) => `<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">${P[n] || ''}</svg>`;
 const HUE = { playbook: 255, coding: 190, design: 150, reliability: 28, ai: 320, openbanking: 44, cloud: 215 };
@@ -56,7 +58,14 @@ let progress = store.get('progress', {});
 let xp = store.get('xp', 0);
 let days = store.get('days', []);
 const dstr = (d) => d.toISOString().slice(0, 10);
-const itemsOf = (l) => l.sections.map((s, i) => ({ s, k: (s.type === 'quiz' ? 'q' : 'c') + i })).filter((x) => x.s.type === 'quiz' || x.s.type === 'code');
+const KP = { quiz: 'q', code: 'c', bug: 'b', predict: 'p' };
+function keysOf(l) {
+  if (l._keys) return l._keys;
+  let n = 0; /* legacy sections keep index-based keys so saved progress/drafts survive; added sections use their pid */
+  l._keys = l.sections.map((s) => { const legacy = !s.pid, idx = legacy ? n++ : null; return KP[s.type] ? (legacy ? KP[s.type] + idx : 'x:' + s.pid) : null; });
+  return l._keys;
+}
+const itemsOf = (l) => l.sections.map((s, i) => ({ s, k: keysOf(l)[i] })).filter((x) => x.k);
 const lessonPct = (l) => {
   const items = itemsOf(l), p = progress[l.id] || {};
   if (!items.length) return p.read ? 100 : 0;
@@ -151,12 +160,13 @@ function viewHome() {
   const total = TRACKS.reduce((a, t) => a + t.lessons.length, 0);
   const done = TRACKS.reduce((a, t) => a + t.lessons.filter((l) => lessonPct(l) === 100).length, 0);
   const due = dueCards().length, nx = nextLesson(), s = streak();
-  const exTotal = TRACKS.reduce((a, t) => a + t.lessons.reduce((b, l) => b + l.sections.filter((x) => x.type === 'code').length, 0), 0);
+  const cnt = (type) => TRACKS.reduce((a, t) => a + t.lessons.reduce((b, l) => b + l.sections.filter((x) => x.type === type).length, 0), 0);
+  const exTotal = cnt('code'), bugTotal = cnt('bug'), simTotal = cnt('sim');
   app.innerHTML = `
     <section class="hero"><div class="hero-l">
       <span class="eyebrow"><span class="p">$</span> ./senior-prep <b>--mode=ai-era</b></span>
       <h1>Practice like it's the <span class="grad">real interview.</span><span class="cur"></span></h1>
-      <p class="lead">${TRACKS.length} tracks, ${exTotal} runnable coding challenges, flashcards with spaced repetition and mock interviews, from system design and Kafka to AWS, Terraform and a dedicated open-banking track for Neonomics.</p>
+      <p class="lead">${TRACKS.length} tracks with ${exTotal} coding challenges, ${bugTotal} bug hunts and ${simTotal} interactive simulations, plus flashcards and mock interviews. From system design and Kafka to AWS, Terraform and a dedicated open-banking track for Neonomics. Every lesson works as text, as practice, or both.</p>
       <div class="cta">
         <a class="btn primary" href="#/lesson/${(nx ? nx.l : TRACKS[0].lessons[0]).id}">${ic('play', 16)} ${nx && (nx.resume || nx.started) ? 'Continue learning' : 'Start learning'}</a>
         <a class="btn" href="#/review">${ic('cards', 16)} ${due} cards due</a>
@@ -224,7 +234,8 @@ function viewTrack(id) {
 /* ---------- lesson ---------- */
 function secMeta(s, i) {
   if (s.type === 'quiz') { const q = strip(s.q); return { t: q.length > 44 ? q.slice(0, 44) + '…' : q, act: true }; }
-  if (s.type === 'code') return { t: s.title, act: true };
+  if (s.type === 'code' || s.type === 'bug' || s.type === 'predict') return { t: s.title, act: true };
+  if (s.type === 'sim') return { t: s.title };
   if (s.type === 'steps') return { t: 'Walkthrough' };
   if (s.type === 'reveal') return { t: s.title.replace(/^[^\p{L}\p{N}“"(]+/u, '') };
   const m = /<h[23][^>]*>(.*?)<\/h[23]>/is.exec(s.html || '');
@@ -236,17 +247,22 @@ function viewLesson(id) {
   const { t, l, i } = f, h = hueOf(t.id);
   document.title = l.title + ' · Senior Interview Lab';
   store.set('last', l.id);
-  const nCode = l.sections.filter((s) => s.type === 'code').length, nQuiz = l.sections.filter((s) => s.type === 'quiz').length;
+  const ct = (...ty) => l.sections.filter((x) => ty.includes(x.type)).length;
+  const nCode = ct('code', 'bug'), nQuiz = ct('quiz', 'predict'), nSim = ct('sim');
+  const mode = store.get('lmode', 'all'), READ = ['text', 'reveal'];
+  const cls = (x) => (READ.includes(x.type) ? 'read' : x.type === 'steps' ? 'both' : 'prac');
+  VIM.eds = [];
   const metas = l.sections.map(secMeta);
-  const outline = metas.map((m, k) => m && `<li><button data-t="s${k}" class="${m.act ? 'act' : ''}"><span class="ck">${ic('check', 10, 3.4)}</span><span>${esc(m.t)}</span></button></li>`).filter(Boolean).join('');
+  const outline = metas.map((m, k) => m && `<li class="${cls(l.sections[k])}"><button data-t="s${k}" class="${m.act ? 'act' : ''}"><span class="ck">${ic('check', 10, 3.4)}</span><span>${esc(m.t)}</span></button></li>`).filter(Boolean).join('');
   const nxt = t.lessons[i + 1];
   app.innerHTML = `
-    <div class="lesson tc" style="--h:${h}">
-      <aside class="outline"><p class="oh">In this lesson</p><ol>${outline}</ol><div class="sm"><b id="lpct">${lessonPct(l)}%</b> complete<br>${nQuiz} quick check${nQuiz === 1 ? '' : 's'}${nCode ? ` · ${nCode} challenge${nCode === 1 ? '' : 's'}` : ''}</div></aside>
+    <div class="lesson tc m-${mode}" style="--h:${h}">
+      <aside class="outline"><p class="oh">In this lesson</p><ol>${outline}</ol><div class="sm"><b id="lpct">${lessonPct(l)}%</b> complete<br>${nQuiz} quick check${nQuiz === 1 ? '' : 's'}${nCode ? ` · ${nCode} challenge${nCode === 1 ? '' : 's'}` : ''}${nSim ? ` · ${nSim} simulation${nSim === 1 ? '' : 's'}` : ''}</div></aside>
       <article>
         <div class="crumbs"><a href="#/">${ic('home', 14)}</a> ${ic('arrow', 12)} <a href="#/track/${t.id}">${esc(t.title)}</a> ${ic('arrow', 12)} <span>Lesson ${i + 1}</span></div>
         <header class="lhead"><span class="chip tc" style="--h:${h}">${ic(t.id, 13)} ${esc(t.title)}</span><h1>${esc(l.title)}</h1><p class="sum">${esc(l.summary || '')}</p>
-          <div class="metas"><span class="chip">${ic('clock', 12)} ${l.minutes} min</span>${nQuiz ? `<span class="chip">${ic('target', 12)} ${nQuiz} quick check${nQuiz === 1 ? '' : 's'}</span>` : ''}${nCode ? `<span class="chip">${ic('terminal', 12)} ${nCode} challenge${nCode === 1 ? '' : 's'}</span>` : ''}</div></header>
+          <div class="metas"><span class="chip">${ic('clock', 12)} ${l.minutes} min</span>${nQuiz ? `<span class="chip">${ic('target', 12)} ${nQuiz} quick check${nQuiz === 1 ? '' : 's'}</span>` : ''}${nCode ? `<span class="chip">${ic('terminal', 12)} ${nCode} challenge${nCode === 1 ? '' : 's'}</span>` : ''}${nSim ? `<span class="chip">${ic('sim', 12)} ${nSim} simulation${nSim === 1 ? '' : 's'}</span>` : ''}</div>
+          <div class="seg" role="group" aria-label="Lesson view"><button data-m="all" class="${mode === 'all' ? 'on' : ''}">text + practice</button><button data-m="read" class="${mode === 'read' ? 'on' : ''}">read</button><button data-m="practice" class="${mode === 'practice' ? 'on' : ''}">practice</button></div></header>
         <div class="lbody" id="body"></div>
         <div class="endcard tc brk" style="--h:${h}">${nxt ? `<div class="tx"><div class="k">Up next</div><div class="tt">${esc(nxt.title)}</div></div><a class="btn primary" href="#/lesson/${nxt.id}">Next lesson ${ic('arrow', 16)}</a>` : `<div class="tx"><div class="k">Track end</div><div class="tt">That's the last lesson in ${esc(t.title)}.</div></div><a class="btn primary" href="#/">Pick another track ${ic('arrow', 16)}</a>`}
           ${i > 0 ? `<a class="btn" href="#/lesson/${t.lessons[i - 1].id}">${ic('arrowL', 16)} Previous</a>` : ''}</div>
@@ -257,13 +273,19 @@ function viewLesson(id) {
   const sync = () => {
     $('#lpct').textContent = lessonPct(l) + '%';
     const p = progress[l.id] || {};
-    l.sections.forEach((s, k) => { const b = outBtns['s' + k]; if (b && (s.type === 'quiz' || s.type === 'code')) b.parentElement.classList.toggle('okk', !!p[(s.type === 'quiz' ? 'q' : 'c') + k]); });
+    l.sections.forEach((s, k) => { const b = outBtns['s' + k], key = keysOf(l)[k]; if (b && key) b.parentElement.classList.toggle('okk', !!p[key]); });
   };
-  const disposers = [];
+  const disposers = [], redraws = [];
   l.sections.forEach((s, k) => {
-    const el = document.createElement('section'); el.className = 'sec'; el.id = 's' + k; body.appendChild(el);
-    ({ text: rText, quiz: rQuiz, reveal: rReveal, steps: rSteps, code: rCode }[s.type] || rText)(el, s, l, k, sync, h);
+    const el = document.createElement('section'); el.className = 'sec ' + cls(s); el.id = 's' + k; body.appendChild(el);
+    const r = ({ text: rText, quiz: rQuiz, reveal: rReveal, steps: rSteps, code: rCode, bug: rBug, predict: rPredict, sim: rSim }[s.type] || rText)(el, s, l, k, sync, h, disposers);
+    if (typeof r === 'function' && s.type === 'steps') redraws.push(r);
   });
+  $$('.seg button').forEach((b) => (b.onclick = () => {
+    const m = b.dataset.m; store.set('lmode', m);
+    $('.lesson').className = 'lesson tc m-' + m; $$('.seg button').forEach((x) => x.classList.toggle('on', x === b));
+    redraws.forEach((f) => f());
+  }));
   if (!itemsOf(l).length) progress[l.id] = { ...(progress[l.id] || {}), read: true }, store.set('progress', progress);
   sync();
   $$('.outline button').forEach((b) => (b.onclick = () => document.getElementById(b.dataset.t).scrollIntoView({ behavior: 'smooth', block: 'start' })));
@@ -277,7 +299,7 @@ const label = (icn, txt) => `<div class="sec-label">${ic(icn, 14)} ${txt}</div>`
 function rText(el, s) { el.innerHTML = `<div class="html">${s.html}</div>`; }
 function rReveal(el, s) { el.innerHTML = `<details><summary>${esc(s.title)}</summary><div class="html">${s.html}</div></details>`; }
 function rQuiz(el, s, l, idx, sync) {
-  const key = 'q' + idx; let done = false;
+  const key = keysOf(l)[idx]; let done = false;
   el.innerHTML = `${label('target', 'Quick check')}<div class="quiz"><div class="q">${s.q}</div>${s.options.map((o, i) => `<button class="opt" data-i="${i}"><span class="l">${'ABCD'[i]}</span><span>${o}</span></button>`).join('')}<div class="explain" hidden></div></div>`;
   const ex = $('.explain', el);
   if ((progress[l.id] || {})[key]) { /* already solved earlier: show the answer */
@@ -295,6 +317,9 @@ function rQuiz(el, s, l, idx, sync) {
 function rSteps(el, s, l, idx, sync, hue) {
   let n = 0;
   const draw = () => {
+    if (store.get('lmode', 'all') === 'read') {
+      el.innerHTML = `<div class="html">${s.steps.map((x, i) => `<h3>${i + 1}. ${esc(x.title.replace(/^\d+\.\s*/, ''))}</h3>${x.html}`).join('')}</div>`; return;
+    }
     el.innerHTML = `${label('route', 'Walkthrough')}<div class="stepper"><div class="dots">${s.steps.map((x, i) => `${i ? `<i class="${i <= n ? 'done' : ''}"></i>` : ''}<button class="${i === n ? 'on' : i < n ? 'done' : ''}" data-i="${i}" aria-label="Step ${i + 1}">${i + 1}</button>`).join('')}</div>
       <h3>${esc(s.steps[n].title)}</h3><div class="html">${s.steps[n].html}</div>
       <div class="nav"><button class="btn sm" id="pv" ${n === 0 ? 'disabled' : ''}>${ic('arrowL', 14)} Back</button><button id="nx" class="btn sm primary" ${n === s.steps.length - 1 ? 'disabled' : ''}>Next ${ic('arrow', 14)}</button></div></div>`;
@@ -302,6 +327,23 @@ function rSteps(el, s, l, idx, sync, hue) {
     $('#pv', el).onclick = () => { n--; draw(); }; $('#nx', el).onclick = () => { n++; draw(); };
   };
   draw();
+  return draw;
+}
+
+/* ---------- vim mode ---------- */
+const VIM = { on: store.get('vim', false), eds: [] };
+function applyVim() {
+  if (window.CodeMirror && CodeMirror.Vim && !CodeMirror.Vim._silDefined) {
+    CodeMirror.Vim.defineEx('run', 'run', (cm) => cm._run && cm._run());
+    CodeMirror.Vim.defineEx('write', 'w', (cm) => cm._run && cm._run());
+    CodeMirror.Vim._silDefined = true;
+  }
+  VIM.eds.forEach(({ cm, vb, vm, vh }) => {
+    cm.setOption('keyMap', VIM.on ? 'vim' : 'default');
+    cm.setOption('showCursorWhenSelecting', VIM.on);
+    vb.textContent = VIM.on ? 'vim: on' : 'vim: off'; vb.classList.toggle('on', VIM.on); vh.hidden = !VIM.on;
+    vm.textContent = VIM.on ? '-- NORMAL --' : '';
+  });
 }
 
 /* ---------- code exercises ---------- */
@@ -315,11 +357,11 @@ function runInWorker(code) {
   });
 }
 function rCode(el, s, l, idx, sync, hue) {
-  const key = 'c' + idx, dk = 'draft:' + l.id + ':' + idx, solved = () => !!(progress[l.id] || {})[key];
+  const key = keysOf(l)[idx], dk = 'draft:' + l.id + ':' + key.slice(1), solved = () => !!(progress[l.id] || {})[key];
   el.innerHTML = `${label('terminal', 'Challenge')}<div class="ex tc brk">
     <div class="ex-head"><div class="ex-title">${esc(s.title)}</div><span class="chip st ${solved() ? 'good' : ''}">${solved() ? ic('check', 12, 3) + ' Solved' : 'Unsolved'}</span></div>
     <div class="ex-prompt">${s.prompt}</div>
-    <div class="ex-win"><div class="ex-tab"><span class="tl3"><i></i><i></i><i></i></span><span class="file">solution.js</span><span class="sp"></span><span><kbd>Ctrl</kbd> <kbd>↵</kbd> run</span></div><div class="editor"></div></div>
+    <div class="ex-win"><div class="ex-tab"><span class="tl3"><i></i><i></i><i></i></span><span class="file">solution.js</span><span class="sp"></span><span class="vmode"></span><button type="button" class="vimbtn" title="Toggle Vim keybindings">vim: off</button><span><kbd>Ctrl</kbd> <kbd>↵</kbd> run</span></div><div class="editor"></div><div class="vimhint" hidden>h j k l move · w b e words · 0 $ line · gg G file · i a o insert · x dd yy p edit · u undo · ciw · / search · <b>:run</b> or <b>:w</b> runs the tests</div></div>
     <div class="ex-actions"><button class="btn primary run">${ic('play', 15)} Run tests</button><button class="btn hint">${ic('bulb', 15)} Hint</button><button class="btn sol">${ic('eye', 15)} Solution</button><span class="sp"></span><button class="btn ghost reset">${ic('rotate', 15)} Reset</button></div>
     <div class="out" aria-live="polite"></div></div>`;
   const host = $('.editor', el), start = store.get(dk, s.starter);
@@ -328,6 +370,14 @@ function rCode(el, s, l, idx, sync, hue) {
     const cm = CodeMirror(host, { value: start, mode: 'javascript', lineNumbers: true, indentUnit: 2, tabSize: 2, indentWithTabs: false, matchBrackets: true, autoCloseBrackets: true, viewportMargin: Infinity,
       extraKeys: { Tab: (c) => c.execCommand('insertSoftTab'), 'Ctrl-Enter': () => run(), 'Cmd-Enter': () => run() } });
     get = () => cm.getValue(); set = (v) => cm.setValue(v); cm.on('change', () => store.set(dk, cm.getValue()));
+    cm._run = () => run();
+    const vb = $('.vimbtn', el), vm = $('.vmode', el), vh = $('.vimhint', el);
+    if (window.CodeMirror.Vim) {
+      VIM.eds.push({ cm, vb, vm, vh });
+      cm.on('vim-mode-change', (ev) => { vm.textContent = '-- ' + String(ev.mode).toUpperCase() + (ev.subMode ? ' ' + ev.subMode.toUpperCase() : '') + ' --'; });
+      vb.onclick = () => { VIM.on = !VIM.on; store.set('vim', VIM.on); applyVim(); if (VIM.on) cm.focus(); };
+    } else vb.hidden = true;
+    applyVim();
   } else {
     const ta = document.createElement('textarea'); ta.value = start; ta.spellcheck = false; host.appendChild(ta);
     ta.addEventListener('keydown', (e) => {
@@ -360,6 +410,75 @@ function rCode(el, s, l, idx, sync, hue) {
   $('.hint', el).onclick = () => { out.innerHTML = `<div class="callout tip"><b>Hint.</b> ${s.hint || 'Start with the simplest failing test.'}</div>`; };
   $('.sol', el).onclick = () => { out.innerHTML = `<div class="callout warn"><b>Spoiler.</b> One reasonable solution, but try first.</div><pre><code>${esc(s.solution)}</code></pre>${s.notes ? `<div class="callout">${s.notes}</div>` : ''}`; };
   $('.reset', el).onclick = () => { if (confirm('Reset to starter code?')) { set(s.starter); out.innerHTML = ''; } };
+}
+
+
+/* ---------- simulation ---------- */
+function rSim(el, s, l, idx, sync, hue, disposers) {
+  el.innerHTML = `${label('sim', 'Simulation')}<div class="simbox tc brk"><div class="ex-head"><div class="ex-title">${esc(s.title)}</div></div>${s.intro ? `<div class="ex-prompt">${s.intro}</div>` : ''}<div class="simroot"></div>${s.try ? `<div class="trylist"><b>Try this</b><ul>${s.try.map((x) => `<li>${x}</li>`).join('')}</ul></div>` : ''}</div>`;
+  const fn = window.SIMS && window.SIMS[s.id], root = $('.simroot', el);
+  if (!fn) { root.innerHTML = '<p class="warn">Simulation failed to load.</p>'; return; }
+  const dispose = fn(root); if (dispose) disposers.push(dispose);
+}
+
+/* ---------- find the bug ---------- */
+function rBug(el, s, l, idx, sync, hue) {
+  const key = keysOf(l)[idx], lines = s.code.split('\n'), sel = new Set(), solved = () => !!(progress[l.id] || {})[key];
+  const bugLines = s.bugs.map((b) => b.line), okLines = s.ok || [];
+  el.innerHTML = `${label('bug', 'Bug hunt')}<div class="ex bugbox tc brk">
+    <div class="ex-head"><div class="ex-title">${esc(s.title)}</div><span class="chip st ${solved() ? 'good' : ''}">${solved() ? ic('check', 12, 3) + ' Found' : `${bugLines.length} bug${bugLines.length > 1 ? 's' : ''}`}</span></div>
+    <div class="ex-prompt">${s.prompt}</div>
+    <div class="bug-code" role="group" aria-label="Code. Click the lines that contain bugs.">${lines.map((t, i) => `<button type="button" class="bl" data-n="${i + 1}" aria-pressed="false"><span class="ln">${i + 1}</span><code>${esc(t) || ' '}</code></button>`).join('')}</div>
+    <div class="ex-actions"><button class="btn primary bcheck">${ic('check', 15)} Check my answer</button><button class="btn hint">${ic('bulb', 15)} Hint</button><button class="btn show">${ic('eye', 15)} Show answer</button><span class="sp"></span><span class="selc muted"></span></div>
+    <div class="out" aria-live="polite"></div></div>`;
+  const out = $('.out', el), cnt = $('.selc', el);
+  const paint = (n, cls) => { const b = $(`.bl[data-n="${n}"]`, el); if (b) b.classList.add(cls); };
+  const explain = () => `<div class="bugwhy">${s.bugs.map((b) => `<div class="callout"><b>Line ${b.line}.</b> ${b.why}</div>`).join('')}${s.notes ? `<div class="callout tip">${s.notes}</div>` : ''}</div>`;
+  const upd = () => { cnt.textContent = sel.size ? `${sel.size} line${sel.size > 1 ? 's' : ''} selected` : 'click lines to select'; }; upd();
+  $$('.bl', el).forEach((b) => (b.onclick = () => {
+    const n = +b.dataset.n; $$('.bl', el).forEach((x) => x.classList.remove('hit', 'miss', 'fp'));
+    if (sel.has(n)) sel.delete(n); else sel.add(n);
+    b.classList.toggle('sel', sel.has(n)); b.setAttribute('aria-pressed', sel.has(n)); upd();
+  }));
+  $('.bcheck', el).onclick = () => {
+    if (!sel.size) { out.innerHTML = '<div class="callout warn">Select the lines you think are buggy first.</div>'; return; }
+    $$('.bl', el).forEach((x) => x.classList.remove('hit', 'miss', 'fp'));
+    const found = bugLines.filter((n) => sel.has(n)), missed = bugLines.filter((n) => !sel.has(n)), extra = [...sel].filter((n) => !bugLines.includes(n) && !okLines.includes(n));
+    found.forEach((n) => paint(n, 'hit')); extra.forEach((n) => paint(n, 'fp'));
+    if (!missed.length && !extra.length) {
+      out.innerHTML = `<div class="allpass">${ic('trophy', 20)} Found ${bugLines.length === 1 ? 'the bug' : 'all ' + bugLines.length + ' bugs'}</div>${explain()}`;
+      const first = mark(l.id, key, 30, 'Bug squashed');
+      const st = $('.st', el); st.className = 'chip st good'; st.innerHTML = ic('check', 12, 3) + ' Found'; sync();
+      if (first) { const r = $('.bcheck', el).getBoundingClientRect(); confetti(r.left + r.width / 2, r.top, hue); }
+    } else {
+      out.innerHTML = `<div class="sumbar"><b>${found.length}/${bugLines.length} bugs found</b>${extra.length ? `<span class="chip hot">${extra.length} selected line${extra.length > 1 ? 's' : ''} ${extra.length > 1 ? 'are' : 'is'} not a bug</span>` : ''}</div><p class="muted">Green = real bug${found.length ? '' : ' (none yet)'}, struck-through = not a bug. Adjust your selection and check again, or ask for a hint.</p>`;
+    }
+  };
+  $('.hint', el).onclick = () => { out.innerHTML = `<div class="callout tip"><b>Hint.</b> ${s.hint || 'Think about edge cases, concurrency, money, and security.'}</div>`; };
+  $('.show', el).onclick = () => { $$('.bl', el).forEach((x) => x.classList.remove('hit', 'miss', 'fp')); bugLines.forEach((n) => paint(n, 'miss')); out.innerHTML = explain(); };
+}
+
+/* ---------- predict the output ---------- */
+function rPredict(el, s, l, idx, sync) {
+  const key = keysOf(l)[idx]; let done = false;
+  el.innerHTML = `${label('bulb', 'Predict the output')}<div class="quiz"><div class="ex-title" style="margin-bottom:8px">${esc(s.title)}</div>${s.intro ? `<div class="ex-prompt" style="padding:0 0 8px">${s.intro}</div>` : ''}
+    <pre><code>${esc(s.code)}</code></pre><div class="q" style="margin-top:14px">${s.question}</div>
+    ${s.options.map((o, i) => `<button class="opt" data-i="${i}"><span class="l">${'ABCD'[i]}</span><span>${o}</span></button>`).join('')}
+    <div class="explain" hidden></div>
+    <div class="ex-actions" style="padding:12px 0 0"><button class="btn run">${ic('play', 15)} Run it for real</button><span class="muted">executes the snippet in the sandbox and shows its actual output</span></div><div class="out" style="padding:0"></div></div>`;
+  const ex = $('.explain', el), out = $('.out', el);
+  const finish = (b) => { done = true; if (b) b.classList.add('right'); $$('.opt', el).forEach((x) => (x.disabled = true)); ex.hidden = false; ex.classList.add('ok'); ex.innerHTML = s.explain; };
+  if ((progress[l.id] || {})[key]) finish($(`.opt[data-i="${s.answer}"]`, el));
+  $$('.opt', el).forEach((b) => (b.onclick = () => {
+    if (done) return;
+    if (+b.dataset.i === s.answer) { finish(b); mark(l.id, key, 15, 'Called it'); sync(); }
+    else { b.classList.add('wrong'); b.disabled = true; ex.hidden = false; ex.classList.remove('ok'); ex.textContent = 'Not that one. Trace it step by step, or run it to see.'; }
+  }));
+  $('.run', el).onclick = async () => {
+    out.innerHTML = '<div class="sumbar"><b>Running…</b></div>';
+    const r = await runInWorker(s.code + "\n;test('run', () => new Promise((r) => setTimeout(r, 80)));");
+    out.innerHTML = r.fatal ? `<div class="res fail"><div class="nm">Error<small>${esc(r.fatal)}</small></div></div>` : `<div class="logs actual">${esc((r.logs || []).join('\n') || '(no output)')}</div>`;
+  };
 }
 
 /* ---------- flashcards ---------- */
@@ -504,7 +623,7 @@ function buildIndex() {
   TRACKS.forEach((t) => {
     index.push({ kind: 'Track', icon: t.id, hue: hueOf(t.id), title: t.title, sub: t.blurb, href: '#/track/' + t.id, text: (t.title + ' ' + t.blurb).toLowerCase() });
     t.lessons.forEach((l) => index.push({ kind: 'Lesson', icon: t.id, hue: hueOf(t.id), title: l.title, sub: t.title + ' · ' + (l.summary || ''), href: '#/lesson/' + l.id,
-      text: (l.title + ' ' + (l.summary || '') + ' ' + l.sections.map((s) => strip((s.html || '') + ' ' + (s.q || '') + ' ' + (s.prompt || '') + ' ' + (s.title || '') + ' ' + (s.steps ? s.steps.map((x) => x.title + ' ' + x.html).join(' ') : ''))).join(' ')).toLowerCase() }));
+      text: (l.title + ' ' + (l.summary || '') + ' ' + l.sections.map((s) => strip((s.html || '') + ' ' + (s.q || '') + ' ' + (s.prompt || '') + ' ' + (s.question || '') + ' ' + (s.intro || '') + ' ' + (s.title || '') + ' ' + (s.steps ? s.steps.map((x) => x.title + ' ' + x.html).join(' ') : ''))).join(' ')).toLowerCase() }));
   });
   CARDS.forEach((c) => index.push({ kind: 'Flashcard', icon: 'cards', hue: trackHue(c.track), title: strip(c.q), sub: strip(c.a).slice(0, 120), href: '#/review', text: (strip(c.q) + ' ' + strip(c.a)).toLowerCase() }));
   MOCK.forEach((m) => index.push({ kind: 'Mock', icon: 'mic', hue: 255, title: strip(m.q), sub: m.kind, href: '#/mock', text: (strip(m.q) + ' ' + m.rubric.join(' ')).toLowerCase() }));
