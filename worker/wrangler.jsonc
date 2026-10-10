@@ -3,6 +3,8 @@
   "name": "senior-interview-lab-feedback",
   "main": "index.mjs",
   "compatibility_date": "2026-09-20",
+  "workers_dev": true,
+  "preview_urls": false,
   "vars": { "LAB_MODEL": "deepseek-v4-flash" },
   "ratelimits": [
     { "name": "LAB_LIMIT", "namespace_id": "93728110", "simple": { "limit": 10, "period": 60 } }
