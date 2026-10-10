@@ -54,15 +54,6 @@ window.CARDS = [
   { track: 'AI', q: 'The “lethal trifecta” for agents?', a: 'Access to private data + exposure to untrusted content + an outbound/exfiltration channel. Remove at least one.' },
   { track: 'AI', q: 'Common bugs in AI-generated code?', a: 'Boundary/off-by-one, hallucinated APIs, floats for money, missing authorisation checks, races/missing awaits, over-engineering, tests that mirror the implementation.' },
   // Open banking
-  { track: 'Open Banking', q: 'ASPSP, PSU, TPP, AISP, PISP?', a: 'Bank; end user; regulated third party; account-information provider (read); payment-initiation provider (pay by bank).' },
-  { track: 'Open Banking', q: 'QWAC vs QSealC?', a: 'QWAC: eIDAS cert for mutual TLS (channel identity). QSealC: eIDAS seal cert for signing messages (integrity/non-repudiation).' },
-  { track: 'Open Banking', q: 'PSD2 limits on unattended account access?', a: 'About 4 requests per 24h per account when the user is not present; SCA exemption for repeated AIS access extended from 90 to 180 days (2023). Verify per bank.' },
-  { track: 'Open Banking', q: 'Neonomics UAPI flow (public docs)?', a: 'Get token (client id/secret, signed requests) → create session → call accounts/payments → on error 1426 initiate consent → user does SCA at the bank → call again; complete payments promptly after SCA.' },
-  { track: 'Open Banking', q: 'Money handling rules?', a: 'Integer minor units + ISO 4217 currency, never floats; no cross-currency arithmetic; one documented rounding rule; idempotency keys; append-only ledger.' },
-  { track: 'Open Banking', q: 'Payment status ISO 20022 codes?', a: 'RCVD, PDNG, ACTC, ACCP, ACSP, ACSC, ACCC, RJCT, CANC. Handle late/duplicate/out-of-order updates with monotonic rules.' },
-  { track: 'Open Banking', q: 'Why per-bank circuit breakers and bulkheads?', a: 'Banks differ wildly in latency/uptime; isolating each prevents one slow bank from starving workers for all others.' },
-  { track: 'Open Banking', q: 'SCA flows?', a: 'Redirect (user authenticates at bank), decoupled (approve in banking app), embedded (credentials collected by TPP; rare).' },
-  { track: 'Open Banking', q: 'What does a sudden all-banks TLS failure suggest?', a: 'Something shared on your side: expired/revoked TPP certificate or CA chain change. Alert on cert expiry and keep a renewal runbook.' },
   // Database
   { track: 'Database', q: 'Postgres default isolation level, and what it allows?', a: 'Read committed: each statement sees data committed before it began. Allows non-repeatable reads, phantoms, lost updates (with read-then-write) and write skew.' },
   { track: 'Database', q: 'What does Repeatable read give you in Postgres?', a: 'A single snapshot for the whole transaction (snapshot isolation; also no phantoms). Concurrent updates to the same row raise 40001 and must be retried. Write skew is still possible.' },

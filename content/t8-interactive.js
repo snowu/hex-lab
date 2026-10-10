@@ -23,10 +23,6 @@
   INSERT('stateful-classes', 2, { pid: 'sim-bucket', type: 'sim', id: 'bucket', title: 'Token bucket rate limiter',
     intro: '<p>Each request spends one token. Tokens refill continuously up to the capacity. Capacity is your burst tolerance, refill rate is your sustained throughput.</p>',
     try: ['Press <b>Burst ×10</b> with capacity 5: the first 5 pass, the rest are rejected.', 'Wait a few seconds and burst again: the bucket has refilled.', 'Turn on <b>auto traffic</b> at 8/s with a refill of 2/s: roughly three quarters of requests are rejected in steady state.', 'Raise capacity but not the refill rate: bigger bursts, same long-run rate.'] });
-  INSERT('ob-aggregator-eng', 1, { pid: 'sim-outage', type: 'sim', id: 'outage', title: 'One slow bank vs your worker pool',
-    intro: '<p>An aggregator serves three banks (illustrative names) from one pool of 64 workers at 30 requests/s each. For the first 20 seconds everything is healthy: ~99.7% success, p95 under half a second. Then <b>Havn Bank</b> degrades: calls take about 9 seconds and 10% fail. Step through the scenarios and watch which protection contains the damage. The breaker counts errors and calls slower than 2s as failures.</p>',
-    try: ['<b>no protection</b>: after the incident Havn Bank holds the workers, queues build, and the <i>healthy</i> banks fail too. Look at the timeline.', '<b>+ timeout</b>: Havn Bank is cut off at 2s, which helps a lot but it still consumes a large share of the pool.', '<b>+ bulkhead</b>: each bank gets its own workers, so the healthy banks stay at baseline however slow Havn Bank is.', '<b>+ breaker</b>: after a few slow or failed calls Havn Bank is failed instantly, so no workers are wasted on it.', 'Raise the load to 60 req/s or shrink the pool, and see how much headroom each setup really has.', 'Drop the incident latency to 1s and raise the error rate instead: compare how the breaker reacts to errors versus slowness.'] });
-
   /* ---------- bug hunts (Python) ---------- */
   INSERT('async-patterns', -1, { pid: 'bug-async', type: 'bug', title: 'Spot the concurrency bugs',
     prompt: '<p>An assistant wrote this transaction sync for a bank aggregator. It works in the demo. Click the <b>2</b> lines that will cause trouble in production.</p>',
@@ -42,18 +38,6 @@
     bugs: [{ line: 6, why: 'Unbounded concurrency: <code>asyncio.gather</code> over every account starts every bank call at once. With 5,000 accounts that hits bank rate limits and exhausts sockets. Bound it with an <code>asyncio.Semaphore</code> (the <code>map_limit</code> pattern).' },
            { line: 8, why: '<code>asyncio.create_task</code> without keeping or awaiting the task is fire-and-forget. <code>sync_all</code> returns before <code>mark_synced</code> finishes, exceptions are only logged as "Task exception was never retrieved", and the event loop holds only a weak reference, so the task can even be garbage-collected mid-flight. Await it (gather) or use <code>asyncio.TaskGroup</code>.' }],
     ok: [7], hint: 'One line starts too much work at once; the other starts work nobody waits for.' });
-
-  INSERT('ob-payments-money', -1, { pid: 'bug-money', type: 'bug', title: 'Spot the money bugs',
-    prompt: '<p>This is part of a fee calculator. Click the <b>2</b> lines that are wrong for a payments system.</p>',
-    code: String.raw`def charge_with_fee(amount_eur, fee_percent):
-    fee = amount_eur * (fee_percent / 100)
-    return {'total': amount_eur + fee, 'currency': 'EUR'}
-
-def split_equally(total_cents, n):
-    return [total_cents / n] * n`,
-    bugs: [{ line: 2, why: 'Money as floating-point euros. <code>19.99 * 0.15</code> is not exactly representable, so totals drift by fractions of a cent. Use integer minor units (cents) or <code>decimal.Decimal</code>, and one documented rounding rule.' },
-           { line: 6, why: '<code>/</code> is true division in Python 3, so <code>100 / 3</code> gives <code>33.333…</code>: fractional cents, and the parts do not add up to the total. Use <code>divmod</code> and hand the leftover cents out one at a time (largest remainder).' }],
-    ok: [3], hint: 'Both bugs are about numbers that cannot be represented as whole cents.' });
 
   INSERT('idempotency', -1, { pid: 'bug-idem', type: 'bug', title: 'This payment endpoint is idempotent. Is it?',
     prompt: '<p>The team claims this handler is safe to retry because it checks the idempotency key. Click the <b>2</b> lines that break that guarantee under concurrency or crashes.</p>',
@@ -144,17 +128,6 @@ print('balance:', balance)`,
     options: ['70 then "balance: 70"', '40 then "balance: 40"', '70 then "balance: 40"', '100 then "balance: 100"'], answer: 1,
     explain: 'The first call charged 30 (balance 70) but timed out, so the client retried and charged another 30. The customer paid 60 for a 30 purchase. An idempotency key lets the server recognise the retry and return the first result instead of applying it again.',
     output: ['40', 'balance: 40'] });
-
-  INSERT('ob-payments-money', 1, { pid: 'pred-float', type: 'predict', title: 'Floats and rounding in money code',
-    intro: '<p>Two reasons seniors insist on integer minor units or <code>Decimal</code> for currency.</p>',
-    code: String.raw`print(0.1 + 0.2)
-print(19.99 * 100)
-print(round(19.99 * 100))
-print(round(2.5), round(3.5))`,
-    question: 'Which is the exact output, line by line?',
-    options: ['0.3, 1999.0, 1999, 3 4', '0.30000000000000004, 1998.9999999999998, 1999, 2 4', '0.30000000000000004, 1999.0, 1999, 3 4', '0.3, 1998.9999999999998, 1998, 2 4'], answer: 1,
-    explain: 'Binary floating point cannot represent most decimal fractions exactly, so <code>19.99 * 100</code> is <code>1998.9999999999998</code>. And Python&#39;s <code>round()</code> uses <b>banker&#39;s rounding</b> (round half to even): <code>round(2.5)</code> is 2 and <code>round(3.5)</code> is 4, which silently shifts money by a cent. Use integer cents or <code>Decimal</code> with an explicit rounding mode.',
-    output: ['0.30000000000000004', '1998.9999999999998', '1999', '2 4'] });
 
   INSERT('kafka', 4, { pid: 'pred-redeliver', type: 'predict', title: 'What does a crash before the commit cause?',
     intro: '<p>A tiny at-least-once consumer: process, then commit. It crashes while handling the second message, then restarts.</p>',

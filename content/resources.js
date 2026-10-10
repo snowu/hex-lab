@@ -1,12 +1,5 @@
 window.RESOURCES = [
-  // Open banking & Neonomics
-  { cat: 'Neonomics & Open Banking', title: 'Neonomics developer docs', url: 'https://docs.neonomics.io', note: 'Primary source: UAPI guides, consent/SCA, QSeal signatures, payments. Read this before the interview.' },
-  { cat: 'Neonomics & Open Banking', title: 'Neonomics: About us', url: 'https://neonomics.io/about-us', note: 'Mission, history and footprint of the company.' },
-  { cat: 'Neonomics & Open Banking', title: 'Neonomics blog: Open Banking is evolving', url: 'https://neonomics.io/blog/open-banking-is-evolving-and-so-are-we', note: 'Product direction and open banking commentary.' },
-  { cat: 'Neonomics & Open Banking', title: 'Berlin Group: Open Finance & NextGenPSD2', url: 'https://www.berlin-group.org/open-finance', note: 'Home of the openFinance / NextGenPSD2 API specs used by many European banks (find the downloads from here).' },
-  { cat: 'Neonomics & Open Banking', title: 'EBA: PSD2 and RTS on SCA', url: 'https://www.eba.europa.eu/regulation-and-policy/payment-services-and-electronic-money', note: 'Regulatory background: strong customer authentication and secure communication.' },
-  { cat: 'Neonomics & Open Banking', title: 'Open Banking Tracker', url: 'https://www.openbankingtracker.com', note: 'Directory of banks, aggregators and TPPs, useful for market context.' },
-  { cat: 'Neonomics & Open Banking', title: 'ISO 20022 for developers', url: 'https://www.iso20022.org/', note: 'The messaging standard behind payment status codes.' },
+  // Open banking
   // System design
   { cat: 'System Design', title: 'The System Design Primer', url: 'https://github.com/donnemartin/system-design-primer', note: 'Huge free repo with concepts, trade-offs and practice questions.' },
   { cat: 'System Design', title: 'AWS Builders’ Library', url: 'https://aws.amazon.com/builders-library/', note: 'Deep articles on timeouts, retries with jitter, load shedding, idempotent APIs.' },

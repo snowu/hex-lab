@@ -55,9 +55,10 @@
       coord = SyncCore.createCoordinator({ storage: localStorage, remote, userId: s.user.id, deviceId });
       coord.onChange(() => { paintIcon(); redraw(); });
       paintIcon(); redraw();
+      if (window.PRIVATE) client().then((c) => window.PRIVATE.load(c)).catch(() => {}); /* the owner's private material, if this account may read it */
       await coord.reconcile(); afterSync();
       if (coord.status.kind === 'conflict' || coord.status.kind === 'cloud-newer') toast('Cloud sync needs a decision: open Plan');
-    } else { session = null; coord = null; paintIcon(); redraw(); }
+    } else { session = null; coord = null; paintIcon(); redraw(); if (window.PRIVATE) window.PRIVATE.clear(); }
   }
   function afterSync() {
     if (coord && coord.status.kind === 'applied') { toast('Loaded your progress from the cloud'); setTimeout(() => location.reload(), 900); }

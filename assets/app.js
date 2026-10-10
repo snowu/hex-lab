@@ -175,12 +175,11 @@ function viewHome() {
     <section class="hero"><div class="hero-l">
       <span class="eyebrow"><span class="p">$</span> ./senior-prep <b>--mode=ai-era</b></span>
       <h1>Practice like it's the <span class="grad">real interview.</span><span class="cur"></span></h1>
-      <p class="lead">${TRACKS.length} tracks with ${exTotal} runnable coding challenges (Python and SQL), ${bugTotal} bug hunts and ${simTotal} interactive simulations, plus flashcards and mock interviews. From system design and Kafka to AWS, Terraform and a dedicated open-banking track for Neonomics. Every lesson works as text, as practice, or both.</p>
+      <p class="lead">${TRACKS.length} tracks with ${exTotal} runnable coding challenges (Python and SQL), ${bugTotal} bug hunts and ${simTotal} interactive simulations, plus flashcards and mock interviews. From system design and Kafka to AWS, Terraform. Every lesson works as text, as practice, or both.</p>
       <div class="cta">
         <a class="btn primary" href="#/lesson/${(nx ? nx.l : TRACKS[0].lessons[0]).id}">${ic('play', 16)} ${nx && (nx.resume || nx.started) ? 'Continue learning' : 'Start learning'}</a>
         <a class="btn" href="#/plan">${ic('target', 16)} Today's plan</a>
         <a class="btn" href="#/review">${ic('cards', 16)} ${due} cards due</a>
-        <button class="btn ghost" id="heroSearch">${ic('search', 16)} Search <kbd>Ctrl K</kbd></button>
       </div></div>
       <div class="hero-r" aria-hidden="true"><div class="pv brk">
         <div class="pv-tab"><span class="tl3"><i></i><i></i><i></i></span><span class="file">rateLimiter.js</span></div>
@@ -215,7 +214,7 @@ function viewHome() {
         <div class="row"><span class="ticon">${ic(t.id, 24)}</span>${ring(trackPct(t), 44, 4)}</div>
         <div class="bd"><h3>${esc(t.title)}</h3>
         <p>${esc(t.blurb)}</p></div>
-        <div class="meta">${t.hot ? '<span class="chip hot">Neonomics focus</span>' : ''}<span class="chip">${t.lessons.length} lessons</span><span class="chip">${ic('clock', 12)} ${trackMin(t)} min</span></div>
+        <div class="meta">${t.hot ? '<span class="chip hot">Interview focus</span>' : ''}<span class="chip">${t.lessons.length} lessons</span><span class="chip">${ic('clock', 12)} ${trackMin(t)} min</span></div>
       </a>`).join('')}</div>
     <div class="sec-h"><h2>Toolkit</h2></div>
     <div class="tools">
@@ -223,7 +222,6 @@ function viewHome() {
       <a class="tool" href="#/mock"><span class="si">${ic('mic', 22)}</span><div><b>Mock interview</b><span>${MOCK.length} questions · timer · rubric</span></div></a>
       <a class="tool" href="#/resources"><span class="si">${ic('link', 22)}</span><div><b>Free resources</b><span>${RES.length} hand-picked links</span></div></a>
     </div>`;
-  $('#heroSearch').onclick = openPalette;
   const wk = $('#weak'); if (wk) wk.onclick = () => store.set('mockkind', mockSummary().weakest.kind);
 }
 
@@ -619,7 +617,7 @@ function mockSummary() {
   return { h, by, seen: new Set(h.map((a) => a.id)), avg, weakest: w && { kind: w[0], n: w[1].n, avg: w[1].avg } };
 }
 const ago = (ts) => { const m = Math.round((Date.now() - ts) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' d ago'; };
-const MOCK_HUE = { 'Full-stack': 100, Databases: 200, 'Coding under pressure': 165, Behavioral: 255, 'System Design': 150, 'Neonomics / Open Banking': 44, 'Scale & Cloud': 215, 'AI Era': 320 };
+const MOCK_HUE = { 'Full-stack': 100, Databases: 200, 'Coding under pressure': 165, Behavioral: 255, 'System Design': 150, 'Open Banking': 44, 'Scale & Cloud': 215, 'AI Era': 320 };
 function viewMock() {
   document.title = 'Mock interview · Senior Interview Lab';
   let kind = store.get('mockkind', ''), q = null, t0 = 0, iv = null, secs = 0, rec = null;
@@ -683,8 +681,8 @@ function viewMock() {
 }
 
 /* ---------- resources ---------- */
-const catIcon = (c) => ({ 'Full-stack': 'fullstack', Databases: 'data', 'Neonomics & Open Banking': 'openbanking', 'System Design': 'design', Kafka: 'route', AWS: 'cloud', Terraform: 'cloud', 'Coding Practice': 'coding', 'AI Engineering': 'ai', 'Security & Career': 'reliability' }[c] || 'book');
-const catHue = (c) => ({ 'Full-stack': 100, Databases: 200, 'Neonomics & Open Banking': 44, 'System Design': 150, Kafka: 275, AWS: 215, Terraform: 262, 'Coding Practice': 190, 'AI Engineering': 320, 'Security & Career': 28 }[c] ?? hueOf(c));
+const catIcon = (c) => ({ 'Full-stack': 'fullstack', Databases: 'data', 'Open Banking': 'openbanking', 'System Design': 'design', Kafka: 'route', AWS: 'cloud', Terraform: 'cloud', 'Coding Practice': 'coding', 'AI Engineering': 'ai', 'Security & Career': 'reliability' }[c] || 'book');
+const catHue = (c) => ({ 'Full-stack': 100, Databases: 200, 'Open Banking': 44, 'System Design': 150, Kafka: 275, AWS: 215, Terraform: 262, 'Coding Practice': 190, 'AI Engineering': 320, 'Security & Career': 28 }[c] ?? hueOf(c));
 function viewResources() {
   document.title = 'Free resources · Senior Interview Lab';
   const cats = [...new Set(RES.map((r) => r.cat))]; let f = '';
