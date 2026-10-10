@@ -17,14 +17,6 @@ for (const m of html.matchAll(/<script src="(content\/[^"]+)"/g)) {
   vm.runInContext(fs.readFileSync(path.join(root, m[1]), 'utf8'), ctx, { filename: m[1] });
 }
 const { TRACKS, CARDS = [], MOCK = [], RESOURCES = [] } = vm.runInContext('({TRACKS, CARDS: window.CARDS||[], MOCK: window.MOCK||[], RESOURCES: window.RESOURCES||[]})', ctx);
-/* The owner's private material is not in the repo. When it is present locally, validate it too (CI validates the public part only). */
-import { createRequire } from 'node:module';
-const privFile = path.join(root, 'private/neonomics.json');
-if (fs.existsSync(privFile)) {
-  const { merge } = createRequire(import.meta.url)('../assets/private-merge.js');
-  const n = merge({ TRACKS, CARDS, MOCK, RESOURCES }, JSON.parse(fs.readFileSync(privFile, 'utf8')));
-  console.log(`(also validating ${n} items from private/neonomics.json)`);
-} else console.log('(private/neonomics.json not present: validating the public content only)');
 
 const simIds = new Set([...fs.readFileSync(path.join(root, 'assets/sims.js'), 'utf8').matchAll(/SIMS\.(\w+)\s*=/g)].map((m) => m[1]));
 const pids = new Set();

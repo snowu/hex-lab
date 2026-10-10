@@ -909,9 +909,216 @@ def apply_discount(price_cents, percent):
     notes: 'round(52.5) is 52 in Python (round-half-to-even), which is a classic money bug. Use Decimal with an explicit rounding mode, or integer arithmetic, and agree the rule with finance.',
   },
 
+  iban: {
+    title: 'IBAN validation (mod 97)',
+    prompt: `<p>Implement <code>is_valid_iban(iban)</code>. Steps: remove spaces and uppercase; the format is <code>2 letters + 2 digits + 11–30 alphanumerics</code>; check the country length for <code>NO</code>=15, <code>DE</code>=22, <code>SE</code>=24, <code>DK</code>=18, <code>FI</code>=18, <code>GB</code>=22 (other countries: skip the length check); move the first 4 characters to the end; replace letters with numbers (A=10 … Z=35); the resulting big number mod 97 must equal 1. (Python ints have arbitrary precision, so no overflow tricks needed. In many languages you would compute the remainder piecewise.) Return <code>False</code> for anything that is not a string.</p>`,
+    starter: String.raw`def is_valid_iban(iban):
+    pass
+`,
+    tests: String.raw`test('valid NO', lambda: eq(is_valid_iban('NO93 8601 1117 947'), True))
+test('valid GB', lambda: eq(is_valid_iban('GB82 WEST 1234 5698 7654 32'), True))
+test('valid DE, lowercase', lambda: eq(is_valid_iban('de89370400440532013000'), True))
+test('bad checksum', lambda: eq(is_valid_iban('NO94 8601 1117 947'), False))
+test('wrong length for the country', lambda: eq(is_valid_iban('NO93 8601 1117 9470'), False))
 
+@test('garbage')
+def _():
+    for bad in ('', 'hello', 'NO93-8601-1117-947'):
+        eq(is_valid_iban(bad), False, repr(bad))
 
+@test('non-strings')
+def _():
+    for bad in (None, 12345):
+        eq(is_valid_iban(bad), False, repr(bad))
+`,
+    hint: 'int(ch, 36) turns "0"-"9" and "A"-"Z" into 0–35, which is exactly the IBAN letter mapping. Join them into one string and take int(...) % 97. Use re.fullmatch with [0-9] (the \\d class also matches non-ASCII digits).',
+    solution: String.raw`import re
 
+LENGTHS = {'NO': 15, 'DE': 22, 'SE': 24, 'DK': 18, 'FI': 18, 'GB': 22}
+
+def is_valid_iban(iban):
+    if not isinstance(iban, str):
+        return False
+    s = iban.replace(' ', '').upper()
+    if not re.fullmatch(r'[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}', s):
+        return False
+    if LENGTHS.get(s[:2], len(s)) != len(s):
+        return False
+    rearranged = s[4:] + s[:4]
+    digits = ''.join(str(int(ch, 36)) for ch in rearranged)
+    return int(digits) % 97 == 1`,
+    notes: 'Validating the checksum proves the IBAN is well-formed, not that the account exists or belongs to the person. That is what an account-verification endpoint is for.',
+  },
+
+  split_amount: {
+    title: 'Split money without losing a cent',
+    prompt: `<p>Implement <code>split_amount(total_minor, weights)</code> returning int parts proportional to <code>weights</code> that <b>sum exactly to total_minor</b>. Use the largest-remainder method: floor each share, then give the leftover units one by one to the shares with the largest fractional remainders (ties: lower index first). Raise <code>ValueError</code> for empty, negative or all-zero weights.</p>`,
+    starter: String.raw`def split_amount(total_minor, weights):
+    pass
+`,
+    tests: String.raw`test('even thirds', lambda: eq(split_amount(100, [1, 1, 1]), [34, 33, 33]))
+test('exact halves', lambda: eq(split_amount(10, [1, 1]), [5, 5]))
+test('one cent over three', lambda: eq(split_amount(1, [1, 1, 1]), [1, 0, 0]))
+test('the biggest fraction gets the leftover', lambda: eq(split_amount(101, [70, 30]), [71, 30]))
+test('zero total', lambda: eq(split_amount(0, [1, 2]), [0, 0]))
+
+@test('always sums to the total')
+def _():
+    for total in (0, 1, 7, 99, 1000, 12345):
+        for weights in ([1], [1, 2, 3], [5] * 7, [0.3, 0.3, 0.4]):
+            eq(sum(split_amount(total, weights)), total, f'{total} {weights}')
+
+@test('invalid weights raise ValueError')
+def _():
+    for bad in ([], [0, 0], [-1, 2]):
+        with raises(ValueError):
+            split_amount(10, bad)
+`,
+    hint: 'Use fractions.Fraction so the shares are exact: Fraction(total) * Fraction(w) / Fraction(sum). int() floors a non-negative Fraction. Then sort indexes by (-remainder, index) and add 1 to the first `leftover` of them.',
+    solution: String.raw`from fractions import Fraction
+
+def split_amount(total_minor, weights):
+    if not weights or any(w < 0 for w in weights) or sum(weights) <= 0:
+        raise ValueError('invalid weights')
+    ws = [Fraction(w) for w in weights]
+    total_weight = sum(ws)
+    exact = [Fraction(total_minor) * w / total_weight for w in ws]
+    parts = [int(x) for x in exact]
+    leftover = total_minor - sum(parts)
+    order = sorted(range(len(parts)), key=lambda i: (-(exact[i] - parts[i]), i))
+    for k in range(leftover):
+        parts[order[k % len(parts)]] += 1
+    return parts`,
+    notes: 'Money is integer minor units plus a currency code. Keep the allocation rule in the spec (for example fees go to the platform) and always test the invariant “parts sum to the total”.',
+  },
+
+  payment_status: {
+    title: 'Merge payment status updates safely',
+    prompt: `<p>Implement <code>apply_status(current, incoming)</code> returning the new status, with these simplified rules (ranks: RCVD 0, PDNG 1, ACTC 2, ACCP 3, ACSP 4, ACSC 5, ACCC 6):</p>
+<ul><li>If <code>current</code> is terminal (<code>ACCC</code>, <code>RJCT</code>, <code>CANC</code>) → unchanged.</li><li><code>RJCT</code> is accepted unless current rank ≥ 5 (already settled).</li><li><code>CANC</code> is accepted only if current rank ≤ 2.</li><li>Otherwise move forward only: accept <code>incoming</code> if its rank is higher (skipping is fine); ignore same or lower rank (stale or duplicate).</li><li>Unknown status → raise <code>ValueError('unknown status')</code>.</li></ul>`,
+    starter: String.raw`def apply_status(current, incoming):
+    pass
+`,
+    tests: String.raw`test('forward', lambda: eq(apply_status('RCVD', 'ACTC'), 'ACTC'))
+test('skipping is allowed', lambda: eq(apply_status('PDNG', 'ACSC'), 'ACSC'))
+test('duplicate ignored', lambda: eq(apply_status('ACSP', 'ACSP'), 'ACSP'))
+test('stale update ignored', lambda: eq(apply_status('ACSC', 'PDNG'), 'ACSC'))
+
+@test('terminal states stick')
+def _():
+    eq(apply_status('ACCC', 'RJCT'), 'ACCC')
+    eq(apply_status('RJCT', 'ACSP'), 'RJCT')
+    eq(apply_status('CANC', 'ACTC'), 'CANC')
+
+@test('reject early and mid-flight')
+def _():
+    eq(apply_status('RCVD', 'RJCT'), 'RJCT')
+    eq(apply_status('ACSP', 'RJCT'), 'RJCT')
+
+test('reject after settlement is refused', lambda: eq(apply_status('ACSC', 'RJCT'), 'ACSC'))
+
+@test('cancel only early')
+def _():
+    eq(apply_status('PDNG', 'CANC'), 'CANC')
+    eq(apply_status('ACCP', 'CANC'), 'ACCP')
+
+@test('unknown statuses raise ValueError')
+def _():
+    for current, incoming in (('RCVD', 'WAT'), ('NOPE', 'ACTC')):
+        with raises(ValueError):
+            apply_status(current, incoming)
+`,
+    hint: 'A RANK dict and a TERMINAL set. Handle RJCT and CANC before the generic “higher rank wins” comparison.',
+    solution: String.raw`RANK = {'RCVD': 0, 'PDNG': 1, 'ACTC': 2, 'ACCP': 3, 'ACSP': 4, 'ACSC': 5, 'ACCC': 6}
+TERMINAL = {'ACCC', 'RJCT', 'CANC'}
+
+def apply_status(current, incoming):
+    known = set(RANK) | {'RJCT', 'CANC'}
+    if current not in known or incoming not in known:
+        raise ValueError('unknown status')
+    if current in TERMINAL:
+        return current
+    if incoming == 'RJCT':
+        return current if RANK[current] >= 5 else 'RJCT'
+    if incoming == 'CANC':
+        return 'CANC' if RANK[current] <= 2 else current
+    return incoming if RANK[incoming] > RANK[current] else current`,
+    notes: 'The design principle: status handling must be idempotent and monotonic, so replays, retries and out-of-order webhooks converge to the same state. Store the raw bank statuses too, for audit and debugging.',
+  },
+
+  normalize: {
+    title: 'Normalise two banks’ transactions',
+    prompt: `<p>Implement <code>normalize(bank, raw)</code> returning <code>{'id', 'date', 'amount_minor', 'currency', 'description', 'counterparty'}</code> where <code>date</code> is <code>YYYY-MM-DD</code> and <code>amount_minor</code> is a signed <b>int</b> of minor units (2 decimals assumed). Two formats:</p>
+<pre><code>bank 'A' (Berlin-Group-like):
+  {'transactionId', 'bookingDate': '2024-03-01', 'transactionAmount': {'amount': '-12.50', 'currency': 'EUR'},
+   'creditorName', 'remittanceInformationUnstructured'}
+bank 'B':
+  {'id', 'date': '01.03.2024', 'amountMinor': -1250, 'ccy': 'NOK', 'text', 'counterparty'}</code></pre>
+<p>Parse A’s decimal <b>string</b> exactly (never via float): <code>'-0.10'</code> must give <code>-10</code>, <code>'7'</code> gives <code>700</code>, <code>'1.5'</code> gives <code>150</code>. Missing optional text fields become <code>''</code>. Unknown bank → <code>ValueError</code>.</p>`,
+    starter: String.raw`def normalize(bank, raw):
+    pass
+`,
+    tests: String.raw`A = {'transactionId': 'a1', 'bookingDate': '2024-03-01', 'transactionAmount': {'amount': '-12.50', 'currency': 'EUR'},
+     'creditorName': 'Shop', 'remittanceInformationUnstructured': 'Groceries'}
+B = {'id': 'b1', 'date': '01.03.2024', 'amountMinor': -1250, 'ccy': 'NOK', 'text': 'Coffee', 'counterparty': 'Cafe'}
+
+test('bank A', lambda: eq(normalize('A', A), {'id': 'a1', 'date': '2024-03-01', 'amount_minor': -1250, 'currency': 'EUR', 'description': 'Groceries', 'counterparty': 'Shop'}))
+test('bank B', lambda: eq(normalize('B', B), {'id': 'b1', 'date': '2024-03-01', 'amount_minor': -1250, 'currency': 'NOK', 'description': 'Coffee', 'counterparty': 'Cafe'}))
+
+@test('decimal strings are parsed exactly')
+def _():
+    def minor(amount):
+        return normalize('A', {**A, 'transactionAmount': {'amount': amount, 'currency': 'EUR'}})['amount_minor']
+    for text, expected in (('-0.10', -10), ('7', 700), ('1.5', 150), ('0.07', 7), ('+3.00', 300), ('19.99', 1999)):
+        eq(minor(text), expected, text)
+
+@test('missing optional fields become empty strings')
+def _():
+    sparse = {k: v for k, v in A.items() if k not in ('creditorName', 'remittanceInformationUnstructured')}
+    n = normalize('A', sparse)
+    eq(n['description'], '')
+    eq(n['counterparty'], '')
+
+test('amount_minor is an int', lambda: eq(type(normalize('A', A)['amount_minor']), int))
+
+@test('unknown bank raises ValueError')
+def _():
+    with raises(ValueError):
+        normalize('Z', A)
+`,
+    hint: 'decimal.Decimal(text) * 100 is exact. Check that it is a whole number before int(...) so extra decimals fail loudly instead of truncating. dict.get(key, "") handles missing fields.',
+    solution: String.raw`from decimal import Decimal
+
+def parse_minor(text):
+    value = Decimal(text.strip()) * 100
+    if value != value.to_integral_value():
+        raise ValueError('more than 2 decimals: ' + text)
+    return int(value)
+
+def normalize(bank, raw):
+    if bank == 'A':
+        amount = raw['transactionAmount']
+        return {
+            'id': raw['transactionId'],
+            'date': raw['bookingDate'],
+            'amount_minor': parse_minor(amount['amount']),
+            'currency': amount['currency'],
+            'description': raw.get('remittanceInformationUnstructured', ''),
+            'counterparty': raw.get('creditorName', ''),
+        }
+    if bank == 'B':
+        day, month, year = raw['date'].split('.')
+        return {
+            'id': raw['id'],
+            'date': f'{year}-{month}-{day}',
+            'amount_minor': raw['amountMinor'],
+            'currency': raw['ccy'],
+            'description': raw.get('text', ''),
+            'counterparty': raw.get('counterparty', ''),
+        }
+    raise ValueError('unknown bank: ' + str(bank))`,
+    notes: 'Real mapping also handles debtor vs creditor naming by sign, booked vs pending, value date vs booking date, timezones, duplicates across pages, and banks that omit stable ids (derive a deterministic hash). Keep the raw payload next to the normalised one.',
+  },
 
   replicas: {
     title: 'Autoscaling calculation',

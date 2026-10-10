@@ -49,16 +49,17 @@
 
   /* ---------------- session + coordinator ---------------- */
   async function attach(s) {
+    const isOwner = !!(s && s.user && String(s.user.email || '').toLowerCase() === window.OWNER_EMAIL);
+    if (isOwner !== !!window.OWNER_VIEW) { setTimeout(() => location.reload(), 300); } /* owner-gate.js decides at load */
     if (s && s.user) {
       if (coord && session && session.user.id === s.user.id) { session = s; return; }
       session = s;
       coord = SyncCore.createCoordinator({ storage: localStorage, remote, userId: s.user.id, deviceId });
       coord.onChange(() => { paintIcon(); redraw(); });
       paintIcon(); redraw();
-      if (window.PRIVATE) client().then((c) => window.PRIVATE.load(c)).catch(() => {}); /* the owner's private material, if this account may read it */
       await coord.reconcile(); afterSync();
       if (coord.status.kind === 'conflict' || coord.status.kind === 'cloud-newer') toast('Cloud sync needs a decision: open Plan');
-    } else { session = null; coord = null; paintIcon(); redraw(); if (window.PRIVATE) window.PRIVATE.clear(); }
+    } else { session = null; coord = null; paintIcon(); redraw(); }
   }
   function afterSync() {
     if (coord && coord.status.kind === 'applied') { toast('Loaded your progress from the cloud'); setTimeout(() => location.reload(), 900); }

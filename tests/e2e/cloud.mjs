@@ -18,7 +18,7 @@ export function createClient(url, key, opts) {
       async verifyOtp({ email, token }) { const r = await call('verify', { email, token }); if (r.error) return { data: { session: null }, error: err(r.error) }; localStorage.setItem(SK, JSON.stringify(r.session)); emit('SIGNED_IN', r.session); return { data: { session: r.session }, error: null }; },
       async signOut() { localStorage.removeItem(SK); emit('SIGNED_OUT', null); return { error: null }; },
     },
-    from(table) { if (table === 'lab_private') return { select() { return { async order() { const r = await call('private', { token: token() }); return { data: r.data, error: err(r.error) }; } }; } }; return {
+    from() { return {
       select() { return { async maybeSingle() { const r = await call('select', { token: token() }); return { data: r.data, error: err(r.error) }; } }; },
       delete() { return { async eq() { const r = await call('delete', { token: token() }); return { error: err(r.error) }; } }; },
     }; },
@@ -27,14 +27,13 @@ export function createClient(url, key, opts) {
 }`;
 
 class FakeServer { // implements the same rules as supabase/lab_progress.sql
-  constructor() { this.bundle = null; this.rows = new Map(); this.emails = []; this.setupMissing = false; this.saves = 0; }
+  constructor() { this.rows = new Map(); this.emails = []; this.setupMissing = false; this.saves = 0; }
   user(token) { return token && token.startsWith('tok-') ? 'id-' + token.slice(4) : null; }
   handle(name, a) {
     if (name === 'otp') { this.emails.push(a.email); return {}; }
     if (name === 'verify') return a.token === '123456' ? { session: { access_token: 'tok-' + a.email, user: { id: 'id-' + a.email, email: a.email } } } : { error: { message: 'Token has expired or is invalid' } };
     const uid = this.user(a.token);
     if (!uid) return { error: { message: 'JWT required' } };
-    if (name === 'private') return { data: a.token.slice(4) === 'zancato.t@gmail.com' && this.bundle ? [{ id: 'neonomics', data: this.bundle }] : [] }; /* RLS: only the owner's email sees rows */
     if (this.setupMissing) return { error: { code: 'PGRST205', message: "Could not find the table 'public.lab_progress' in the schema cache" } };
     const row = this.rows.get(uid);
     if (name === 'select') return { data: row ? { state: row.state, generation: row.generation, content_hash: row.hash, updated_at: new Date().toISOString(), device_id: row.device } : null };
@@ -138,30 +137,7 @@ export default async function ({ url, browser, ok, section }) {
   await A.locator('#cout').click(); await A.waitForTimeout(500);
   ok(await A.locator('#cemail').isVisible() && (await xp(A)) !== null, 'signed out, local progress still there');
 
-  section('private material: only the owner account receives it');
-  server.bundle = { v: 1, trackIndex: 2, track: { id: 'secret-track', icon: 'x', title: 'Secret Track', blurb: 'b', lessons: [{ id: 'secret-lesson', title: 'Secret lesson', minutes: 5, summary: 's', sections: [{ type: 'text', title: 'T', html: '<p>hidden body</p>' }] }] },
-    mock: [{ lessons: ['secret-lesson'], kind: 'Open Banking', minutes: 5, q: 'Secret question?', rubric: ['a'] }], cards: [{ track: 'Open Banking', q: 'Secret card?', a: 'yes' }], resources: [{ cat: 'Open Banking', title: 'Secret link', url: 'https://example.com/s', note: 'n' }] };
-  const has = (p) => p.evaluate(() => TRACKS.some((t) => t.id === 'secret-track'));
-  const P = await device();
-  ok(!(await has(P)) && !(await P.evaluate(() => document.documentElement.outerHTML.includes('hidden body'))), 'signed out: no trace of the private track');
-  await signIn(P, 'someone.else@example.com');
-  await P.waitForTimeout(1200);
-  ok(!(await has(P)) && (await P.evaluate(() => localStorage.getItem('silp:bundle'))) === null, 'a different account gets nothing and nothing is cached');
-  await P.locator('#cout').click(); await P.waitForTimeout(500);
-  await signIn(P, 'zancato.t@gmail.com');
-  ok(await waitFor(() => has(P)), 'the owner account receives the private track after sign-in');
-  ok(await P.evaluate(() => TRACKS.findIndex((t) => t.id === 'secret-track') === 2 && MOCK.some((m) => m.q === 'Secret question?') && CARDS.some((c) => c.q === 'Secret card?') && RESOURCES.some((r) => r.url === 'https://example.com/s')), 'track, mock question, card and resource are merged at the right place');
-  await P.go(url, '#/lesson/secret-lesson', 500);
-  ok((await P.locator('body').innerText()).includes('hidden body'), 'the private lesson opens');
-  ok(await P.evaluate(() => !Object.keys(SyncCore.snapshot(localStorage)).some((k) => k.startsWith('silp:')) && JSON.stringify(SyncCore.snapshot(localStorage)).indexOf('hidden body') < 0), 'the private copy is never part of the synced progress snapshot');
-  await P.reload(); await P.waitForTimeout(500);
-  ok(await has(P), 'after a reload it is there immediately (offline copy)');
-  await P.locator('#cout').click().catch(async () => { await P.go(url, '#/plan', 500); await P.locator('#cout').click(); });
-  await P.waitForTimeout(1500);
-  ok(!(await has(P)) && (await P.evaluate(() => localStorage.getItem('silp:bundle'))) === null, 'signing out removes it from the page and from this device');
-  server.bundle = null;
-
-  const errs = [A, B, C, P].flatMap((x) => x.errors);
+  const errs = [A, B, C].flatMap((x) => x.errors);
   ok(errs.length === 0, 'no uncaught errors in any device ' + JSON.stringify(errs.slice(0, 2)));
-  for (const x of [A, B, C, P]) await x.context().close();
+  for (const x of [A, B, C]) await x.context().close();
 }

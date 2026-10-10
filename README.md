@@ -1,10 +1,10 @@
 # 🧗 Senior Interview Lab
 
-Interactive prep for **senior engineering interviews in the AI era**.
+Interactive prep for **senior engineering interviews in the AI era**, with a dedicated **Neonomics / open banking** track.
 Pure static site (no build step), hosted on GitHub Pages.
 
 ## What's inside
-- **9 public tracks, 39 lessons**: Senior Playbook, Coding Fluency, **Coding Patterns**, System Design, **Databases & SQL**, **Full-Stack (browser, edge, auth, API, sync)**, Distributed Systems & Reliability, AI-Era Engineering, Scale/Kafka/AWS/Terraform
+- **10 tracks, 44 lessons**: Senior Playbook, Coding Fluency, **Coding Patterns**, System Design, **Databases & SQL**, **Full-Stack (browser, edge, auth, API, sync)**, Distributed Systems & Reliability, AI-Era Engineering, Neonomics & Open Banking, Scale/Kafka/AWS/Terraform
 - **53 coding exercises**: 44 Python (12 are timed pattern drills, 8 are full-stack: cache-control, CORS, JWT, signed cursors, single-flight, stale-while-revalidate, compare-and-swap saves, sync decisions) and 9 SQL with a CodeMirror editor. Python runs in your browser via [Pyodide](https://pyodide.org) (CPython compiled to WebAssembly, loaded from a CDN on first use, about 10 MB, then cached) in a Web Worker with a timeout, with hints and reference solutions
 - **Interactive lessons**: quizzes, step-through walkthroughs, reveal-and-self-check blocks
 - **SQL exercises run in the browser** on SQLite inside the same Python runtime: queries are checked against a reference on a visible and a hidden dataset (so hard-coding fails), and index exercises are verified through the real query plan
@@ -49,6 +49,7 @@ Interactive sections (`sim`, `bug`, `predict`) are added with `INSERT(lessonId, 
 Code exercises live in `content/exercises-py.js` (lessons reference them with `{ type: 'code', ref: 'id' }`). An exercise needs `starter`, `tests` (Python: `test(name, fn)` or `@test(name)`, `eq`, `raises`, `close`; sync or async) and `solution`. The same `assets/harness.py` runs them in the browser (Pyodide) and in CI (CPython). A `predict` section declares its expected `output`. CI (`scripts/validate.mjs`) runs all of them for real.
 
 ## Accuracy note
+Neonomics details come from their public docs and general PSD2 knowledge, not insider information. Verify against <https://docs.neonomics.io>.
 
 ## Browser tests
 `tests/` holds a Playwright suite (smoke over every route, all 53 reference solutions through the real editor and runtime, interactive features, full-stack simulators, and the whole cloud-sync flow against a fake Supabase SDK, so no real project is touched).
@@ -74,15 +75,6 @@ fix and one thing to practise. The model key lives only in the Worker. The butto
 - Protection: CORS only for `https://snowu.github.io`, 10 reviews/min/IP, 6000-char answer cap, JSON-only output.
   `node scripts/test-worker.mjs` runs the Worker's tests offline.
 
-## Private bundles
+## Owner-only track
 
-Some material should not ship to everyone (this repo and the site are public). A **bundle** is a JSON document
-`{v:1, track?, trackIndex?, mock?, cards?, resources?}` that is merged into the app after sign-in:
-
-- Private bundles live in the Supabase table `lab_private` (`supabase/lab_private.sql`): row-level security lets only
-  the owner's email read it and nobody write it through the API. The content itself stays in the gitignored `private/`
-  folder; `private/seed.sql` is pasted into the SQL editor. A new topic is just another row.
-- The browser caches the bundle under `silp:bundle` (never part of synced progress) so it works offline, and drops it
-  on sign-out or when a different account signs in.
-- `node scripts/validate.mjs` also validates `private/*.json` when present; CI validates the public content only.
-- Scrubbing files from the repo does not unpublish earlier commits: history still holds anything committed before.
+The open-banking focus track (plus its mock questions, cards and resources) is shown only when the stored sign-in session belongs to the owner email (`assets/owner-gate.js`). It is a cosmetic JS check, not access control: the content is in the public files.
