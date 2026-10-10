@@ -409,7 +409,7 @@ function rCode(el, s, l, idx, sync, hue, disposers) {
     ${isSql ? `<details class="schema"><summary>Schema &amp; sample data</summary><pre><code>${esc(s.schema)}</code></pre>${s.seed ? `<pre><code>${esc(s.seed.split('\n').slice(0, 14).join('\n'))}${s.seed.split('\n').length > 14 ? '\n-- … more rows' : ''}</code></pre>` : ''}<p class="muted">Runs on SQLite in your browser. A second, hidden dataset checks that you did not hard-code the answer.</p></details>` : ''}
     <div class="ex-win"><div class="ex-tab"><span class="tl3"><i></i><i></i><i></i></span><span class="file">${isSql ? 'query.sql' : 'solution.py'}</span><span class="sp"></span><span class="tclock" hidden></span><span class="vmode"></span><button type="button" class="vimbtn" title="Toggle Vim keybindings">vim: off</button><span><kbd>Ctrl</kbd> <kbd>↵</kbd> run</span></div><div class="editor"></div><div class="vimhint" hidden>h j k l move · w b e words · 0 $ line · gg G file · i a o insert · x dd yy p edit · u undo · ciw · / search · <b>:run</b> or <b>:w</b> runs the tests</div></div>
     <div class="ex-actions"><button class="btn primary run">${ic('play', 15)} Run tests</button><button class="btn timed" title="Timed attempt: countdown, hints locked">${ic('clock', 15)} Timed</button><button class="btn hint">${ic('bulb', 15)} Hint</button><button class="btn sol">${ic('eye', 15)} Solution</button><span class="sp"></span><button class="btn ghost reset">${ic('rotate', 15)} Reset</button></div>
-    <div class="out" aria-live="polite"></div></div>`;
+    <div class="out" aria-live="polite"></div><div class="fbk-slot"></div></div>`;
   const host = $('.editor', el), start = store.get(dk, s.starter);
   let get, set;
   if (window.CodeMirror) {
@@ -433,6 +433,7 @@ function rCode(el, s, l, idx, sync, hue, disposers) {
     ta.addEventListener('input', () => store.set(dk, ta.value)); get = () => ta.value; set = (v) => { ta.value = v; store.set(dk, v); };
   }
   const out = $('.out', el), runBtn = $('.run', el);
+  if (window.FEEDBACK) FEEDBACK.mount($('.fbk-slot', el), { kind: isSql ? 'sql' : 'code', prompt: strip(s.prompt), getAnswer: () => get() });
   async function run() {
     runBtn.disabled = true; out.innerHTML = PY.isReady ? '<div class="sumbar"><b>Running…</b></div>' : LOADING;
     const r = isSql

@@ -1,0 +1,11 @@
+{
+  // Separate from the ldr-simulator Worker: its own name, its own secret, its own deploys.
+  "name": "senior-interview-lab-feedback",
+  "main": "index.mjs",
+  "compatibility_date": "2026-09-20",
+  "vars": { "LAB_MODEL": "deepseek-v4-flash" },
+  "ratelimits": [
+    { "name": "LAB_LIMIT", "namespace_id": "93728110", "simple": { "limit": 10, "period": 60 } }
+  ],
+  "observability": { "enabled": true, "head_sampling_rate": 0.1 }
+}

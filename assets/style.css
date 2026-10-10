@@ -631,3 +631,15 @@ details.schema{margin:0 14px 10px;background:var(--panel2)}details.schema pre{fo
 .cs-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}.cs-row .inp{flex:1;min-width:220px;padding:10px 12px;border:1px solid var(--line2);background:var(--editor);color:var(--ink);font-family:var(--mono);font-size:.85rem}.cs-row .inp:focus{outline:none;border-color:var(--accent)}
 .cs-err{color:var(--bad);font-family:var(--mono);font-size:.78rem}
 .cs-cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:10px 0}.cs-col{border:1px solid var(--line2);background:var(--panel);padding:12px 14px}.cs-h{font-family:var(--mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:6px}.cs-col ul{margin:0;padding-left:18px;font-size:.88rem}
+
+/* ---- AI feedback widget ---- */
+.fbk{margin-top:14px}
+.fbk-box{margin-top:10px;font-size:14px;line-height:1.55}
+.fbk-box:empty{display:none}
+.fbk-verdict{display:inline-block;padding:3px 10px;border:1px solid var(--line);font-weight:700;letter-spacing:.04em;text-transform:uppercase;font-size:12px}
+.fbk-verdict.pass{color:var(--green,#39ff7a);border-color:currentColor}
+.fbk-verdict.partial{color:#e8c547;border-color:currentColor}
+.fbk-verdict.fail{color:#ff6b6b;border-color:currentColor}
+.fbk-h{margin:12px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.fbk-box ul{margin:0;padding-left:18px}
+.fbk-note{font-size:12px;margin-top:12px}

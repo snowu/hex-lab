@@ -70,6 +70,7 @@
         <div class="tagsel">${COMP.map((c) => `<button type="button" class="fchip ${(d.tags || []).includes(c.id) ? 'on' : ''}" data-t="${c.id}">${esc(c.name)}</button>`).join('')}</div>
         ${FIELDS.map(([k, n, h]) => `<label class="lbl">${n} <span class="wcnt" data-w="${k}"></span></label><div class="muted fh">${esc(h)}</div><textarea class="inp" data-k="${k}" rows="${k === 'a' ? 6 : 3}">${esc(d[k] || '')}</textarea>`).join('')}
         <div class="dbar"><button class="btn primary" id="ssave">${ic('check', 15)} Save story</button><button class="btn ghost" id="scancel">Cancel</button></div>
+        <div id="sfbk"></div>
       </div><aside class="coach"><h3>Coach</h3><div id="cbody"></div><p class="muted">Rules of thumb, not AI: a strong story is specific, has a number, says "I", and ends with a lesson.</p></aside></div>`;
     const upd = () => {
       FIELDS.forEach(([k]) => { $(`.wcnt[data-w="${k}"]`).textContent = wc(d[k]) + ' words'; });
@@ -86,6 +87,7 @@
       save(arr); mode = { v: 'list' }; viewStories();
     };
     $('#scancel').onclick = $('#sback').onclick = (e) => { e.preventDefault(); mode = { v: 'list' }; viewStories(); };
+    if (window.FEEDBACK) FEEDBACK.mount($('#sfbk'), { kind: 'story', prompt: 'Behavioural story' + (d.title ? ': ' + d.title : '') + '. Competencies: ' + (d.tags || []).join(', '), getAnswer: () => FIELDS.map(([k, n]) => n + ': ' + (d[k] || '')).join('\n') });
     upd();
   }
 

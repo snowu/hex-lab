@@ -85,6 +85,10 @@
       if (score >= d.rubric.length - 1) { const r = $('#dsave').getBoundingClientRect(); confetti(r.left, r.top); }
       store.set('dw:' + d.id, {}); $('#dsave').disabled = true; $('#dsave').textContent = 'Saved';
     };
+    if (window.FEEDBACK && FEEDBACK.enabled()) {
+      el.insertAdjacentHTML('beforeend', '<section class="cmp"><h3>Second opinion</h3><div id="dfbk"></div></section>');
+      FEEDBACK.mount($('#dfbk'), { kind: 'design', prompt: d.title + ': ' + d.prompt, getAnswer: () => STEPS.map((x) => x.title + ':\n' + (mine[x.id] || '')).join('\n\n') });
+    }
     el.scrollIntoView({ behavior: 'smooth' });
   }
 

@@ -60,3 +60,17 @@ cd tests && npm ci && npx playwright install chromium
 node e2e/run.mjs             # or: node e2e/run.mjs cloud smoke
 LAB_URL=https://snowu.github.io/senior-interview-lab/index.html node e2e/run.mjs smoke fullstack cloud   # against the live site
 ```
+
+## AI feedback (optional)
+
+A "Get AI feedback" button on coding challenges, design reps and the story editor sends your answer to a tiny
+Cloudflare Worker (`worker/`), which asks a cheap model on OpenCode Go and returns a verdict, what works, what to
+fix and one thing to practise. The model key lives only in the Worker. The button is hidden until
+`assets/feedback-config.js` has a URL.
+
+- Benchmark candidate models first: `OPENCODE_API_KEY=... node ai/bench/bench.mjs --runs=2` (5 seeded-flaw answers per model).
+- Deploy: `cd worker && npx wrangler login && npx wrangler secret put OPENCODE_API_KEY && npx wrangler deploy`,
+  then put the printed `*.workers.dev` URL in `assets/feedback-config.js`.
+- Change the model with `LAB_MODEL` in `worker/wrangler.jsonc` (default is a placeholder until benchmarked).
+- Protection: CORS only for `https://snowu.github.io`, 10 reviews/min/IP, 6000-char answer cap, JSON-only output.
+  `node scripts/test-worker.mjs` runs the Worker's tests offline.

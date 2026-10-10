@@ -11,3 +11,4 @@ jobs:
         with: { python-version: '3.12' }
       - run: node scripts/validate.mjs
       - run: node scripts/test-sync.mjs
+      - run: node scripts/test-worker.mjs
