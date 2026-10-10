@@ -24,150 +24,156 @@
     intro: '<p>Each request spends one token. Tokens refill continuously up to the capacity. Capacity is your burst tolerance, refill rate is your sustained throughput.</p>',
     try: ['Press <b>Burst ×10</b> with capacity 5: the first 5 pass, the rest are rejected.', 'Wait a few seconds and burst again: the bucket has refilled.', 'Turn on <b>auto traffic</b> at 8/s with a refill of 2/s: roughly three quarters of requests are rejected in steady state.', 'Raise capacity but not the refill rate: bigger bursts, same long-run rate.'] });
   INSERT('ob-aggregator-eng', 1, { pid: 'sim-outage', type: 'sim', id: 'outage', title: 'One slow bank vs your worker pool',
-    intro: '<p>Three banks share one pool of workers (each square is a worker). Bank C turns slow. Step through the scenarios to see which protection contains the damage. The breaker treats errors and calls slower than 2s as failures.</p>',
-    try: ['<b>no protection</b>: bank C holds every worker, and healthy banks A and B start failing.', '<b>+ timeout</b>: C is cut off at 1s, which helps but C still takes a big share of the pool.', '<b>+ bulkhead</b>: each bank gets its own workers, so A and B stay healthy even though C is slow.', '<b>+ breaker</b>: C is failed instantly after repeated slow calls, freeing the pool without any bulkhead.', 'Raise the <b>error rate</b> of C and compare how the breaker behaves with errors versus slowness.'] });
+    intro: '<p>An aggregator serves three banks (illustrative names) from one pool of 64 workers at 30 requests/s each. For the first 20 seconds everything is healthy: ~99.7% success, p95 under half a second. Then <b>Havn Bank</b> degrades: calls take about 9 seconds and 10% fail. Step through the scenarios and watch which protection contains the damage. The breaker counts errors and calls slower than 2s as failures.</p>',
+    try: ['<b>no protection</b>: after the incident Havn Bank holds the workers, queues build, and the <i>healthy</i> banks fail too. Look at the timeline.', '<b>+ timeout</b>: Havn Bank is cut off at 2s, which helps a lot but it still consumes a large share of the pool.', '<b>+ bulkhead</b>: each bank gets its own workers, so the healthy banks stay at baseline however slow Havn Bank is.', '<b>+ breaker</b>: after a few slow or failed calls Havn Bank is failed instantly, so no workers are wasted on it.', 'Raise the load to 60 req/s or shrink the pool, and see how much headroom each setup really has.', 'Drop the incident latency to 1s and raise the error rate instead: compare how the breaker reacts to errors versus slowness.'] });
 
-  /* ---------- bug hunts ---------- */
+  /* ---------- bug hunts (Python) ---------- */
   INSERT('async-patterns', -1, { pid: 'bug-async', type: 'bug', title: 'Spot the concurrency bugs',
     prompt: '<p>An assistant wrote this transaction sync for a bank aggregator. It works in the demo. Click the <b>2</b> lines that will cause trouble in production.</p>',
-    code: `async function syncAll(accountIds) {
-  const results = [];
-  await Promise.all(accountIds.map(async (id) => {
-    const res = await fetchTransactions(id);
-    results.push(...res);
-  }));
-  accountIds.forEach(async (id) => {
-    await markSynced(id);
-  });
-  return results;
-}`,
-    bugs: [{ line: 3, why: 'Unbounded concurrency: <code>Promise.all</code> over every account fires all bank calls at once. With 5,000 accounts that hits bank rate limits and exhausts sockets. Use a pool such as <code>mapLimit</code>.' },
-           { line: 7, why: '<code>forEach</code> ignores the promises returned by an <code>async</code> callback. The function returns before <code>markSynced</code> finishes, and any rejection becomes an unhandled promise rejection. Use <code>await Promise.all(...)</code> or a <code>for...of</code> loop.' }],
-    hint: 'One line starts too much work at once; the other starts work nobody waits for.' });
+    code: String.raw`async def sync_all(account_ids):
+    results = []
+    async def one(account_id):
+        res = await fetch_transactions(account_id)
+        results.extend(res)
+    await asyncio.gather(*(one(a) for a in account_ids))
+    for account_id in account_ids:
+        asyncio.create_task(mark_synced(account_id))
+    return results`,
+    bugs: [{ line: 6, why: 'Unbounded concurrency: <code>asyncio.gather</code> over every account starts every bank call at once. With 5,000 accounts that hits bank rate limits and exhausts sockets. Bound it with an <code>asyncio.Semaphore</code> (the <code>map_limit</code> pattern).' },
+           { line: 8, why: '<code>asyncio.create_task</code> without keeping or awaiting the task is fire-and-forget. <code>sync_all</code> returns before <code>mark_synced</code> finishes, exceptions are only logged as "Task exception was never retrieved", and the event loop holds only a weak reference, so the task can even be garbage-collected mid-flight. Await it (gather) or use <code>asyncio.TaskGroup</code>.' }],
+    ok: [7], hint: 'One line starts too much work at once; the other starts work nobody waits for.' });
 
   INSERT('ob-payments-money', -1, { pid: 'bug-money', type: 'bug', title: 'Spot the money bugs',
     prompt: '<p>This is part of a fee calculator. Click the <b>2</b> lines that are wrong for a payments system.</p>',
-    code: `function chargeWithFee(amountEur, feePercent) {
-  const fee = amountEur * (feePercent / 100);
-  return { total: amountEur + fee, currency: 'EUR' };
-}
+    code: String.raw`def charge_with_fee(amount_eur, fee_percent):
+    fee = amount_eur * (fee_percent / 100)
+    return {'total': amount_eur + fee, 'currency': 'EUR'}
 
-function splitEqually(totalCents, n) {
-  return Array(n).fill(totalCents / n);
-}`,
-    bugs: [{ line: 2, why: 'Money as floating-point euros. <code>19.99 * 0.15</code> is not exactly representable, so totals drift by fractions of a cent. Store integer minor units (cents) and apply one documented rounding rule.' },
-           { line: 7, why: '<code>totalCents / n</code> produces fractional cents (100 / 3 = 33.333…) and the parts do not add up to the total. Use the largest-remainder method: floor each share and hand the leftover cents out one at a time.' }],
+def split_equally(total_cents, n):
+    return [total_cents / n] * n`,
+    bugs: [{ line: 2, why: 'Money as floating-point euros. <code>19.99 * 0.15</code> is not exactly representable, so totals drift by fractions of a cent. Use integer minor units (cents) or <code>decimal.Decimal</code>, and one documented rounding rule.' },
+           { line: 6, why: '<code>/</code> is true division in Python 3, so <code>100 / 3</code> gives <code>33.333…</code>: fractional cents, and the parts do not add up to the total. Use <code>divmod</code> and hand the leftover cents out one at a time (largest remainder).' }],
     ok: [3], hint: 'Both bugs are about numbers that cannot be represented as whole cents.' });
 
   INSERT('idempotency', -1, { pid: 'bug-idem', type: 'bug', title: 'This payment endpoint is idempotent. Is it?',
     prompt: '<p>The team claims this handler is safe to retry because it checks the idempotency key. Click the <b>2</b> lines that break that guarantee under concurrency or crashes.</p>',
-    code: `async function createPayment(key, payload) {
-  const existing = await db.findByKey(key);
-  if (existing) return existing.result;
-  const result = await bank.initiate(payload);
-  await db.save({ key, result });
-  return result;
-}`,
+    code: String.raw`async def create_payment(key, payload):
+    existing = await db.find_by_key(key)
+    if existing:
+        return existing.result
+    result = await bank.initiate(payload)
+    await db.save(key=key, result=result)
+    return result`,
     bugs: [{ line: 2, why: 'Check-then-act is not atomic. Two concurrent requests with the same key both see "no existing record" and both reach the bank. Claim the key first with an atomic insert guarded by a unique constraint.' },
-           { line: 5, why: 'The key is recorded only after the side effect. If the process crashes between the bank call and this write, the retry will initiate the payment again. Record the key as <i>in progress</i> before calling the bank, then complete it afterwards.' }],
-    ok: [4], hint: 'Ask what happens if two identical requests arrive together, and what happens if the server dies between two lines.' });
+           { line: 6, why: 'The key is recorded only after the side effect. If the process crashes between the bank call and this write, the retry will initiate the payment again. Record the key as <i>in progress</i> before calling the bank, then complete it afterwards.' }],
+    ok: [5], hint: 'Ask what happens if two identical requests arrive together, and what happens if the server dies between two lines.' });
 
   INSERT('kafka', -1, { pid: 'bug-kafka', type: 'bug', title: 'Spot the Kafka consumer bugs',
     prompt: '<p>This consumer processes payment instructions. Click the <b>2</b> lines that will cost money or lose messages.</p>',
-    code: `consumer.run({
-  eachMessage: async ({ topic, partition, message }) => {
-    await consumer.commitOffsets([{ topic, partition, offset: String(Number(message.offset) + 1) }]);
-    await chargeCustomer(JSON.parse(message.value));
-  },
-});`,
+    code: String.raw`consumer = KafkaConsumer('payments', group_id='billing', enable_auto_commit=False)
+for msg in consumer:
+    consumer.commit()
+    charge_customer(json.loads(msg.value))`,
     bugs: [{ line: 3, why: 'The offset is committed <i>before</i> the work is done, which is at-most-once. If the process crashes after the commit and before the charge, that payment is lost forever. Commit after processing (at-least-once).' },
-           { line: 4, why: '<code>chargeCustomer</code> has no idempotency key, so once you fix the ordering and get redelivery, a retry double-charges. Also a malformed payload makes <code>JSON.parse</code> throw and blocks the partition. Use an idempotency key (for example topic-partition-offset), and send poison messages to a dead-letter topic.' }],
+           { line: 4, why: '<code>charge_customer</code> has no idempotency key, so once you fix the ordering and get redelivery, a retry double-charges. Also a malformed payload makes <code>json.loads</code> raise and blocks the partition. Use an idempotency key (for example topic-partition-offset), and send poison messages to a dead-letter topic.' }],
     hint: 'One line is about ordering of commit vs work. The other is about what happens when the same message arrives twice.' });
 
   INSERT('review-ai-code', -1, { pid: 'bug-sec', type: 'bug', title: 'Review this AI-written endpoint',
-    prompt: '<p>An assistant generated this route. It passes the happy-path test. Click the <b>2</b> lines a security review would reject.</p>',
-    code: `app.get('/accounts/:id/transactions', auth, async (req, res) => {
-  const sql = "SELECT * FROM transactions WHERE account_id = '" + req.params.id + "'";
-  const rows = await db.query(sql);
-  console.log('fetched', rows.length, 'rows for', req.headers.authorization);
-  res.json(rows);
-});`,
-    bugs: [{ line: 2, why: 'String-built SQL is injectable. It also queries by whatever id the caller supplies, with no check that the authenticated user owns that account, which is broken object-level authorisation (BOLA/IDOR). Use parameterised queries and filter by the caller\'s accounts.' },
-           { line: 4, why: 'Logs the Authorization header, so bearer tokens end up in log storage. Never log credentials or tokens, and keep PII out of application logs.' }],
-    ok: [3], hint: 'One line builds a query from user input. The other writes something secret to the logs.' });
+    prompt: '<p>An assistant generated this Flask route. It passes the happy-path test. Click the <b>2</b> lines a security review would reject.</p>',
+    code: String.raw`@app.get('/accounts/<account_id>/transactions')
+@login_required
+def transactions(account_id):
+    rows = db.execute(f"SELECT * FROM transactions WHERE account_id = '{account_id}'")
+    app.logger.info('fetched %d rows for %s', len(rows), request.headers['Authorization'])
+    return jsonify(rows)`,
+    bugs: [{ line: 4, why: 'An f-string builds the SQL, so it is injectable. It also queries by whatever id the caller supplies, with no check that the logged-in user owns that account, which is broken object-level authorisation (BOLA/IDOR). Use parameterised queries and filter by the caller\'s accounts.' },
+           { line: 5, why: 'Logs the Authorization header, so bearer tokens end up in log storage. Never log credentials or tokens, and keep PII out of application logs.' }],
+    ok: [6], hint: 'One line builds a query from user input. The other writes something secret to the logs.' });
 
-  INSERT('review-ai-code', -1, { pid: 'bug-sort', type: 'bug', title: 'Plausible but wrong helpers',
-    prompt: '<p>Two small helpers an assistant wrote for a dashboard. Click the <b>2</b> lines that fail on realistic input.</p>',
-    code: `function top3(scores) {
-  scores.sort();
-  return scores.slice(-3).reverse();
-}
+  INSERT('review-ai-code', -1, { pid: 'bug-defaults', type: 'bug', title: 'Plausible but wrong helpers',
+    prompt: '<p>Two small helpers an assistant wrote for a dashboard. Click the <b>2</b> lines that fail on realistic use.</p>',
+    code: String.raw`def add_tag(tag, tags=[]):
+    tags.append(tag)
+    return tags
 
-const average = (xs) => xs.reduce((a, b) => a + b) / xs.length;`,
-    bugs: [{ line: 2, why: 'Array.prototype.sort() with no comparator sorts as strings: [10, 9, 100] becomes [10, 100, 9]. It also mutates the caller\'s array. Copy first and pass <code>(a, b) =&gt; a - b</code>.' },
-           { line: 6, why: '<code>reduce</code> without an initial value throws a TypeError on an empty array. Pass <code>0</code> as the initial value and decide what the average of nothing should be.' }],
-    hint: 'Think about how JavaScript sorts numbers by default, and what reduce does on an empty array.' });
+def average(xs):
+    return sum(xs) / len(xs)`,
+    bugs: [{ line: 1, why: 'A mutable default argument is created once, when the function is defined, and shared by every call: <code>add_tag("a")</code> then <code>add_tag("b")</code> returns <code>["a", "b"]</code>. Use <code>tags=None</code> and create the list inside the function.' },
+           { line: 6, why: 'Raises <code>ZeroDivisionError</code> on an empty list. Decide what the average of nothing should be (<code>None</code>, <code>0</code>, or a clear error) and handle it explicitly.' }],
+    hint: 'Think about when Python evaluates default argument values, and what an empty list does to the division.' });
 
-  /* ---------- predict the output ---------- */
-  INSERT('async-patterns', 1, { pid: 'pred-loop', type: 'predict', title: 'Event loop order',
-    intro: '<p>A classic senior JavaScript question: microtasks vs timers.</p>',
-    code: `console.log('A');
-setTimeout(() => console.log('B'), 0);
-Promise.resolve().then(() => console.log('C'));
-(async () => { console.log('D'); await null; console.log('E'); })();
-console.log('F');`,
-    question: 'In what order are the letters printed?',
-    options: ['A B C D E F', 'A D F C E B', 'A F D C E B', 'A D F B C E'], answer: 1,
-    explain: 'Synchronous code runs first: <code>A</code>, then the async function body up to its first <code>await</code> (<code>D</code>), then <code>F</code>. Promise callbacks are <b>microtasks</b> and run before the next <b>macrotask</b>: <code>C</code>, then the continuation after <code>await</code> (<code>E</code>). The <code>setTimeout</code> callback is a macrotask, so <code>B</code> is last.',
-    output: ['A', 'D', 'F', 'C', 'E', 'B'] });
+  /* ---------- predict the output (Python) ---------- */
+  INSERT('async-patterns', 1, { pid: 'pred-gather', type: 'predict', title: 'gather: completion order vs result order',
+    intro: '<p>Three coroutines finish at different times. What does <code>asyncio.gather</code> give back, and in which order do they print?</p>',
+    code: String.raw`import asyncio
+
+async def work(name, delay):
+    await asyncio.sleep(delay)
+    print('done', name)
+    return name
+
+results = await asyncio.gather(work('a', 0.06), work('b', 0.02), work('c', 0.04))
+print(results)`,
+    question: 'What is printed?',
+    options: ['done a, done b, done c, then [a, b, c]', 'done b, done c, done a, then [a, b, c]', 'done b, done c, done a, then [b, c, a]', 'done a, done b, done c, then [b, c, a]'], answer: 1,
+    explain: 'The coroutines run concurrently, so they <b>finish</b> in order of their delays: b (20ms), c (40ms), a (60ms). But <code>gather</code> returns results in the order the awaitables were <b>passed in</b>, not the order they completed. If you need completion order, use <code>asyncio.as_completed</code>.',
+    output: ['done b', 'done c', 'done a', "['a', 'b', 'c']"] });
 
   INSERT('idempotency', 1, { pid: 'pred-retry', type: 'predict', title: 'Retrying a charge',
     intro: '<p>The server applies the charge, but the response is lost on the first attempt. The client retries without an idempotency key.</p>',
-    code: `let balance = 100;
-let calls = 0;
-async function charge(amount) {
-  balance -= amount;                  // the server applies the charge...
-  calls++;
-  if (calls === 1) throw new Error('timeout'); // ...but the response is lost
-  return balance;
-}
-async function withRetry(fn) {
-  try { return await fn(); } catch { return await fn(); }
-}
-console.log(await withRetry(() => charge(30)));
-console.log('balance:', balance);`,
+    code: String.raw`balance = 100
+calls = 0
+
+async def charge(amount):
+    global balance, calls
+    balance -= amount                  # the server applies the charge...
+    calls += 1
+    if calls == 1:
+        raise TimeoutError('timeout')  # ...but the response is lost
+    return balance
+
+async def with_retry(fn):
+    try:
+        return await fn()
+    except TimeoutError:
+        return await fn()
+
+print(await with_retry(lambda: charge(30)))
+print('balance:', balance)`,
     question: 'What is printed?',
     options: ['70 then "balance: 70"', '40 then "balance: 40"', '70 then "balance: 40"', '100 then "balance: 100"'], answer: 1,
     explain: 'The first call charged 30 (balance 70) but timed out, so the client retried and charged another 30. The customer paid 60 for a 30 purchase. An idempotency key lets the server recognise the retry and return the first result instead of applying it again.',
     output: ['40', 'balance: 40'] });
 
-  INSERT('ob-payments-money', 1, { pid: 'pred-float', type: 'predict', title: 'Floating-point money',
-    intro: '<p>Why seniors insist on integer minor units for currency.</p>',
-    code: `console.log(0.1 + 0.2);
-console.log(19.99 * 100);
-console.log(Math.round(19.99 * 100));
-console.log((1999 * 15) / 100);`,
+  INSERT('ob-payments-money', 1, { pid: 'pred-float', type: 'predict', title: 'Floats and rounding in money code',
+    intro: '<p>Two reasons seniors insist on integer minor units or <code>Decimal</code> for currency.</p>',
+    code: String.raw`print(0.1 + 0.2)
+print(19.99 * 100)
+print(round(19.99 * 100))
+print(round(2.5), round(3.5))`,
     question: 'Which is the exact output, line by line?',
-    options: ['0.3, 1999, 1999, 299.85', '0.30000000000000004, 1998.9999999999998, 1999, 299.85', '0.30000000000000004, 1999, 1999, 299.85', '0.3, 1998.9999999999998, 1998, 299.85'], answer: 1,
-    explain: 'Binary floating point cannot represent most decimal fractions exactly. <code>19.99 * 100</code> is <code>1998.9999999999998</code>, so truncating it would lose a cent, and rounding hides the problem rather than fixing it. Integer cents stay exact, and you choose the rounding rule explicitly instead of inheriting whatever the float happens to do.',
-    output: ['0.30000000000000004', '1998.9999999999998', '1999', '299.85'] });
+    options: ['0.3, 1999.0, 1999, 3 4', '0.30000000000000004, 1998.9999999999998, 1999, 2 4', '0.30000000000000004, 1999.0, 1999, 3 4', '0.3, 1998.9999999999998, 1998, 2 4'], answer: 1,
+    explain: 'Binary floating point cannot represent most decimal fractions exactly, so <code>19.99 * 100</code> is <code>1998.9999999999998</code>. And Python&#39;s <code>round()</code> uses <b>banker&#39;s rounding</b> (round half to even): <code>round(2.5)</code> is 2 and <code>round(3.5)</code> is 4, which silently shifts money by a cent. Use integer cents or <code>Decimal</code> with an explicit rounding mode.',
+    output: ['0.30000000000000004', '1998.9999999999998', '1999', '2 4'] });
 
   INSERT('kafka', 4, { pid: 'pred-redeliver', type: 'predict', title: 'What does a crash before the commit cause?',
     intro: '<p>A tiny at-least-once consumer: process, then commit. It crashes while handling the second message, then restarts.</p>',
-    code: `const log = ['pay-1', 'pay-2', 'pay-3'];
-let committed = 0;                 // next offset to read
-const processed = [];
-function consume(crashAfter) {
-  for (let i = committed; i < log.length; i++) {
-    processed.push(log[i]);        // side effect
-    if (i + 1 === crashAfter) return; // crash before the commit below
-    committed = i + 1;             // commit after processing
-  }
-}
-consume(2);   // crashes while handling pay-2
-consume(99);  // restart
-console.log(processed.join(','));
-console.log('committed', committed);`,
+    code: String.raw`log = ['pay-1', 'pay-2', 'pay-3']
+committed = 0                      # next offset to read
+processed = []
+
+def consume(crash_after):
+    global committed
+    for i in range(committed, len(log)):
+        processed.append(log[i])           # side effect
+        if i + 1 == crash_after:
+            return                         # crash before the commit below
+        committed = i + 1                  # commit after processing
+
+consume(2)    # crashes while handling pay-2
+consume(99)   # restart
+print(','.join(processed))
+print('committed', committed)`,
     question: 'What is printed?',
     options: ['pay-1,pay-2,pay-3 then "committed 3"', 'pay-1,pay-2,pay-2,pay-3 then "committed 3"', 'pay-1,pay-3 then "committed 3"', 'pay-1,pay-2,pay-2,pay-3 then "committed 2"'], answer: 1,
     explain: '<code>pay-2</code> was processed but never committed, so after the restart it is read again: the side effect runs twice. That is at-least-once delivery. The fix is not to avoid it but to make the handler idempotent.',

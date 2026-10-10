@@ -30,8 +30,9 @@ window.RESOURCES = [
   { cat: 'Terraform', title: 'OpenTofu', url: 'https://opentofu.org/docs/', note: 'Open-source fork. Knowing both is a plus.' },
   // Coding
   { cat: 'Coding Practice', title: 'NeetCode roadmap', url: 'https://neetcode.io/roadmap', note: 'Free curated problem roadmap with explanations.' },
-  { cat: 'Coding Practice', title: 'Exercism: JavaScript track', url: 'https://exercism.org/tracks/javascript', note: 'Free, mentored practice with tests.' },
-  { cat: 'Coding Practice', title: 'MDN: JavaScript guide', url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript', note: 'Language reference for async, Map/Set, modules.' },
+  { cat: 'Coding Practice', title: 'Exercism: Python track', url: 'https://exercism.org/tracks/python', note: 'Free, mentored practice with tests.' },
+  { cat: 'Coding Practice', title: 'Python docs: asyncio', url: 'https://docs.python.org/3/library/asyncio.html', note: 'Tasks, semaphores, gather, TaskGroup: the concurrency toolbox behind the async exercises.' },
+  { cat: 'Coding Practice', title: 'Python docs: decimal', url: 'https://docs.python.org/3/library/decimal.html', note: 'Exact decimal arithmetic and rounding modes: the right tool for money.' },
   { cat: 'Coding Practice', title: 'Big-O cheat sheet', url: 'https://www.bigocheatsheet.com/', note: 'Quick complexity reference for data structures and sorts.' },
   // AI
   { cat: 'AI Engineering', title: 'Anthropic: prompt engineering overview', url: 'https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview', note: 'Practical prompting techniques from the model vendor.' },

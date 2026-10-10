@@ -223,109 +223,139 @@ SIMS.bucket = (root) => {
 };
 
 /* =========================================================
-   Bank outage: shared pool vs timeout / bulkhead / breaker
+   Bank outage: shared pool vs timeout / bulkhead / breaker.
+   Calibrated to look like production: log-normal latencies, ~0.3% baseline errors, Poisson arrivals,
+   a healthy baseline period, then a scripted incident on one bank. Bank names are fictional.
    ========================================================= */
 SIMS.outage = (root) => {
-  const BANKS = ['A', 'B', 'C'], BC = { A: '#39ff7a', B: '#00e5ff', C: '#ffb000' };
-  const cfg = { load: 20, latC: 6000, failC: 0, pool: 12, timeout: false, bulkhead: false, breaker: false, speed: 1, running: true };
+  const BANKS = ['A', 'B', 'C'];
+  const BANK = { A: { name: 'Fjord Bank', med: 180, sig: 0.45, color: '#39ff7a' }, B: { name: 'Nordlys Sparebank', med: 260, sig: 0.5, color: '#00e5ff' }, C: { name: 'Havn Bank', med: 340, sig: 0.5, color: '#ffb000' } };
+  const cfg = { load: 30, latC: 9000, failC: 10, pool: 64, timeout: false, bulkhead: false, breaker: false, speed: 3, running: true, incidentAt: 20000 };
+  const DEADLINE = 5000, BASE_ERR = 0.003, WIN = 10000, SLOW = 2000;
+  const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  const lognorm = (med, sig) => Math.min(30000, med * Math.exp(sig * gauss()));
+  const poisson = (lam) => { const L = Math.exp(-lam); let k = 0, p = 1; do { k++; p *= Math.random(); } while (p > L); return k - 1; };
+  const pct = (arr, p) => { if (!arr.length) return 0; const a = [...arr].sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.floor(p * a.length))]; };
+  const fmtT = (ms) => 'T+' + String(Math.floor(ms / 60000)).padStart(2, '0') + ':' + String(Math.floor(ms / 1000) % 60).padStart(2, '0');
   let sim, iv = null;
   const reset = () => {
-    sim = { t: 0, q: [], bq: { A: [], B: [], C: [] }, carry: { A: 0, B: 0, C: 0 }, win: { A: [], B: [], C: [] },
-      brk: { state: 'closed', fails: 0, openedAt: 0, probing: false },
-      workers: Array.from({ length: cfg.pool }, (_, i) => ({ free: true, until: 0, req: null, ok: true, home: BANKS[i % 3] })) };
+    sim = { t: 0, q: [], bq: { A: [], B: [], C: [] }, win: { A: [], B: [], C: [] }, sec: { A: { ok: 0, bad: 0 }, B: { ok: 0, bad: 0 }, C: { ok: 0, bad: 0 } }, line: { A: [], B: [], C: [] }, lastSec: 0,
+      brk: { state: 'closed', fails: 0, openedAt: 0, probing: false }, total: 0, failed: 0, incTotal: 0, incFailed: 0,
+      workers: Array.from({ length: cfg.pool }, (_, i) => ({ free: true, until: 0, req: null, ok: true, home: BANKS[i % 3], start: 0 })) };
   };
-  const record = (r, ok, lat) => { sim.win[r.bank].push({ t: sim.t, ok, lat }); };
-  const brkOpen = () => sim.brk.state === 'open' && sim.t - sim.brk.openedAt < 3000;
-  const brkResult = (ok, lat) => {
-    const b = sim.brk, bad = !ok || lat > 2000;
-    if (!bad) { b.state = 'closed'; b.fails = 0; b.probing = false; return; }
+  const record = (r, ok, lat) => {
+    sim.win[r.bank].push({ t: sim.t, ok, lat }); sim.sec[r.bank][ok ? 'ok' : 'bad']++;
+    sim.total++; if (!ok) sim.failed++;
+    if (sim.t >= cfg.incidentAt) { sim.incTotal++; if (!ok) sim.incFailed++; }
+  };
+  const brkResult = (ok, dur) => {
+    const b = sim.brk;
+    if (ok && dur <= SLOW) { b.state = 'closed'; b.fails = 0; b.probing = false; return; }
     b.fails++; if (b.state === 'half' || b.fails >= 5) { b.state = 'open'; b.openedAt = sim.t; b.probing = false; }
   };
   const step = () => {
     const dt = 100; sim.t += dt;
-    // arrivals
     const arrivals = [];
-    for (const bank of BANKS) {
-      sim.carry[bank] += (cfg.load * dt) / 1000; const n = Math.floor(sim.carry[bank]); sim.carry[bank] -= n;
-      for (let i = 0; i < n; i++) arrivals.push(bank);
-    }
-    for (let i = arrivals.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arrivals[i], arrivals[j]] = [arrivals[j], arrivals[i]]; } /* fair interleaving */
-    {
-      for (const bank of arrivals) {
-        const r = { bank, t0: sim.t };
-        if (bank === 'C' && cfg.breaker) {
-          if (sim.brk.state === 'open' && sim.t - sim.brk.openedAt >= 3000) sim.brk.state = 'half';
-          if (sim.brk.state === 'open' || (sim.brk.state === 'half' && sim.brk.probing)) { record(r, false, 0); continue; }
-          if (sim.brk.state === 'half') sim.brk.probing = true;
-        }
-        (cfg.bulkhead ? sim.bq[bank] : sim.q).push(r);
+    for (const bank of BANKS) { const n = poisson((cfg.load * dt) / 1000); for (let i = 0; i < n; i++) arrivals.push(bank); }
+    for (let i = arrivals.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arrivals[i], arrivals[j]] = [arrivals[j], arrivals[i]]; }
+    for (const bank of arrivals) {
+      const r = { bank, t0: sim.t - Math.random() * dt }; /* arrival time is spread inside the tick so latencies are not quantised */
+      if (bank === 'C' && cfg.breaker) {
+        if (sim.brk.state === 'open' && sim.t - sim.brk.openedAt >= 5000) sim.brk.state = 'half';
+        if (sim.brk.state === 'open' || (sim.brk.state === 'half' && sim.brk.probing)) { record(r, false, 0); continue; }
+        if (sim.brk.state === 'half') sim.brk.probing = true;
       }
+      (cfg.bulkhead ? sim.bq[bank] : sim.q).push(r);
     }
-    // expire queued > 2s
-    const expire = (q) => { while (q.length && sim.t - q[0].t0 > 2000) { record(q[0], false, sim.t - q[0].t0); q.shift(); } };
+    const expire = (q) => { while (q.length && sim.t - q[0].t0 > DEADLINE) { record(q[0], false, sim.t - q[0].t0); q.shift(); } };
     expire(sim.q); BANKS.forEach((b) => expire(sim.bq[b]));
-    const qcap = (q) => { while (q.length > 300) { record(q[0], false, 0); q.shift(); } };
-    qcap(sim.q); BANKS.forEach((b) => qcap(sim.bq[b]));
-    // completions
     for (const w of sim.workers) if (!w.free && sim.t >= w.until) {
-      const lat = sim.t - w.req.t0; record(w.req, w.ok, lat);
-      if (w.req.bank === 'C' && cfg.breaker) brkResult(w.ok, sim.t - w.start);
+      record(w.req, w.ok, w.until - w.req.t0);
+      if (w.req.bank === 'C' && cfg.breaker) brkResult(w.ok, w.until - w.start);
       w.free = true; w.req = null;
     }
-    // dispatch
     for (const w of sim.workers) if (w.free) {
       const q = cfg.bulkhead ? sim.bq[w.home] : sim.q; const r = q.shift(); if (!r) continue;
-      const base = r.bank === 'C' ? cfg.latC : 100; let svc = base * (0.8 + Math.random() * 0.4), ok = !(r.bank === 'C' && Math.random() * 100 < cfg.failC);
-      if (cfg.timeout && svc > 1000) { svc = 1000; ok = false; }
-      w.free = false; w.req = r; w.start = sim.t; w.until = sim.t + Math.max(100, svc); w.ok = ok;
+      const incident = r.bank === 'C' && sim.t >= cfg.incidentAt;
+      let svc = incident ? lognorm(cfg.latC, 0.3) : lognorm(BANK[r.bank].med, BANK[r.bank].sig), ok = Math.random() >= BASE_ERR;
+      if (!ok) svc = Math.min(svc, 120);
+      else if (incident && Math.random() * 100 < cfg.failC) ok = false;
+      if (cfg.timeout && svc > 2000) { svc = 2000; ok = false; }
+      Object.assign(w, { free: false, req: r, start: sim.t, until: sim.t + Math.max(60, svc), ok });
     }
+    while (sim.t - sim.lastSec >= 1000) {
+      sim.lastSec += 1000;
+      for (const b of BANKS) { const c = sim.sec[b], tot = c.ok + c.bad, prev = sim.line[b].length ? sim.line[b][sim.line[b].length - 1] : 1; sim.line[b].push(tot ? c.ok / tot : prev); sim.sec[b] = { ok: 0, bad: 0 }; if (sim.line[b].length > 120) sim.line[b].shift(); }
+    }
+    for (const b of BANKS) sim.win[b] = sim.win[b].filter((x) => sim.t - x.t <= WIN);
   };
   root.innerHTML = `
     <div class="sim-ctl"><span class="grp"><b>Scenario</b><button class="btn sm" data-p="0">no protection</button><button class="btn sm" data-p="1">+ timeout</button><button class="btn sm" data-p="2">+ bulkhead</button><button class="btn sm" data-p="3">+ breaker</button><button class="btn sm" data-p="4">all three</button></span></div>
     <div class="sim-ctl">
-      <span class="grp"><label class="rng"><span>load per bank <b id="o1">20</b>/s</span><input type="range" min="5" max="40" value="20" data-r="load"></label><label class="rng"><span>bank C latency <b id="o2">6.0</b>s</span><input type="range" min="1" max="20" value="60" data-r="latC"></label><label class="rng"><span>bank C error rate <b id="o3">0</b>%</span><input type="range" min="0" max="100" value="0" data-r="failC"></label><label class="rng"><span>worker pool <b id="o4">12</b></span><input type="range" min="3" max="30" value="12" data-r="pool"></label></span>
-      <span class="grp"><label class="chk"><input type="checkbox" data-c="timeout"> 1s timeout</label><label class="chk"><input type="checkbox" data-c="bulkhead"> bulkhead (pool per bank)</label><label class="chk"><input type="checkbox" data-c="breaker"> circuit breaker on C</label></span>
-      <span class="grp"><button class="btn sm primary" data-a="pause" id="opause">pause</button><button class="btn sm" data-a="speed" id="ospd">speed ×1</button><button class="btn sm ghost" data-a="reset">reset</button></span></div>
-    <div class="ow" id="ow"></div><div class="ob" id="ob"></div><div class="sim-note" id="on"></div>`;
-  const stats = (b) => { const w = sim.win[b].filter((x) => sim.t - x.t <= 5000); const ok = w.filter((x) => x.ok), tot = w.length; return { rate: tot ? ok.length / tot : 1, lat: ok.length ? ok.reduce((s, x) => s + x.lat, 0) / ok.length : 0, tps: ok.length / 5, tot }; };
-  const draw = () => {
-    for (const b of BANKS) sim.win[b] = sim.win[b].filter((x) => sim.t - x.t <= 5000);
-    $('#ow', root).innerHTML = `<div class="wgrid">${sim.workers.map((w) => `<i class="wk ${w.free ? '' : 'busy'}" style="--wc:${w.free ? 'transparent' : BC[w.req.bank]}" title="${w.free ? 'idle' : 'busy: bank ' + w.req.bank}"></i>`).join('')}</div>
-      <div class="wq">queued: ${cfg.bulkhead ? BANKS.map((b) => `<span style="color:${BC[b]}">${b}:${sim.bq[b].length}</span>`).join(' ') : `<span>${sim.q.length}</span> (shared FIFO)`}${cfg.breaker ? ` · breaker on C: <b class="${sim.brk.state === 'open' ? 'neg' : ''}">${sim.brk.state === 'half' ? 'half-open' : sim.brk.state}</b>` : ''}</div>`;
-    const S = Object.fromEntries(BANKS.map((b) => [b, stats(b)]));
-    $('#ob', root).innerHTML = BANKS.map((b) => `<div class="bcard ${S[b].rate < 0.8 ? 'bad' : ''}"><div class="bt" style="color:${BC[b]}">Bank ${b}${b === 'C' ? ' <small>(the problem bank)</small>' : ''}</div>
-      <div class="bnum ${S[b].rate < 0.8 ? 'neg' : 'pos'}">${Math.round(S[b].rate * 100)}%</div><small>success (last 5s)</small>
-      <div class="bsub">avg latency <b>${S[b].lat ? (S[b].lat / 1000).toFixed(2) + 's' : '–'}</b> · <b>${S[b].tps.toFixed(1)}</b> ok/s</div></div>`).join('');
-    const hurt = S.A.rate < 0.8 || S.B.rate < 0.8;
-    $('#on', root).innerHTML = hurt
-      ? `<p class="warn">Healthy banks A and B are failing even though nothing is wrong with them. Bank C is hogging the shared workers, so their requests wait in the queue until they expire. This is head-of-line blocking, and it is how one slow dependency takes down everything.</p>`
-      : (sim.t > 8000 && cfg.latC > 1500 ? `<p>A and B are healthy. Bank C is still slow, but the damage is contained.${cfg.breaker ? ' The breaker counts errors and calls slower than 2s as failures and then fails C instantly instead of spending workers on it.' : ''}</p>` : `<p>Press a scenario button and watch the worker pool (each square is a worker) and the three banks' success rates.</p>`);
+      <span class="grp"><label class="rng"><span>load per bank <b id="o1"></b> req/s</span><input type="range" min="10" max="60" data-r="load"></label><label class="rng"><span>incident: Havn Bank latency <b id="o2"></b> s</span><input type="range" min="1" max="30" data-r="latC"></label><label class="rng"><span>incident: error rate <b id="o3"></b>%</span><input type="range" min="0" max="100" data-r="failC"></label><label class="rng"><span>worker pool <b id="o4"></b></span><input type="range" min="16" max="128" data-r="pool"></label></span>
+      <span class="grp"><label class="chk"><input type="checkbox" data-c="timeout"> 2s call timeout</label><label class="chk"><input type="checkbox" data-c="bulkhead"> bulkhead (pool per bank)</label><label class="chk"><input type="checkbox" data-c="breaker"> circuit breaker on Havn Bank</label></span>
+      <span class="grp"><button class="btn sm primary" data-a="pause" id="opause">pause</button><button class="btn sm" data-a="speed" id="ospd"></button><button class="btn sm" data-a="now">trigger incident now</button><button class="btn sm ghost" data-a="reset">restart</button></span></div>
+    <div class="ow" id="ow"></div><div class="ob" id="ob"></div>
+    <div class="tlc"><div class="tlh"><b>Success rate per second, last 90s</b><span id="tll"></span></div><svg id="tls" viewBox="0 0 600 120" preserveAspectRatio="none" role="img" aria-label="Success rate timeline"></svg></div>
+    <div class="sim-note" id="on"></div>`;
+  const stat = (b) => {
+    const w = sim.win[b], ok = w.filter((x) => x.ok), tot = w.length, lat = ok.map((x) => x.lat);
+    return { rate: tot ? ok.length / tot : null, p50: pct(lat, 0.5), p95: pct(lat, 0.95), p99: pct(lat, 0.99), rps: ok.length / (WIN / 1000), inflight: sim.workers.filter((x) => !x.free && x.req.bank === b).length };
   };
-  const preset = (n) => {
-    Object.assign(cfg, { load: 20, latC: 6000, failC: 0, pool: 12, timeout: n === 1 || n === 4, bulkhead: n === 2 || n === 4, breaker: n === 3 || n === 4 });
-    sync(); reset(); cfg.running = true; $('#opause', root).textContent = 'pause';
+  const draw = () => {
+    const busy = sim.workers.filter((w) => !w.free).length, queued = cfg.bulkhead ? BANKS.reduce((n, b) => n + sim.bq[b].length, 0) : sim.q.length;
+    const incident = sim.t >= cfg.incidentAt;
+    $('#ow', root).innerHTML = `<div class="clk"><b>${fmtT(sim.t)}</b><span class="${incident ? 'neg' : 'pos'}">${incident ? `incident since ${fmtT(cfg.incidentAt)}: ${BANK.C.name} is degraded` : `all banks healthy, incident starts at ${fmtT(cfg.incidentAt)}`}</span></div>
+      <div class="wgrid">${sim.workers.map((w) => `<i class="wk ${w.free ? '' : 'busy'}" style="--wc:${w.free ? 'transparent' : BANK[w.req.bank].color}" title="${w.free ? 'idle' : 'busy: ' + BANK[w.req.bank].name}"></i>`).join('')}</div>
+      <div class="wq">workers busy <b>${busy}/${cfg.pool}</b> · queued <b class="${queued > 20 ? 'neg' : ''}">${queued}</b>${cfg.breaker ? ` · breaker on ${BANK.C.name}: <b class="${sim.brk.state === 'open' ? 'neg' : ''}">${sim.brk.state === 'half' ? 'half-open' : sim.brk.state}</b>` : ''}</div>`;
+    const S = Object.fromEntries(BANKS.map((b) => [b, stat(b)]));
+    $('#ob', root).innerHTML = BANKS.map((b) => { const x = S[b], low = x.rate !== null && x.rate < 0.97; return `<div class="bcard ${low ? 'bad' : ''}"><div class="bt" style="color:${BANK[b].color}">${BANK[b].name}</div>
+      <div class="bnum ${x.rate === null ? '' : low ? 'neg' : 'pos'}">${x.rate === null ? '–' : (x.rate * 100).toFixed(1) + '%'}</div><small>success, last 10s</small>
+      <div class="bsub">p50 <b>${Math.round(x.p50)}ms</b> · p95 <b>${Math.round(x.p95)}ms</b> · p99 <b>${Math.round(x.p99)}ms</b></div>
+      <div class="bsub"><b>${x.rps.toFixed(1)}</b> ok/s · <b>${x.inflight}</b> in flight</div></div>`; }).join('');
+    // timeline
+    const nowSec = Math.floor(sim.t / 1000), startSec = Math.max(0, nowSec - 90), X = (sec) => ((sec - startSec) / 90) * 600, Y = (r) => 116 - r * 108;
+    const lines = BANKS.map((b) => { const arr = sim.line[b], first = nowSec - arr.length; const pts = arr.map((r, k) => [X(first + k + 1), Y(r)]).filter(([x]) => x >= 0); return pts.length > 1 ? `<polyline fill="none" stroke="${BANK[b].color}" stroke-width="2" points="${pts.map((p) => p.join(',')).join(' ')}"/>` : ''; }).join('');
+    const ix = X(cfg.incidentAt / 1000);
+    $('#tls', root).innerHTML = `<line x1="0" x2="600" y1="${Y(1)}" y2="${Y(1)}" stroke="var(--line2)" stroke-dasharray="2 4"/><line x1="0" x2="600" y1="${Y(0.5)}" y2="${Y(0.5)}" stroke="var(--line)" stroke-dasharray="2 4"/>${ix >= 0 && ix <= 600 ? `<line x1="${ix}" x2="${ix}" y1="0" y2="120" stroke="var(--bad)" stroke-dasharray="4 3"/><text x="${ix + 4}" y="12" fill="var(--bad)" font-size="10" font-family="monospace">incident</text>` : ''}${lines}`;
+    $('#tll', root).innerHTML = BANKS.map((b) => `<span style="color:${BANK[b].color}">■ ${BANK[b].name}</span>`).join(' ');
+    // narrative
+    const since = sim.incTotal ? (sim.incFailed / sim.incTotal) * 100 : 0, hurt = (S.A.rate !== null && S.A.rate < 0.97) || (S.B.rate !== null && S.B.rate < 0.97);
+    let msg;
+    if (!incident) msg = `<p>Baseline: ${(100 - (sim.total ? (sim.failed / sim.total) * 100 : 0)).toFixed(2)}% of requests succeed and p95 is a few hundred milliseconds. Watch what happens at ${fmtT(cfg.incidentAt)}.</p>`;
+    else if (hurt) msg = `<p class="warn">Healthy banks are failing although nothing is wrong with them. ${BANK.C.name} is holding the shared workers, so requests for other banks wait in the queue until they hit the ${DEADLINE / 1000}s deadline. That is head-of-line blocking, and it is how one slow dependency takes down everything. Since the incident <b>${since.toFixed(1)}%</b> of all requests (${sim.incFailed.toLocaleString()} of ${sim.incTotal.toLocaleString()}) have failed.</p>`;
+    else msg = `<p>The healthy banks are unaffected. ${BANK.C.name} is still degraded, but the damage is contained. Since the incident ${since.toFixed(1)}% of all requests have failed (${sim.incFailed.toLocaleString()} of ${sim.incTotal.toLocaleString()}), almost all of them for ${BANK.C.name} itself.${cfg.breaker ? ' The breaker treats errors and calls slower than 2s as failures, and then fails that bank instantly instead of spending workers on it.' : ''}</p>`;
+    $('#on', root).innerHTML = msg;
   };
   const sync = () => {
-    $('#o1', root).textContent = cfg.load; $('#o2', root).textContent = (cfg.latC / 1000).toFixed(1); $('#o3', root).textContent = cfg.failC; $('#o4', root).textContent = cfg.pool;
-    $$('[data-r]', root).forEach((i) => { const m = { load: cfg.load, latC: cfg.latC / 100, failC: cfg.failC, pool: cfg.pool }[i.dataset.r]; i.value = m; });
+    $('#o1', root).textContent = cfg.load; $('#o2', root).textContent = (cfg.latC / 1000).toFixed(0); $('#o3', root).textContent = cfg.failC; $('#o4', root).textContent = cfg.pool;
+    $$('[data-r]', root).forEach((i) => { i.value = { load: cfg.load, latC: cfg.latC / 1000, failC: cfg.failC, pool: cfg.pool }[i.dataset.r]; });
     $$('[data-c]', root).forEach((i) => (i.checked = cfg[i.dataset.c]));
+    $('#ospd', root).textContent = 'speed ×' + cfg.speed;
+  };
+  const preset = (n) => {
+    Object.assign(cfg, { timeout: n === 1 || n === 4, bulkhead: n === 2 || n === 4, breaker: n === 3 || n === 4, incidentAt: 20000, running: true });
+    $('#opause', root).textContent = 'pause'; sync(); reset(); draw();
   };
   root.addEventListener('click', (e) => {
     const b = e.target.closest('[data-p],[data-a]'); if (!b) return;
     if (b.dataset.p !== undefined) preset(+b.dataset.p);
-    if (b.dataset.a === 'reset') reset();
-    if (b.dataset.a === 'pause') { cfg.running = !cfg.running; b.textContent = cfg.running ? 'pause' : 'resume'; }
-    if (b.dataset.a === 'speed') { cfg.speed = cfg.speed === 1 ? 3 : 1; b.textContent = 'speed ×' + cfg.speed; }
+    const a = b.dataset.a;
+    if (a === 'reset') { reset(); cfg.running = true; $('#opause', root).textContent = 'pause'; }
+    if (a === 'pause') { cfg.running = !cfg.running; b.textContent = cfg.running ? 'pause' : 'resume'; }
+    if (a === 'speed') { cfg.speed = cfg.speed === 1 ? 3 : cfg.speed === 3 ? 10 : 1; sync(); }
+    if (a === 'now') cfg.incidentAt = sim.t;
     draw();
   });
   root.addEventListener('input', (e) => {
     const r = e.target.dataset.r; if (!r) return; const v = +e.target.value;
-    if (r === 'latC') cfg.latC = v * 100; else cfg[r] = v;
-    if (r === 'pool') reset(); sync();
+    if (r === 'latC') cfg.latC = v * 1000; else cfg[r] = v;
+    if (r === 'pool') reset();
+    sync();
   });
   root.addEventListener('change', (e) => { const c = e.target.dataset.c; if (c) { cfg[c] = e.target.checked; if (c === 'bulkhead') reset(); } });
-  reset(); preset(0);
-  iv = setInterval(() => { if (cfg.running) { for (let i = 0; i < cfg.speed; i++) step(); draw(); } }, 100);
+  sync(); reset(); draw();
+  iv = setInterval(() => { if (cfg.running) { for (let k = 0; k < cfg.speed; k++) step(); draw(); } }, 100);
   return () => clearInterval(iv);
 };
 })();

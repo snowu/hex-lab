@@ -51,53 +51,7 @@ TRACKS.push({
         { type: 'text', html: `
 <p>With <code>hash(key) % N</code>, adding a node remaps almost every key, which is a cache disaster. <b>Consistent hashing</b> places nodes (and many <i>virtual nodes</i> per node) on a ring; a key belongs to the first node clockwise from its hash. Adding or removing a node moves only ~1/N of the keys.</p>
 <ul><li><b>Virtual nodes</b> even out load and let you weight bigger machines.</li><li>Used by Dynamo-style stores, memcached clients, and many load balancers.</li></ul>` },
-        { type: 'code', title: 'Implement a hash ring', prompt: `<p>Implement <code>class HashRing</code> with <code>constructor(vnodes = 50)</code>, <code>addNode(name)</code>, <code>removeNode(name)</code> and <code>getNode(key)</code> (returns <code>undefined</code> if the ring is empty). A simple <code>hash</code> function is provided. Use binary search over a sorted array of ring points.</p>`,
-          starter: `function hash(str) { // FNV-1a, 32-bit
-  let h = 2166136261;
-  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
-  return h >>> 0;
-}
-class HashRing {
-  constructor(vnodes = 50) {
-  }
-  addNode(name) {
-  }
-  removeNode(name) {
-  }
-  getNode(key) {
-  }
-}
-`,
-          tests: `
-const keys = Array.from({length: 2000}, (_, i) => 'key-' + i);
-test('empty ring', () => eq(new HashRing().getNode('x'), undefined));
-test('single node owns all', () => { const r=new HashRing(); r.addNode('A'); eq(keys.every(k=>r.getNode(k)==='A'), true); });
-test('deterministic', () => { const r=new HashRing(); ['A','B','C'].forEach(n=>r.addNode(n)); eq(keys.map(k=>r.getNode(k)), keys.map(k=>r.getNode(k))); });
-test('roughly balanced', () => { const r=new HashRing(100); ['A','B','C','D'].forEach(n=>r.addNode(n)); const c={}; keys.forEach(k=>{const n=r.getNode(k); c[n]=(c[n]||0)+1;}); eq(Object.keys(c).length,4); eq(Math.min(...Object.values(c))>2000/4*0.5, true, 'some node is badly underloaded'); });
-test('adding a node moves few keys', () => { const r=new HashRing(100); ['A','B','C','D'].forEach(n=>r.addNode(n)); const before=keys.map(k=>r.getNode(k)); r.addNode('E'); const moved=keys.filter((k,i)=>r.getNode(k)!==before[i]); eq(moved.length < 2000*0.35, true, 'moved '+moved.length); eq(moved.every(k=>r.getNode(k)==='E'), true, 'keys may only move to the new node'); });
-test('removing a node only moves its keys', () => { const r=new HashRing(100); ['A','B','C'].forEach(n=>r.addNode(n)); const before=keys.map(k=>r.getNode(k)); r.removeNode('B'); keys.forEach((k,i)=>{ if(before[i]!=='B') eq(r.getNode(k), before[i]); else eq(r.getNode(k)!=='B', true); }); });`,
-          hint: 'Keep `points` as a sorted array of {h, node}. getNode: binary-search the first point with h >= hash(key); wrap to index 0 if none. vnode i of node n hashes the string n + "#" + i.',
-          solution: `function hash(str) {
-  let h = 2166136261;
-  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
-  return h >>> 0;
-}
-class HashRing {
-  constructor(vnodes = 50) { this.vnodes = vnodes; this.points = []; }
-  addNode(name) {
-    for (let i = 0; i < this.vnodes; i++) this.points.push({ h: hash(name + '#' + i), node: name });
-    this.points.sort((a, b) => a.h - b.h);
-  }
-  removeNode(name) { this.points = this.points.filter((p) => p.node !== name); }
-  getNode(key) {
-    const p = this.points;
-    if (!p.length) return undefined;
-    const h = hash(String(key));
-    let lo = 0, hi = p.length;
-    while (lo < hi) { const mid = (lo + hi) >> 1; if (p[mid].h < h) lo = mid + 1; else hi = mid; }
-    return p[lo % p.length].node;
-  }
-}`, notes: 'Follow-ups: replication (next N distinct nodes clockwise), weighted nodes, hot keys (consistent hashing balances keys, not load), and rendezvous hashing as an alternative.' },
+        { type: 'code', ref: 'hash_ring' },
       ],
     },
     {

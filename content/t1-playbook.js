@@ -65,32 +65,7 @@ Strong: "Checkout p99 was 4.2s and we were losing ~3% of carts. I profiled it, f
 <li><b>Narrate verification:</b> “It handles the happy path. Let me check empty input, duplicates, and concurrent calls.”</li>
 <li><b>Own the result.</b> You must be able to explain every line.</li>
 </ol>` },
-        { type: 'code', title: 'Spot and fix the AI bug', prompt: `<p>An assistant produced this “chunk an array into pages” helper. It passes the happy path but is wrong on edge cases. Fix it so all tests pass. <code>chunk([1,2,3,4,5], 2)</code> should be <code>[[1,2],[3,4],[5]]</code>.</p>`,
-          starter: `function chunk(arr, size) {
-  const out = [];
-  for (let i = 0; i < arr.length - size; i += Math.max(size, 1)) {
-    out.push(arr.slice(i, i + size));
-  }
-  return out;
-}
-`,
-          tests: `
-test('even split', () => eq(chunk([1,2,3,4], 2), [[1,2],[3,4]]));
-test('remainder kept', () => eq(chunk([1,2,3,4,5], 2), [[1,2],[3,4],[5]]));
-test('size larger than array', () => eq(chunk([1,2], 5), [[1,2]]));
-test('empty array', () => eq(chunk([], 3), []));
-test('invalid size throws', async () => { await throws(() => chunk([1], 0)); await throws(() => chunk([1], -1)); });
-test('does not mutate input', () => { const a=[1,2,3]; chunk(a,2); eq(a,[1,2,3]); });`,
-          hint: 'The loop condition drops the last page. Also: what should happen when size ≤ 0? Infinite loops are a bug too.',
-          solution: `function chunk(arr, size) {
-  if (!Number.isInteger(size) || size <= 0) throw new RangeError('size must be a positive integer');
-  const out = [];
-  for (let i = 0; i < arr.length; i += size) {
-    out.push(arr.slice(i, i + size));
-  }
-  return out;
-}`,
-          notes: 'The lesson: the generated code looked right. Boundaries (off-by-one, empty, invalid input) are exactly where generated code fails, so test them first.' },
+        { type: 'code', ref: 'chunk' },
         { type: 'quiz', q: 'In an AI-allowed round the assistant generates a working solution in 20 seconds. What should you do next?',
           options: ['Submit immediately to save time', 'Walk through it, state edge cases, run targeted tests, and explain the complexity', 'Rewrite it by hand to prove you can', 'Ask the assistant to explain it to the interviewer'],
           answer: 1, explain: 'The evaluation is on verification and understanding. Speed of generation is no longer a differentiator.' },

@@ -9,6 +9,7 @@ const store = {
   set(k, v) { try { localStorage.setItem('sil:' + k, JSON.stringify(v)); } catch {} },
 };
 const app = $('#app');
+try { if (!localStorage.getItem('sil:pyMigrated')) { Object.keys(localStorage).filter((k) => k.startsWith('sil:draft:')).forEach((k) => localStorage.removeItem(k)); localStorage.setItem('sil:pyMigrated', 'true'); } } catch {}
 const TRACKS = window.TRACKS, CARDS = window.CARDS || [], MOCK = window.MOCK || [], RES = window.RESOURCES || [];
 
 /* ---------- icons ---------- */
@@ -166,7 +167,7 @@ function viewHome() {
     <section class="hero"><div class="hero-l">
       <span class="eyebrow"><span class="p">$</span> ./senior-prep <b>--mode=ai-era</b></span>
       <h1>Practice like it's the <span class="grad">real interview.</span><span class="cur"></span></h1>
-      <p class="lead">${TRACKS.length} tracks with ${exTotal} coding challenges, ${bugTotal} bug hunts and ${simTotal} interactive simulations, plus flashcards and mock interviews. From system design and Kafka to AWS, Terraform and a dedicated open-banking track for Neonomics. Every lesson works as text, as practice, or both.</p>
+      <p class="lead">${TRACKS.length} tracks with ${exTotal} Python coding challenges, ${bugTotal} bug hunts and ${simTotal} interactive simulations, plus flashcards and mock interviews. From system design and Kafka to AWS, Terraform and a dedicated open-banking track for Neonomics. Every lesson works as text, as practice, or both.</p>
       <div class="cta">
         <a class="btn primary" href="#/lesson/${(nx ? nx.l : TRACKS[0].lessons[0]).id}">${ic('play', 16)} ${nx && (nx.resume || nx.started) ? 'Continue learning' : 'Start learning'}</a>
         <a class="btn" href="#/review">${ic('cards', 16)} ${due} cards due</a>
@@ -252,6 +253,7 @@ function viewLesson(id) {
   const mode = store.get('lmode', 'all'), READ = ['text', 'reveal'];
   const cls = (x) => (READ.includes(x.type) ? 'read' : x.type === 'steps' ? 'both' : 'prac');
   VIM.eds = [];
+  if (l.sections.some((x) => x.type === 'code' || x.type === 'predict') && mode !== 'read') warmPython();
   const metas = l.sections.map(secMeta);
   const outline = metas.map((m, k) => m && `<li class="${cls(l.sections[k])}"><button data-t="s${k}" class="${m.act ? 'act' : ''}"><span class="ck">${ic('check', 10, 3.4)}</span><span>${esc(m.t)}</span></button></li>`).filter(Boolean).join('');
   const nxt = t.lessons[i + 1];
@@ -347,27 +349,50 @@ function applyVim() {
 }
 
 /* ---------- code exercises ---------- */
-function runInWorker(code) {
+/* Python runs in a persistent Pyodide web worker (CPython compiled to WebAssembly). The first run downloads the
+   runtime (cached afterwards); an infinite loop is handled by terminating the worker, which restarts on the next run. */
+const PY = { worker: null, ready: null, isReady: false, id: 0, pending: new Map() };
+function pyStart() {
+  if (PY.ready) return PY.ready;
+  const w = new Worker('assets/pyworker.js'); PY.worker = w;
+  PY.ready = new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('timed out loading')), 120000);
+    w.onmessage = (e) => {
+      const m = e.data;
+      if (m.type === 'ready') { clearTimeout(t); PY.isReady = true; resolve(); }
+      else if (m.type === 'init-error') { clearTimeout(t); reject(new Error(m.error)); }
+      else if (m.type === 'result') { const done = PY.pending.get(m.id); if (done) { PY.pending.delete(m.id); done(m.data); } }
+    };
+    w.onerror = (e) => { clearTimeout(t); reject(new Error(e.message || 'worker error')); };
+  });
+  PY.ready.catch(() => pyKill());
+  return PY.ready;
+}
+function pyKill() { if (PY.worker) PY.worker.terminate(); Object.assign(PY, { worker: null, ready: null, isReady: false }); PY.pending.clear(); }
+const warmPython = () => setTimeout(() => pyStart().catch(() => {}), 800);
+async function runPython(code, tests, { allowEmpty = false, onLoading } = {}) {
+  if (!PY.isReady && onLoading) onLoading();
+  try { await pyStart(); } catch (e) { pyKill(); return { fatal: "Couldn't load the Python runtime (" + e.message + '). It is fetched from a CDN on first use, so you need to be online.', results: [], logs: [] }; }
+  const w = PY.worker, id = ++PY.id;
   return new Promise((resolve) => {
-    let w; try { w = new Worker('assets/worker.js'); } catch (e) { return resolve({ fatal: 'Cannot start worker: ' + e.message, results: [], logs: [] }); }
-    const t = setTimeout(() => { w.terminate(); resolve({ fatal: 'Timed out after 4s. Infinite loop or too slow?', results: [], logs: [] }); }, 4000);
-    w.onmessage = (e) => { clearTimeout(t); w.terminate(); resolve(e.data); };
-    w.onerror = (e) => { clearTimeout(t); w.terminate(); resolve({ fatal: e.message || 'Worker error', results: [], logs: [] }); };
-    w.postMessage({ code });
+    const t = setTimeout(() => { pyKill(); resolve({ fatal: 'Timed out after 6s. Infinite loop or too slow? (The Python runtime restarts on the next run.)', results: [], logs: [] }); }, 6000);
+    PY.pending.set(id, (data) => { clearTimeout(t); resolve(data); });
+    w.postMessage({ id, code, tests, allowEmpty });
   });
 }
+const LOADING = '<div class="sumbar"><b>Loading the Python runtime…</b><span class="muted">first run only, about 10 MB, then it is cached</span></div>';
 function rCode(el, s, l, idx, sync, hue) {
-  const key = keysOf(l)[idx], dk = 'draft:' + l.id + ':' + key.slice(1), solved = () => !!(progress[l.id] || {})[key];
+  const key = keysOf(l)[idx], dk = 'pydraft:' + l.id + ':' + key.slice(1), solved = () => !!(progress[l.id] || {})[key];
   el.innerHTML = `${label('terminal', 'Challenge')}<div class="ex tc brk">
     <div class="ex-head"><div class="ex-title">${esc(s.title)}</div><span class="chip st ${solved() ? 'good' : ''}">${solved() ? ic('check', 12, 3) + ' Solved' : 'Unsolved'}</span></div>
     <div class="ex-prompt">${s.prompt}</div>
-    <div class="ex-win"><div class="ex-tab"><span class="tl3"><i></i><i></i><i></i></span><span class="file">solution.js</span><span class="sp"></span><span class="vmode"></span><button type="button" class="vimbtn" title="Toggle Vim keybindings">vim: off</button><span><kbd>Ctrl</kbd> <kbd>↵</kbd> run</span></div><div class="editor"></div><div class="vimhint" hidden>h j k l move · w b e words · 0 $ line · gg G file · i a o insert · x dd yy p edit · u undo · ciw · / search · <b>:run</b> or <b>:w</b> runs the tests</div></div>
+    <div class="ex-win"><div class="ex-tab"><span class="tl3"><i></i><i></i><i></i></span><span class="file">solution.py</span><span class="sp"></span><span class="vmode"></span><button type="button" class="vimbtn" title="Toggle Vim keybindings">vim: off</button><span><kbd>Ctrl</kbd> <kbd>↵</kbd> run</span></div><div class="editor"></div><div class="vimhint" hidden>h j k l move · w b e words · 0 $ line · gg G file · i a o insert · x dd yy p edit · u undo · ciw · / search · <b>:run</b> or <b>:w</b> runs the tests</div></div>
     <div class="ex-actions"><button class="btn primary run">${ic('play', 15)} Run tests</button><button class="btn hint">${ic('bulb', 15)} Hint</button><button class="btn sol">${ic('eye', 15)} Solution</button><span class="sp"></span><button class="btn ghost reset">${ic('rotate', 15)} Reset</button></div>
     <div class="out" aria-live="polite"></div></div>`;
   const host = $('.editor', el), start = store.get(dk, s.starter);
   let get, set;
   if (window.CodeMirror) {
-    const cm = CodeMirror(host, { value: start, mode: 'javascript', lineNumbers: true, indentUnit: 2, tabSize: 2, indentWithTabs: false, matchBrackets: true, autoCloseBrackets: true, viewportMargin: Infinity,
+    const cm = CodeMirror(host, { value: start, mode: 'python', lineNumbers: true, indentUnit: 4, tabSize: 4, indentWithTabs: false, matchBrackets: true, autoCloseBrackets: true, viewportMargin: Infinity,
       extraKeys: { Tab: (c) => c.execCommand('insertSoftTab'), 'Ctrl-Enter': () => run(), 'Cmd-Enter': () => run() } });
     get = () => cm.getValue(); set = (v) => cm.setValue(v); cm.on('change', () => store.set(dk, cm.getValue()));
     cm._run = () => run();
@@ -381,15 +406,15 @@ function rCode(el, s, l, idx, sync, hue) {
   } else {
     const ta = document.createElement('textarea'); ta.value = start; ta.spellcheck = false; host.appendChild(ta);
     ta.addEventListener('keydown', (e) => {
-      if (e.key === 'Tab') { e.preventDefault(); ta.setRangeText('  ', ta.selectionStart, ta.selectionEnd, 'end'); }
+      if (e.key === 'Tab') { e.preventDefault(); ta.setRangeText('    ', ta.selectionStart, ta.selectionEnd, 'end'); }
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); run(); }
     });
     ta.addEventListener('input', () => store.set(dk, ta.value)); get = () => ta.value; set = (v) => { ta.value = v; store.set(dk, v); };
   }
   const out = $('.out', el), runBtn = $('.run', el);
   async function run() {
-    runBtn.disabled = true; out.innerHTML = '<div class="sumbar"><b>Running…</b></div>';
-    const r = await runInWorker(get() + '\n;\n' + s.tests);
+    runBtn.disabled = true; out.innerHTML = PY.isReady ? '<div class="sumbar"><b>Running…</b></div>' : LOADING;
+    const r = await runPython(get(), s.tests, { onLoading: () => (out.innerHTML = LOADING) });
     runBtn.disabled = false;
     const pass = r.results.filter((x) => x.pass).length, all = r.results.length;
     let h = '';
@@ -475,8 +500,8 @@ function rPredict(el, s, l, idx, sync) {
     else { b.classList.add('wrong'); b.disabled = true; ex.hidden = false; ex.classList.remove('ok'); ex.textContent = 'Not that one. Trace it step by step, or run it to see.'; }
   }));
   $('.run', el).onclick = async () => {
-    out.innerHTML = '<div class="sumbar"><b>Running…</b></div>';
-    const r = await runInWorker(s.code + "\n;test('run', () => new Promise((r) => setTimeout(r, 80)));");
+    out.innerHTML = PY.isReady ? '<div class="sumbar"><b>Running…</b></div>' : LOADING;
+    const r = await runPython(s.code, '', { allowEmpty: true });
     out.innerHTML = r.fatal ? `<div class="res fail"><div class="nm">Error<small>${esc(r.fatal)}</small></div></div>` : `<div class="logs actual">${esc((r.logs || []).join('\n') || '(no output)')}</div>`;
   };
 }
@@ -675,7 +700,7 @@ $('#wipe').onclick = () => {
   try { keys = Object.keys(localStorage).filter((k) => k.startsWith('sil:')); } catch {}
   if (!keys.length) { alert('Nothing stored on this device. Nothing to reset.'); return; }
   const done = TRACKS.reduce((a, t) => a + t.lessons.filter((l) => lessonPct(l) === 100).length, 0);
-  const drafts = keys.filter((k) => k.startsWith('sil:draft:')).length;
+  const drafts = keys.filter((k) => k.startsWith('sil:pydraft:')).length;
   const msg = `Reset ALL progress on this device?\n\n` +
     `  - ${done} completed lessons (and partial progress)\n  - ${xp} XP, level ${level()}, ${streak()}-day streak\n` +
     `  - ${Object.keys(cardState).length} scheduled flashcards\n  - ${mockHist().length} mock interview attempts\n` +

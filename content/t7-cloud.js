@@ -32,22 +32,7 @@ TRACKS.push({
         { type: 'quiz', q: 'Which is the best way to survive a 10× traffic spike that lasts 3 minutes (e.g. a marketing push)?',
           options: ['Permanently provision for 10×', 'Queue non-urgent work, cache, rate-limit/shed low-priority traffic, and autoscale with pre-warmed capacity', 'Hope', 'Restart servers'],
           answer: 1, explain: 'Provisioning for peak is expensive. Combine buffering, degradation and elasticity, and load-test the plan beforehand.' },
-        { type: 'code', title: 'Autoscaling calculation', prompt: `<p>A Kafka consumer group must drain its backlog. Implement <code>desiredReplicas({lag, ratePerConsumer, drainSeconds, partitions, min = 1})</code>: the number of consumers needed to clear <code>lag</code> messages in <code>drainSeconds</code> if each processes <code>ratePerConsumer</code> msg/s, rounded <b>up</b>, never below <code>min</code>, and never above <code>partitions</code> (extra consumers would sit idle).</p>`,
-          starter: `function desiredReplicas({ lag, ratePerConsumer, drainSeconds, partitions, min = 1 }) {
-}
-`,
-          tests: `
-test('rounds up', () => eq(desiredReplicas({lag:100000, ratePerConsumer:500, drainSeconds:60, partitions:12}), 4));
-test('capped at partitions', () => eq(desiredReplicas({lag:100000, ratePerConsumer:500, drainSeconds:60, partitions:3}), 3));
-test('min applies when no lag', () => eq(desiredReplicas({lag:0, ratePerConsumer:500, drainSeconds:60, partitions:12}), 1));
-test('custom min', () => eq(desiredReplicas({lag:10, ratePerConsumer:500, drainSeconds:60, partitions:12, min:2}), 2));
-test('exact fit does not over-provision', () => eq(desiredReplicas({lag:60000, ratePerConsumer:500, drainSeconds:60, partitions:12}), 2));
-test('min cannot exceed partitions', () => eq(desiredReplicas({lag:0, ratePerConsumer:1, drainSeconds:1, partitions:2, min:5}), 2));`,
-          hint: 'need = ceil(lag / (rate * drain)); then clamp: max(min, need), then min(partitions, ...). Clamp to partitions last.',
-          solution: `function desiredReplicas({ lag, ratePerConsumer, drainSeconds, partitions, min = 1 }) {
-  const need = Math.ceil(lag / (ratePerConsumer * drainSeconds));
-  return Math.min(partitions, Math.max(min, need));
-}`, notes: 'The cap by partitions is the key insight: in Kafka, parallelism within a group is bounded by partition count, so plan partitions for peak parallelism up front (increasing later breaks key ordering).' },
+        { type: 'code', ref: 'replicas' },
       ],
     },
     {
@@ -77,56 +62,8 @@ test('min cannot exceed partitions', () => eq(desiredReplicas({lag:0, ratePerCon
 <li><b>Consumer lag</b> is the key health metric. Alert on lag growth rate and age of the oldest unprocessed message.</li>
 <li><b>Schemas:</b> use a schema registry (Avro/Protobuf/JSON Schema) with compatibility rules so producers cannot break consumers.</li>
 <li><b>Partition count</b> is hard to change safely (it remaps keys), so size it for the future.</li></ul>` },
-        { type: 'code', title: 'Keyed partitioner', prompt: `<p>Implement <code>partitionFor(key, numPartitions)</code> using the provided <code>hash</code>: deterministic, always in <code>[0, numPartitions)</code>, and throwing a <code>RangeError</code> if <code>numPartitions</code> is not a positive integer.</p>`,
-          starter: `function hash(str) { // FNV-1a, 32-bit
-  let h = 2166136261;
-  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
-  return h >>> 0;
-}
-function partitionFor(key, numPartitions) {
-}
-`,
-          tests: `
-test('in range', () => { for (let i=0;i<500;i++) { const p=partitionFor('k'+i,7); assert(Number.isInteger(p)&&p>=0&&p<7, 'out of range: '+p); } });
-test('deterministic', () => eq(partitionFor('payment-42',12), partitionFor('payment-42',12)));
-test('spreads keys', () => { const s=new Set(); for (let i=0;i<200;i++) s.add(partitionFor('k'+i,8)); assert(s.size>=6, 'only '+s.size+' partitions used'); });
-test('single partition', () => eq(partitionFor('x',1), 0));
-test('invalid count throws', async () => { await throws(() => partitionFor('x',0)); await throws(() => partitionFor('x',-3)); await throws(() => partitionFor('x',2.5)); });`,
-          hint: 'hash(String(key)) % numPartitions after validating the count. Hash is already unsigned, so no negative modulo.',
-          solution: `function hash(str) {
-  let h = 2166136261;
-  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
-  return h >>> 0;
-}
-function partitionFor(key, numPartitions) {
-  if (!Number.isInteger(numPartitions) || numPartitions <= 0) throw new RangeError('numPartitions must be a positive integer');
-  return hash(String(key)) % numPartitions;
-}`, notes: 'Kafka’s default partitioner uses murmur2 on the key bytes. Follow-up: what happens to ordering if you increase the partition count? (Keys remap; old and new messages for a key can land in different partitions.)' },
-        { type: 'code', title: 'Range assignment for a consumer group', prompt: `<p>Implement <code>assignRange(numPartitions, consumers)</code> mimicking Kafka’s range assignor for a single topic. Sort consumer ids; each gets <code>floor(n/c)</code> <b>contiguous</b> partitions, and the first <code>n mod c</code> consumers get one extra. Return an object <code>{consumerId: [partitions]}</code> including consumers with an empty list. No consumers → <code>{}</code>.</p>`,
-          starter: `function assignRange(numPartitions, consumers) {
-}
-`,
-          tests: `
-test('even', () => eq(assignRange(6,['b','a']), {a:[0,1,2], b:[3,4,5]}));
-test('remainder to first consumers', () => eq(assignRange(7,['a','b','c']), {a:[0,1,2], b:[3,4], c:[5,6]}));
-test('more consumers than partitions', () => eq(assignRange(2,['a','b','c']), {a:[0], b:[1], c:[]}));
-test('no consumers', () => eq(assignRange(4,[]), {}));
-test('every partition assigned exactly once', () => { const r=assignRange(13,['x','y','z','w']); const all=Object.values(r).flat().sort((a,b)=>a-b); eq(all, Array.from({length:13},(_,i)=>i)); });
-test('does not mutate input', () => { const c=['b','a']; assignRange(4,c); eq(c,['b','a']); });`,
-          hint: 'Copy and sort consumers. base = floor(n/c), extra = n % c. For consumer i: count = base + (i < extra ? 1 : 0); start = running offset.',
-          solution: `function assignRange(numPartitions, consumers) {
-  const sorted = [...consumers].sort();
-  const out = {};
-  if (!sorted.length) return out;
-  const base = Math.floor(numPartitions / sorted.length), extra = numPartitions % sorted.length;
-  let next = 0;
-  sorted.forEach((c, i) => {
-    const count = base + (i < extra ? 1 : 0);
-    out[c] = Array.from({ length: count }, (_, k) => next + k);
-    next += count;
-  });
-  return out;
-}`, notes: 'Compare with round-robin (spreads evenly across topics), sticky (minimises movement on rebalance) and cooperative-sticky (incremental rebalance without stop-the-world).' },
+        { type: 'code', ref: 'partition_for' },
+        { type: 'code', ref: 'assign_range' },
         { type: 'quiz', q: 'Payment events for the same payment id must be processed in order. Which design guarantees it?',
           options: ['Many partitions with random keys', 'Use the payment id as the message key so they hash to one partition, and process each partition sequentially', 'One topic per consumer', 'Timestamps on messages'],
           answer: 1, explain: 'Per-key ordering comes from keyed partitioning plus sequential processing per partition. Parallelise <i>across</i> keys, not within one.' },
@@ -169,36 +106,7 @@ test('does not mutate input', () => { const c=['b','a']; assignRange(4,c); eq(c,
 <li>Private subnets for data/compute, <b>VPC endpoints</b> to reach AWS services without the internet, security groups as the main firewall.</li>
 <li>Encrypt at rest (KMS) and in transit; CloudTrail + GuardDuty + Config for audit and detection. Particularly relevant in regulated finance.</li>
 </ul>` },
-        { type: 'code', title: 'Evaluate IAM-style policies', prompt: `<p>Implement <code>evaluate(statements, action, resource)</code> returning <code>'ALLOW'</code> or <code>'DENY'</code>. Each statement is <code>{effect: 'Allow'|'Deny', actions: [...], resources: [...]}</code>. Patterns may contain <code>*</code> (matches any characters, including none; every other character is literal). Rules: if any matching <b>Deny</b> exists → DENY; else if any matching <b>Allow</b> exists → ALLOW; else DENY (implicit). A statement matches only if <b>both</b> an action pattern and a resource pattern match. Actions compare case-insensitively; resources are case-sensitive.</p>`,
-          starter: `function evaluate(statements, action, resource) {
-}
-`,
-          tests: `
-const S = [
-  { effect:'Allow', actions:['s3:GetObject','s3:ListBucket'], resources:['arn:aws:s3:::reports/*','arn:aws:s3:::reports'] },
-  { effect:'Deny',  actions:['s3:*'], resources:['arn:aws:s3:::reports/secret/*'] },
-];
-test('allowed read', () => eq(evaluate(S,'s3:GetObject','arn:aws:s3:::reports/q1.csv'),'ALLOW'));
-test('explicit deny beats allow', () => eq(evaluate(S,'s3:GetObject','arn:aws:s3:::reports/secret/keys.txt'),'DENY'));
-test('implicit deny', () => eq(evaluate(S,'s3:PutObject','arn:aws:s3:::reports/q1.csv'),'DENY'));
-test('other resource denied', () => eq(evaluate(S,'s3:GetObject','arn:aws:s3:::other/x'),'DENY'));
-test('action is case-insensitive', () => eq(evaluate(S,'S3:getobject','arn:aws:s3:::reports/a'),'ALLOW'));
-test('resource is case-sensitive', () => eq(evaluate(S,'s3:GetObject','arn:aws:s3:::REPORTS/a'),'DENY'));
-test('regex chars are literal', () => eq(evaluate([{effect:'Allow',actions:['a:b'],resources:['x.y+(z)']}],'a:b','xzy+(z)'),'DENY'));
-test('star matches everything', () => eq(evaluate([{effect:'Allow',actions:['*'],resources:['*']}],'any:thing','whatever'),'ALLOW'));
-test('empty policy', () => eq(evaluate([],'a:b','c'),'DENY'));
-test('needs both action and resource to match', () => eq(evaluate([{effect:'Deny',actions:['s3:Delete*'],resources:['arn:aws:s3:::reports/*']},{effect:'Allow',actions:['s3:*'],resources:['*']}],'s3:GetObject','arn:aws:s3:::reports/a'),'ALLOW'));`,
-          hint: 'Write glob(pattern, caseInsensitive) that escapes regex special chars, then turns \\* into .*, anchored with ^ and $.',
-          solution: `function glob(pattern, ci) {
-  const re = '^' + pattern.split('*').map((p) => p.replace(/[.+?^\${}()|[\\]\\\\]/g, '\\\\$&')).join('.*') + '$';
-  return new RegExp(re, ci ? 'i' : '');
-}
-function evaluate(statements, action, resource) {
-  const matches = (s) => s.actions.some((a) => glob(a, true).test(action)) && s.resources.some((r) => glob(r, false).test(resource));
-  const hit = statements.filter(matches);
-  if (hit.some((s) => s.effect === 'Deny')) return 'DENY';
-  return hit.some((s) => s.effect === 'Allow') ? 'ALLOW' : 'DENY';
-}`, notes: 'Real IAM also has principals, conditions, permission boundaries, SCPs and session policies; all must allow, and any explicit deny at any layer wins.' },
+        { type: 'code', ref: 'iam' },
         { type: 'quiz', q: 'You need to absorb bursty payment-status events from many producers, and three independent services must each process every event. Best AWS-native pattern?',
           options: ['One SQS queue read by three services', 'SNS topic (or EventBridge) fanning out to one SQS queue per service, each with a DLQ', 'Direct HTTP calls to all three', 'Write to S3 and poll'],
           answer: 1, explain: 'A single queue would split messages among consumers (competing consumers). Fan-out to a queue per subscriber gives each its own copy, retries and DLQ. Kinesis/MSK is the alternative if you need ordered replay.' },
@@ -238,66 +146,8 @@ resource "aws_sqs_queue" "payments" {
 <li><b>Danger:</b> a plan that shows <code>-/+ destroy and then create replacement</code> on a database. Read plans carefully; <code>-target</code> is an escape hatch, not a workflow.</li>
 <li><b>Secrets:</b> don’t put them in variables with defaults or in state if avoidable; reference Secrets Manager/SSM, mark outputs <code>sensitive</code> (which only hides display, not state).</li>
 </ul>` },
-        { type: 'code', title: 'Compute a plan (create / update / delete)', prompt: `<p>Implement <code>plan(desired, current)</code>. Both are objects mapping a resource name to its config object. Return <code>{create, update, delete}</code>, each an <b>alphabetically sorted</b> array of names: <code>create</code> = only in desired; <code>delete</code> = only in current; <code>update</code> = in both but with <b>deeply different</b> configs (key order must not matter, nested objects and arrays compared by value).</p>`,
-          starter: `function plan(desired, current) {
-}
-`,
-          tests: `
-test('create/delete/update', () => eq(plan({a:{x:1}, b:{x:2}}, {b:{x:3}, c:{x:1}}), {create:['a'], update:['b'], delete:['c']}));
-test('no changes', () => eq(plan({a:{x:1,y:[1,2]}}, {a:{y:[1,2],x:1}}), {create:[], update:[], delete:[]}));
-test('nested change detected', () => eq(plan({a:{t:{k:1}}}, {a:{t:{k:2}}}).update, ['a']));
-test('array order matters', () => eq(plan({a:{l:[1,2]}}, {a:{l:[2,1]}}).update, ['a']));
-test('sorted output', () => eq(plan({z:{},m:{},a:{}}, {}).create, ['a','m','z']));
-test('empty both', () => eq(plan({}, {}), {create:[], update:[], delete:[]}));
-test('null vs missing key differ', () => eq(plan({a:{x:null}}, {a:{}}).update, ['a']));`,
-          hint: 'Write a stable stringify (sort object keys recursively) and compare strings. Or write deepEqual. Take care that null and a missing key are not equal.',
-          solution: `function stable(v) {
-  if (Array.isArray(v)) return '[' + v.map(stable).join(',') + ']';
-  if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map((k) => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}';
-  return JSON.stringify(v);
-}
-function plan(desired, current) {
-  const d = Object.keys(desired), c = Object.keys(current);
-  return {
-    create: d.filter((k) => !(k in current)).sort(),
-    update: d.filter((k) => k in current && stable(desired[k]) !== stable(current[k])).sort(),
-    delete: c.filter((k) => !(k in desired)).sort(),
-  };
-}`, notes: 'Real Terraform also distinguishes in-place updates from forced replacement (certain attributes are immutable) and computes values that are only known after apply.' },
-        { type: 'code', title: 'Apply order from a dependency graph', prompt: `<p>Implement <code>applyOrder(graph)</code> where <code>graph</code> maps each resource to an array of resources it <b>depends on</b>. Return an array where every resource appears <b>after</b> its dependencies. Among resources that are ready at the same time, choose <b>alphabetically</b> for determinism. Throw <code>Error('cycle')</code> if there is a cycle and <code>Error('unknown dependency: X')</code> if a dependency is not a key of the graph.</p>`,
-          starter: `function applyOrder(graph) {
-}
-`,
-          tests: `
-test('simple chain', () => eq(applyOrder({app:['db'], db:['vpc'], vpc:[]}), ['vpc','db','app']));
-test('alphabetical among ready', () => eq(applyOrder({c:[], a:[], b:[]}), ['a','b','c']));
-test('diamond', () => eq(applyOrder({vpc:[], sg:['vpc'], subnet:['vpc'], ec2:['sg','subnet']}), ['vpc','sg','subnet','ec2']));
-test('empty', () => eq(applyOrder({}), []));
-test('cycle throws', async () => { const e = await throws(() => applyOrder({a:['b'], b:['a']})); eq(e.message,'cycle'); });
-test('self cycle throws', async () => { const e = await throws(() => applyOrder({a:['a']})); eq(e.message,'cycle'); });
-test('unknown dependency', async () => { const e = await throws(() => applyOrder({a:['nope']})); eq(e.message,'unknown dependency: nope'); });`,
-          hint: 'Kahn’s algorithm: count unmet dependencies per node, repeatedly take the alphabetically-first node with zero, then decrement its dependants. If you cannot place all nodes, there is a cycle.',
-          solution: `function applyOrder(graph) {
-  const names = Object.keys(graph);
-  const remaining = new Map(), dependants = new Map(names.map((n) => [n, []]));
-  for (const n of names) {
-    for (const d of graph[n]) if (!(d in graph)) throw new Error('unknown dependency: ' + d);
-    remaining.set(n, graph[n].length);
-    for (const d of graph[n]) dependants.get(d).push(n);
-  }
-  const ready = names.filter((n) => remaining.get(n) === 0).sort();
-  const order = [];
-  while (ready.length) {
-    const n = ready.shift();
-    order.push(n);
-    for (const m of dependants.get(n)) {
-      remaining.set(m, remaining.get(m) - 1);
-      if (remaining.get(m) === 0) { ready.push(m); ready.sort(); }
-    }
-  }
-  if (order.length !== names.length) throw new Error('cycle');
-  return order;
-}`, notes: 'Terraform walks the same kind of DAG but runs independent nodes in parallel (default 10 at a time), and applies destroys in reverse dependency order.' },
+        { type: 'code', ref: 'tf_plan' },
+        { type: 'code', ref: 'tf_order' },
         { type: 'quiz', q: 'A teammate changed a security group in the AWS console. Your next <code>terraform plan</code>…',
           options: ['Shows no changes', 'Detects the drift (refreshes real state) and proposes to revert it to match your code', 'Fails', 'Updates your code automatically'],
           answer: 1, explain: 'Plan compares code with refreshed real-world state. Decide per change: revert (apply) or codify it in config. Better: remove console write access and run scheduled drift detection.' },

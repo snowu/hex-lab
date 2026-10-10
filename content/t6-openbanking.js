@@ -78,87 +78,12 @@ TRACKS.push({
 <li>Use idempotency keys on every payment-creating request (see the Reliability track).</li>
 <li>Ledger entries are <b>append-only</b>; fix mistakes with reversing entries.</li>
 </ol>` },
-        { type: 'code', title: 'IBAN validation (mod 97)', prompt: `<p>Implement <code>isValidIban(iban)</code>. Steps: remove spaces, uppercase; format <code>2 letters + 2 digits + 11-30 alphanumerics</code>; check country length for <code>NO</code>=15, <code>DE</code>=22, <code>SE</code>=24, <code>DK</code>=18, <code>FI</code>=18, <code>GB</code>=22 (other countries: skip length check); move the first 4 chars to the end; replace letters with numbers (A=10 … Z=35); the resulting big number mod 97 must equal 1. <b>Do not</b> parse it as a Number, it overflows; compute the remainder piecewise.</p>`,
-          starter: `function isValidIban(iban) {
-}
-`,
-          tests: `
-test('valid NO', () => eq(isValidIban('NO93 8601 1117 947'), true));
-test('valid GB', () => eq(isValidIban('GB82 WEST 1234 5698 7654 32'), true));
-test('valid DE lowercase', () => eq(isValidIban('de89370400440532013000'), true));
-test('bad checksum', () => eq(isValidIban('NO94 8601 1117 947'), false));
-test('wrong length for country', () => eq(isValidIban('NO93 8601 1117 9470'), false));
-test('garbage', () => { eq(isValidIban(''), false); eq(isValidIban('hello'), false); eq(isValidIban('NO93-8601-1117-947'), false); });
-test('non-string', () => { eq(isValidIban(null), false); eq(isValidIban(12345), false); });`,
-          hint: 'Piecewise mod: let rem = 0; for each digit char of the expanded string: rem = (rem * 10 + digit) % 97. Expand letters by charCode - 55 into one or two digits.',
-          solution: `function isValidIban(iban) {
-  if (typeof iban !== 'string') return false;
-  const s = iban.replace(/ /g, '').toUpperCase();
-  if (!/^[A-Z]{2}\\d{2}[A-Z0-9]{11,30}$/.test(s)) return false;
-  const lengths = { NO: 15, DE: 22, SE: 24, DK: 18, FI: 18, GB: 22 };
-  const cc = s.slice(0, 2);
-  if (lengths[cc] && s.length !== lengths[cc]) return false;
-  const rearranged = s.slice(4) + s.slice(0, 4);
-  let rem = 0;
-  for (const ch of rearranged) {
-    const v = ch >= 'A' ? String(ch.charCodeAt(0) - 55) : ch;
-    for (const d of v) rem = (rem * 10 + Number(d)) % 97;
-  }
-  return rem === 1;
-}`, notes: 'Validating the checksum proves the IBAN is well-formed, not that the account exists or belongs to a person. That is what an account-verification endpoint is for.' },
-        { type: 'code', title: 'Split money without losing a cent', prompt: `<p>Implement <code>splitAmount(totalMinor, weights)</code> returning integer parts proportional to <code>weights</code> that <b>sum exactly to totalMinor</b>. Use the largest-remainder method: floor each share, then give the leftover units one by one to the shares with the largest fractional remainders (ties: lower index first).</p>`,
-          starter: `function splitAmount(totalMinor, weights) {
-}
-`,
-          tests: `
-const sum = a => a.reduce((x,y)=>x+y,0);
-test('even thirds', () => eq(splitAmount(100,[1,1,1]), [34,33,33]));
-test('exact halves', () => eq(splitAmount(10,[1,1]), [5,5]));
-test('one cent over three', () => eq(splitAmount(1,[1,1,1]), [1,0,0]));
-test('weighted remainder goes to biggest fraction', () => eq(splitAmount(101,[70,30]), [71,30]));
-test('always sums to total', () => { for (const t of [0,1,7,99,1000,12345]) for (const w of [[1],[1,2,3],[5,5,5,5,5,5,5],[0.3,0.3,0.4]]) eq(sum(splitAmount(t,w)), t, t+' '+w); });
-test('zero total', () => eq(splitAmount(0,[1,2]), [0,0]));
-test('invalid weights throw', async () => { await throws(() => splitAmount(10, [])); await throws(() => splitAmount(10, [0,0])); await throws(() => splitAmount(10, [-1,2])); });`,
-          hint: 'shares[i] = total*w[i]/sumW. floor them, leftover = total - sum(floors), sort indexes by remainder desc then index asc, +1 to the first `leftover`.',
-          solution: `function splitAmount(totalMinor, weights) {
-  const sw = weights.reduce((a, b) => a + b, 0);
-  if (!weights.length || weights.some((w) => w < 0) || sw <= 0) throw new RangeError('invalid weights');
-  const exact = weights.map((w) => (totalMinor * w) / sw);
-  const parts = exact.map(Math.floor);
-  let left = totalMinor - parts.reduce((a, b) => a + b, 0);
-  const order = exact.map((x, i) => ({ i, r: x - Math.floor(x) })).sort((a, b) => b.r - a.r || a.i - b.i);
-  for (let k = 0; left > 0; k++, left--) parts[order[k % order.length].i]++;
-  return parts;
-}`, notes: 'Real systems use BigInt/decimal for large totals and keep the allocation rule in the spec (e.g. fees go to the platform). Always test the invariant “parts sum to total”.' },
+        { type: 'code', ref: 'iban' },
+        { type: 'code', ref: 'split_amount' },
         { type: 'text', html: `
 <h3>Payment status lifecycle</h3>
 <p>Berlin Group / ISO 20022-style statuses include <code>RCVD</code> (received), <code>PDNG</code> (pending), <code>ACTC</code> (technically accepted), <code>ACCP</code> (accepted for customer profile), <code>ACSP</code> (settlement in process), <code>ACSC</code> (settlement completed), <code>ACCC</code> (credit account completed), <code>RJCT</code> (rejected), <code>CANC</code> (cancelled). Banks report these <b>late, duplicated, skipped, or out of order</b>, and your system must still end in a correct state.</p>` },
-        { type: 'code', title: 'Merge payment status updates safely', prompt: `<p>Implement <code>applyStatus(current, incoming)</code> returning the new status, with these simplified rules (ranks: RCVD 0, PDNG 1, ACTC 2, ACCP 3, ACSP 4, ACSC 5, ACCC 6):</p>
-<ul><li>If <code>current</code> is terminal (<code>ACCC</code>, <code>RJCT</code>, <code>CANC</code>) → unchanged.</li><li><code>RJCT</code> is accepted unless current rank ≥ 5 (already settled).</li><li><code>CANC</code> is accepted only if current rank ≤ 2.</li><li>Otherwise move forward only: accept <code>incoming</code> if its rank is higher (skipping is fine); ignore same or lower rank (stale/duplicate).</li><li>Unknown status → throw <code>Error('unknown status')</code>.</li></ul>`,
-          starter: `function applyStatus(current, incoming) {
-}
-`,
-          tests: `
-test('forward', () => eq(applyStatus('RCVD','ACTC'),'ACTC'));
-test('skip allowed', () => eq(applyStatus('PDNG','ACSC'),'ACSC'));
-test('duplicate ignored', () => eq(applyStatus('ACSP','ACSP'),'ACSP'));
-test('stale ignored', () => eq(applyStatus('ACSC','PDNG'),'ACSC'));
-test('terminal sticks', () => { eq(applyStatus('ACCC','RJCT'),'ACCC'); eq(applyStatus('RJCT','ACSP'),'RJCT'); eq(applyStatus('CANC','ACTC'),'CANC'); });
-test('reject early and mid', () => { eq(applyStatus('RCVD','RJCT'),'RJCT'); eq(applyStatus('ACSP','RJCT'),'RJCT'); });
-test('reject after settlement refused', () => eq(applyStatus('ACSC','RJCT'),'ACSC'));
-test('cancel only early', () => { eq(applyStatus('PDNG','CANC'),'CANC'); eq(applyStatus('ACCP','CANC'),'ACCP'); });
-test('unknown throws', async () => { await throws(() => applyStatus('RCVD','WAT')); await throws(() => applyStatus('NOPE','ACTC')); });`,
-          hint: 'A RANK object and a TERMINAL set. Handle RJCT and CANC before the generic rank comparison.',
-          solution: `const RANK = { RCVD: 0, PDNG: 1, ACTC: 2, ACCP: 3, ACSP: 4, ACSC: 5, ACCC: 6 };
-const TERMINAL = new Set(['ACCC', 'RJCT', 'CANC']);
-function applyStatus(current, incoming) {
-  const known = (s) => s in RANK || s === 'RJCT' || s === 'CANC';
-  if (!known(current) || !known(incoming)) throw new Error('unknown status');
-  if (TERMINAL.has(current)) return current;
-  if (incoming === 'RJCT') return RANK[current] >= 5 ? current : 'RJCT';
-  if (incoming === 'CANC') return RANK[current] <= 2 ? 'CANC' : current;
-  return RANK[incoming] > RANK[current] ? incoming : current;
-}`, notes: 'The design principle: status handling must be commutative-ish and idempotent, so replays, retries and out-of-order webhooks converge to the same state. Store raw bank statuses too, for audit and debugging.' },
+        { type: 'code', ref: 'payment_status' },
         { type: 'quiz', q: 'The same payment’s status webhooks arrive as ACSC, then (late) ACSP. A naive “last write wins” handler does what, and why does it matter?',
           options: ['Nothing, ACSP is fine', 'Regresses a settled payment to “in process”, which could trigger a duplicate payout or confusing notifications', 'Crashes', 'Deletes the payment'],
           answer: 1, explain: 'Out-of-order delivery is normal. Use monotonic state rules (or event versions) so late events cannot move state backwards.' },
@@ -178,46 +103,7 @@ function applyStatus(current, incoming) {
 <li><b>Data freshness is a product feature:</b> expose “as of” timestamps and degrade to cached data with a clear flag when the bank is down.</li>
 <li><b>Reconciliation:</b> regularly compare what you believe happened (payments, statuses) with what the bank reports. Money systems assume drift and detect it.</li>
 </ul>` },
-        { type: 'code', title: 'Normalise two banks’ transactions', prompt: `<p>Implement <code>normalize(bank, raw)</code> returning <code>{id, date, amountMinor, currency, description, counterparty}</code> where <code>date</code> is <code>YYYY-MM-DD</code> and <code>amountMinor</code> is a signed <b>integer</b> of minor units (2 decimals assumed). Two formats:</p>
-<pre><code>bank 'A' (Berlin-Group-like):
-  { transactionId, bookingDate: '2024-03-01', transactionAmount: { amount: '-12.50', currency: 'EUR' },
-    creditorName, remittanceInformationUnstructured }
-bank 'B':
-  { id, date: '01.03.2024', amountMinor: -1250, ccy: 'NOK', text, counterparty }</code></pre>
-<p>Parse A’s decimal <b>string</b> without floating point (<code>'-0.10'</code> must give <code>-10</code>; <code>'7'</code> gives <code>700</code>; <code>'1.5'</code> gives <code>150</code>). Missing optional text fields become <code>''</code>. Unknown bank → throw.</p>`,
-          starter: `function normalize(bank, raw) {
-}
-`,
-          tests: `
-const A = { transactionId:'a1', bookingDate:'2024-03-01', transactionAmount:{amount:'-12.50',currency:'EUR'}, creditorName:'Shop', remittanceInformationUnstructured:'Groceries' };
-const B = { id:'b1', date:'01.03.2024', amountMinor:-1250, ccy:'NOK', text:'Coffee', counterparty:'Cafe' };
-test('bank A', () => eq(normalize('A',A), {id:'a1',date:'2024-03-01',amountMinor:-1250,currency:'EUR',description:'Groceries',counterparty:'Shop'}));
-test('bank B', () => eq(normalize('B',B), {id:'b1',date:'2024-03-01',amountMinor:-1250,currency:'NOK',description:'Coffee',counterparty:'Cafe'}));
-test('decimal strings exact', () => { const f=a=>normalize('A',{...A,transactionAmount:{amount:a,currency:'EUR'}}).amountMinor; eq(f('-0.10'),-10); eq(f('7'),700); eq(f('1.5'),150); eq(f('0.07'),7); eq(f('+3.00'),300); eq(f('19.99'),1999); });
-test('missing optional fields', () => { const {creditorName, remittanceInformationUnstructured, ...rest}=A; const n=normalize('A',rest); eq(n.description,''); eq(n.counterparty,''); });
-test('amount is integer', () => assert(Number.isInteger(normalize('A',A).amountMinor)));
-test('unknown bank throws', async () => { await throws(() => normalize('Z',A)); });`,
-          hint: 'For the string: capture sign, whole and fraction with a regex, pad the fraction to 2 digits, compute whole*100 + fraction, apply the sign. Beware that -0.10 has a whole part of "0": apply the sign at the end.',
-          solution: `function parseMinor(str) {
-  const m = /^([+-]?)(\\d+)(?:\\.(\\d{1,2}))?$/.exec(String(str).trim());
-  if (!m) throw new Error('bad amount: ' + str);
-  const minor = Number(m[2]) * 100 + Number((m[3] || '').padEnd(2, '0') || 0);
-  return m[1] === '-' ? -minor : minor;
-}
-function normalize(bank, raw) {
-  if (bank === 'A') {
-    return {
-      id: raw.transactionId, date: raw.bookingDate,
-      amountMinor: parseMinor(raw.transactionAmount.amount), currency: raw.transactionAmount.currency,
-      description: raw.remittanceInformationUnstructured || '', counterparty: raw.creditorName || '',
-    };
-  }
-  if (bank === 'B') {
-    const [d, mo, y] = raw.date.split('.');
-    return { id: raw.id, date: y + '-' + mo + '-' + d, amountMinor: raw.amountMinor, currency: raw.ccy, description: raw.text || '', counterparty: raw.counterparty || '' };
-  }
-  throw new Error('unknown bank: ' + bank);
-}`, notes: 'Real mapping also handles debtor vs creditor naming by sign, booked vs pending, value date vs booking date, timezones, duplicate transactions across pages, and banks that omit stable ids (derive a deterministic hash).' },
+        { type: 'code', ref: 'normalize' },
         { type: 'quiz', q: 'Bank X starts responding in 25 seconds instead of 300ms. Your workers share one pool across all banks. What happens, and what is the fix?',
           options: ['Nothing: other banks are unaffected', 'Workers pile up waiting on X and starve every other bank; fix with per-bank timeouts, concurrency limits (bulkheads) and a circuit breaker', 'Add more workers only', 'Cache everything forever'],
           answer: 1, explain: 'Classic head-of-line blocking. Isolate failure domains per dependency, and fail fast so healthy banks keep their capacity.' },
