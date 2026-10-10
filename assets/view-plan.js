@@ -75,6 +75,7 @@
         <button class="btn primary" id="dgo">${ic('target', 15)} ${dr ? 'Retake the diagnostic' : 'Take the diagnostic'}</button>
       </section>
       <section class="ready"><div class="ph"><h2>Readiness</h2><span class="muted">lessons + diagnostic</span></div>${readinessHtml()}${statsHtml()}${heatmapHtml()}</section>
+      <section class="cloud"><div class="ph"><h2>Cloud sync</h2><span class="muted">optional · this device always wins unless you choose otherwise</span></div><div id="cloudpanel"></div></section>
       <section class="backup"><div class="ph"><h2>Backup</h2><span class="muted">your data lives only in this browser</span></div>
         <p class="muted">Export a file to move to another browser or device, or to keep a copy before clearing site data.</p>
         <div class="dbar"><button class="btn" id="bexp">${ic('arrow', 15)} Export progress</button><label class="btn" for="bimp">${ic('arrowL', 15)} Import progress</label><input type="file" id="bimp" accept="application/json" hidden></div></section>`;
@@ -82,6 +83,7 @@
     $('#goal').onchange = (e) => { store.set('goalDate', e.target.value); viewPlan(); };
     $('#dgo').onclick = startDiag;
     $('#bexp').onclick = exportData; $('#bimp').onchange = importData;
+    if (window.CLOUD) window.CLOUD.mount($('#cloudpanel'));
   }
 
   const readinessHtml = () => `<div class="rdy">${TRACKS.map((t) => { const m = mastery(t), d = diagResult() && diagResult().tracks[t.id]; return `<div class="rrow tc" style="--h:${hueOf(t.id)}"><span class="rt">${esc(t.title)}</span><span class="rbar"><i style="width:${m}%"></i></span><span class="rv">${m}%${d ? ` <small>diag ${d.right}/${d.total}</small>` : ''}</span></div>`; }).join('')}</div>`;

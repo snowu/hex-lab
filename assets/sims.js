@@ -433,4 +433,58 @@ SIMS.isolation = (root) => {
   draw();
   return () => {};
 };
+
+/* =========================================================
+   Many viewers, one upstream: caching strategies
+   ========================================================= */
+SIMS.edgecache = (root) => {
+  const cfg = { viewers: 150, interval: 5, ttl: 4, upMs: 400, strat: 'ttl' };
+  const STRATS = { none: 'no cache', ttl: 'TTL cache', sf: 'TTL + single-flight', swr: 'stale-while-revalidate + single-flight' };
+  const rng = (seed) => () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const pct = (arr, p) => { if (!arr.length) return 0; const a = [...arr].sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.floor(p * a.length))]; };
+  function simulate() {
+    const T = 60000, rand = rng(7), reqs = [];
+    for (let v = 0; v < cfg.viewers; v++) { let t = rand() * cfg.interval * 1000; while (t < T) { reqs.push(t); t += cfg.interval * 1000 + (rand() - 0.5) * 400; } }
+    reqs.sort((x, y) => x - y);
+    const calls = new Array(60).fill(0), lat = [], age = [];
+    let entryAt = null, inflightEnd = -1; const pend = [], ttl = cfg.ttl * 1000, up = cfg.upMs;
+    const callAt = (t) => { calls[Math.min(59, Math.floor(t / 1000))]++; pend.push(t + up); };
+    for (const t of reqs) {
+      while (pend.length && pend[0] <= t) entryAt = pend.shift();
+      const fresh = entryAt !== null && t < entryAt + ttl;
+      if (cfg.strat === 'none') { callAt(t); lat.push(up); age.push(0); continue; }
+      if (fresh) { lat.push(5); age.push(t - entryAt); continue; }
+      if (cfg.strat === 'ttl') { callAt(t); lat.push(up); age.push(0); continue; }
+      const stale = cfg.strat === 'swr' && entryAt !== null && t < entryAt + ttl * 4;
+      if (inflightEnd > t) { if (stale) { lat.push(5); age.push(t - entryAt); } else { lat.push(inflightEnd - t); age.push(0); } continue; }
+      callAt(t); inflightEnd = t + up;
+      if (stale) { lat.push(5); age.push(t - entryAt); } else { lat.push(up); age.push(0); }
+    }
+    return { calls, total: calls.reduce((a, b) => a + b, 0), peak: Math.max(...calls), p95: pct(lat, 0.95), age95: pct(age, 0.95), n: reqs.length };
+  }
+  root.innerHTML = `
+    <div class="sim-ctl"><span class="grp"><b>Strategy</b>${Object.entries(STRATS).map(([k, v]) => `<button class="btn sm" data-s="${k}">${v}</button>`).join('')}</span></div>
+    <div class="sim-ctl"><span class="grp"><label class="rng"><span>viewers <b id="e1"></b></span><input type="range" min="10" max="500" step="10" data-r="viewers"></label><label class="rng"><span>each polls every <b id="e2"></b> s</span><input type="range" min="2" max="15" data-r="interval"></label><label class="rng"><span>cache TTL <b id="e3"></b> s</span><input type="range" min="1" max="30" data-r="ttl"></label><label class="rng"><span>upstream latency <b id="e4"></b> ms</span><input type="range" min="100" max="2500" step="100" data-r="upMs"></label></span></div>
+    <div class="ecs" id="ecs"></div><div class="echart"><svg id="ecg" viewBox="0 0 600 130" preserveAspectRatio="none" role="img" aria-label="Upstream calls per second"></svg><div class="eax"><span>0 s</span><span>upstream calls per second, one simulated minute</span><span>60 s</span></div></div>
+    <div class="sim-note" id="ecn"></div>`;
+  const draw = () => {
+    const r = simulate(), rate = (r.n / 60).toFixed(0);
+    $$('[data-s]', root).forEach((b) => b.classList.toggle('primary', b.dataset.s === cfg.strat));
+    $('#e1', root).textContent = cfg.viewers; $('#e2', root).textContent = cfg.interval; $('#e3', root).textContent = cfg.ttl; $('#e4', root).textContent = cfg.upMs;
+    $$('[data-r]', root).forEach((i) => (i.value = cfg[i.dataset.r]));
+    const max = Math.max(1, r.peak);
+    $('#ecg', root).innerHTML = r.calls.map((c, i) => `<rect x="${i * 10 + 1}" width="8" y="${128 - (c / max) * 120}" height="${(c / max) * 120}" fill="${c === r.peak && c > 3 ? 'var(--bad)' : 'var(--accent)'}"/>`).join('') + `<text x="4" y="12" fill="var(--muted)" font-size="10" font-family="monospace">peak ${r.peak}/s</text>`;
+    $('#ecs', root).innerHTML = `<div><b>${rate}</b><span>requests/s from viewers</span></div><div class="${r.total > 600 ? 'neg' : ''}"><b>${r.total.toLocaleString()}</b><span>upstream calls in 60 s</span></div><div class="${r.peak > 20 ? 'neg' : ''}"><b>${r.peak}/s</b><span>peak upstream rate</span></div><div class="${r.p95 > 300 ? 'neg' : ''}"><b>${Math.round(r.p95)} ms</b><span>p95 viewer latency</span></div><div><b>${(r.age95 / 1000).toFixed(1)} s</b><span>p95 data age</span></div>`;
+    $('#ecn', root).innerHTML = {
+      none: '<p class="warn">Every poll hits the upstream. The call count scales with viewers, which is exactly how you exhaust an API quota or get blocked.</p>',
+      ttl: '<p>Most requests are cache hits, but look at the spikes: when the entry expires, every viewer arriving while the refresh is still in flight misses too, and each one calls the upstream (a cache stampede). The slower the upstream, the bigger the spike.</p>',
+      sf: '<p>One upstream call per refresh, whatever the number of viewers. The unlucky viewers who arrive during the refresh wait for it, so p95 latency is the upstream latency.</p>',
+      swr: '<p>After the first fill nobody waits: expired entries are served instantly while one refresh runs in the background. The cost is data that is a little older (shown as p95 data age). This is Cache-Control: max-age plus stale-while-revalidate.</p>',
+    }[cfg.strat];
+  };
+  root.addEventListener('click', (e) => { const b = e.target.closest('[data-s]'); if (b) { cfg.strat = b.dataset.s; draw(); } });
+  root.addEventListener('input', (e) => { const k = e.target.dataset.r; if (k) { cfg[k] = +e.target.value; draw(); } });
+  draw();
+  return () => {};
+};
 })();

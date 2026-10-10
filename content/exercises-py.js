@@ -1385,7 +1385,7 @@ window.resolveExercises = function () {
   for (const t of TRACKS) for (const l of t.lessons) for (const s of l.sections) {
     if (s.type === 'code' && s.ref) {
       const ex = window.EXERCISES[s.ref];
-      if (!ex) throw new Error('exercises: unknown exercise ref "' + s.ref + '" in lesson ' + l.id);
+      if (!ex) continue; /* a later exercise file may define it; validate.mjs fails any ref still unresolved */
       Object.assign(s, ex); s.id = s.ref; delete s.ref;
     }
   }

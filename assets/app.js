@@ -6,7 +6,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 const strip = (h) => String(h).replace(/<[^>]*>/g, ' ').replace(/&[a-z#0-9]+;/g, ' ').replace(/\s+/g, ' ').trim();
 const store = {
   get(k, d) { try { const v = localStorage.getItem('sil:' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
-  set(k, v) { try { localStorage.setItem('sil:' + k, JSON.stringify(v)); } catch {} },
+  set(k, v) { try { localStorage.setItem('sil:' + k, JSON.stringify(v)); } catch {} if (window.CLOUD) window.CLOUD.markDirty(); },
 };
 const app = $('#app');
 try { if (!localStorage.getItem('sil:pyMigrated')) { Object.keys(localStorage).filter((k) => k.startsWith('sil:draft:')).forEach((k) => localStorage.removeItem(k)); localStorage.setItem('sil:pyMigrated', 'true'); } } catch {}
@@ -21,6 +21,7 @@ const P = {
   ai: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7z"/>',
   openbanking: '<line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/>',
   cloud: '<path d="M18 10h-1.3A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>',
+  fullstack: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18"/><path d="M12 3a14 14 0 0 0 0 18"/>',
   data: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/>',
   patterns: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 17.5h7M17.5 14v7"/>',
   search: '<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
@@ -51,7 +52,7 @@ const P = {
   sim: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
 };
 const ic = (n, s = 18, sw = 1.8) => `<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">${P[n] || ''}</svg>`;
-const HUE = { playbook: 255, coding: 190, patterns: 165, design: 150, data: 200, reliability: 28, ai: 320, openbanking: 44, cloud: 215 };
+const HUE = { playbook: 255, coding: 190, patterns: 165, design: 150, data: 200, fullstack: 100, reliability: 28, ai: 320, openbanking: 44, cloud: 215 };
 const hueOf = (id) => HUE[id] ?? ([...String(id)].reduce((a, c) => a + c.charCodeAt(0), 0) % 360);
 const trackOf = (lessonId) => TRACKS.find((t) => t.lessons.some((l) => l.id === lessonId));
 const ring = (pct, size = 46) => `<span class="pct ${size >= 48 ? 'lg' : ''}" style="--p:${pct}"><b>${pct}%</b><i></i></span>`;
@@ -565,7 +566,7 @@ const BOX_DAYS = [0, 1, 3, 7, 21, 60];
 const cid = (c) => { let h = 0; for (const ch of c.q) h = (h * 31 + ch.charCodeAt(0)) | 0; return 'c' + (h >>> 0).toString(36); };
 let cardState = store.get('cards', {});
 const dueCards = (track) => CARDS.filter((c) => (!track || c.track === track) && (!cardState[cid(c)] || cardState[cid(c)].due <= Date.now()));
-const trackHue = (name) => ({ Database: 200, Patterns: 165, Playbook: 255, Design: 150, Reliability: 28, Kafka: 275, AWS: 215, Terraform: 262, AI: 320, 'Open Banking': 44 }[name] ?? hueOf(name));
+const trackHue = (name) => ({ 'Full-stack': 100, Database: 200, Patterns: 165, Playbook: 255, Design: 150, Reliability: 28, Kafka: 275, AWS: 215, Terraform: 262, AI: 320, 'Open Banking': 44 }[name] ?? hueOf(name));
 function viewReview() {
   document.title = 'Flashcards · Senior Interview Lab';
   let filter = '', deck = [], cur = 0, flipped = false, total = 0;
@@ -617,7 +618,7 @@ function mockSummary() {
   return { h, by, seen: new Set(h.map((a) => a.id)), avg, weakest: w && { kind: w[0], n: w[1].n, avg: w[1].avg } };
 }
 const ago = (ts) => { const m = Math.round((Date.now() - ts) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' d ago'; };
-const MOCK_HUE = { Databases: 200, 'Coding under pressure': 165, Behavioral: 255, 'System Design': 150, 'Neonomics / Open Banking': 44, 'Scale & Cloud': 215, 'AI Era': 320 };
+const MOCK_HUE = { 'Full-stack': 100, Databases: 200, 'Coding under pressure': 165, Behavioral: 255, 'System Design': 150, 'Neonomics / Open Banking': 44, 'Scale & Cloud': 215, 'AI Era': 320 };
 function viewMock() {
   document.title = 'Mock interview · Senior Interview Lab';
   let kind = store.get('mockkind', ''), q = null, t0 = 0, iv = null, secs = 0, rec = null;
@@ -681,8 +682,8 @@ function viewMock() {
 }
 
 /* ---------- resources ---------- */
-const catIcon = (c) => ({ Databases: 'data', 'Neonomics & Open Banking': 'openbanking', 'System Design': 'design', Kafka: 'route', AWS: 'cloud', Terraform: 'cloud', 'Coding Practice': 'coding', 'AI Engineering': 'ai', 'Security & Career': 'reliability' }[c] || 'book');
-const catHue = (c) => ({ Databases: 200, 'Neonomics & Open Banking': 44, 'System Design': 150, Kafka: 275, AWS: 215, Terraform: 262, 'Coding Practice': 190, 'AI Engineering': 320, 'Security & Career': 28 }[c] ?? hueOf(c));
+const catIcon = (c) => ({ 'Full-stack': 'fullstack', Databases: 'data', 'Neonomics & Open Banking': 'openbanking', 'System Design': 'design', Kafka: 'route', AWS: 'cloud', Terraform: 'cloud', 'Coding Practice': 'coding', 'AI Engineering': 'ai', 'Security & Career': 'reliability' }[c] || 'book');
+const catHue = (c) => ({ 'Full-stack': 100, Databases: 200, 'Neonomics & Open Banking': 44, 'System Design': 150, Kafka: 275, AWS: 215, Terraform: 262, 'Coding Practice': 190, 'AI Engineering': 320, 'Security & Career': 28 }[c] ?? hueOf(c));
 function viewResources() {
   document.title = 'Free resources · Senior Interview Lab';
   const cats = [...new Set(RES.map((r) => r.cat))]; let f = '';
@@ -749,7 +750,7 @@ addEventListener('keydown', (e) => {
 });
 
 /* ---------- reset all local data ---------- */
-$('#wipe').onclick = () => {
+$('#wipe').onclick = async () => {
   let keys = [];
   try { keys = Object.keys(localStorage).filter((k) => k.startsWith('sil:')); } catch {}
   if (!keys.length) { alert('Nothing stored on this device. Nothing to reset.'); return; }
@@ -760,6 +761,9 @@ $('#wipe').onclick = () => {
     `  - ${Object.keys(cardState).length} scheduled flashcards\n  - ${mockHist().length} mock interview attempts\n` +
     `  - ${drafts} saved code drafts\n  - theme preference\n\nThis cannot be undone.`;
   if (!confirm(msg)) return;
+  if (window.CLOUD && window.CLOUD.signedIn() && confirm('You are signed in to cloud sync. Also delete your cloud copy?\n\nIf you keep it, your old progress comes back from the cloud the next time this page loads.')) {
+    if (!(await window.CLOUD.deleteCloud())) { alert('Could not reach the cloud, so nothing was reset. Try again when you are online.'); return; }
+  }
   try { keys.forEach((k) => localStorage.removeItem(k)); } catch {}
   location.hash = '#/'; location.reload();
 };
