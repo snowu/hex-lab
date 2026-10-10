@@ -12,6 +12,16 @@ export default async function ({ url, browser, ok }) {
   const nav = await page.evaluate(() => [...document.querySelectorAll('.top nav a')].map((a) => a.textContent.trim()));
   ok(nav.length === 8 && nav.includes('katas'), 'main navigation has 8 entries: ' + nav.join(' '));
 
+
+  /* the interview-date picker must survive typing a year (it used to re-render on every digit and lose focus) */
+  await page.go(url, '#/plan', 600);
+  const goal = page.locator('#goal');
+  await goal.focus(); await page.keyboard.type('10102030'); await page.waitForTimeout(200);
+  ok((await goal.inputValue()) === '2030-10-10', 'typing a full date into the interview date works (' + await goal.inputValue() + ')');
+  ok(await page.evaluate(() => document.activeElement && document.activeElement.id === 'goal'), 'the date input keeps focus while typing');
+  ok((await page.locator('#daysleft').innerText()).includes('to your interview') && (await page.evaluate(() => localStorage.getItem('sil:goalDate'))).includes('2030-10-10'), 'it is saved and the countdown appears without a re-render');
+  await goal.fill(''); ok((await page.locator('#daysleft').innerText()) === '', 'clearing it removes the countdown');
+
   /* the header must never overflow: every control stays on screen at common widths */
   for (const w of [1000, 1280, 1440, 1920]) {
     await page.setViewportSize({ width: w, height: 800 }); await page.goto(url + '#/'); await page.waitForTimeout(400);

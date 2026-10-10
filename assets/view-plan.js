@@ -59,7 +59,7 @@
     const dr = diagResult();
     if (tasks.length && done === tasks.length && store.get('plandone', '') !== dstr(new Date())) { store.set('plandone', dstr(new Date())); addXp(30, 'Daily plan complete'); }
     app.innerHTML = `
-      <div class="page-h"><h1>Plan</h1><p>${days !== null && days >= 0 ? `<b>${days}</b> day${days === 1 ? '' : 's'} to your interview. ` : ''}A short, repeatable session that targets pressure skills: code against the clock, design reps, and out-loud practice. No interview date needed.</p></div>
+      <div class="page-h"><h1>Plan</h1><p><span id="daysleft">${daysLeftHtml(days)}</span>A short, repeatable session that targets pressure skills: code against the clock, design reps, and out-loud practice. No interview date needed.</p></div>
       <section class="pl-top">
         <div class="seg" role="group" aria-label="Session length">${[15, 30, 60].map((m) => `<button data-m="${m}" class="${m === mins ? 'on' : ''}">${m} min</button>`).join('')}</div>
         <label class="lbl inl">interview date (optional) <input type="date" id="goal" value="${esc(goal)}"></label>
@@ -81,7 +81,16 @@
         <p class="muted">Export a file to move to another browser or device, or to keep a copy before clearing site data.</p>
         <div class="dbar"><button class="btn" id="bexp">${ic('arrow', 15)} Export progress</button><label class="btn" for="bimp">${ic('arrowL', 15)} Import progress</label><input type="file" id="bimp" accept="application/json" hidden></div></section>`;
     $$('.pl-top .seg button').forEach((b) => (b.onclick = () => { store.set('planMin', +b.dataset.m); viewPlan(); }));
-    $('#goal').onchange = (e) => { store.set('goalDate', e.target.value); viewPlan(); };
+    /* Never re-render while the date is being typed: each digit of a year is already a "valid" date and rebuilding the input swallowed the keystrokes. */
+    const goalEl = $('#goal'), saveGoal = () => {
+      const v = goalEl.value;
+      if (v === '') { store.set('goalDate', ''); $('#daysleft').innerHTML = ''; return; }
+      const y = +v.slice(0, 4);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(v) || y < 2000 || y > 2100) return; /* partial or implausible: wait */
+      store.set('goalDate', v);
+      $('#daysleft').innerHTML = daysLeftHtml(Math.ceil((new Date(v) - new Date(dstr(new Date()))) / 864e5));
+    };
+    goalEl.oninput = saveGoal; goalEl.onchange = saveGoal;
     $('#dgo').onclick = startDiag;
     $('#bexp').onclick = exportData; $('#bimp').onchange = importData;
     if (window.CLOUD) window.CLOUD.mount($('#cloudpanel'));
@@ -102,6 +111,7 @@
       <p class="muted">Prices are per-token list prices for OpenCode Go (DeepSeek costs double at peak hours). Go is a flat subscription, so this shows headroom, not what you pay. ${u.all.calls ? '<button class="linkbtn" id="ureset">reset counter</button>' : ''}</p>`;
     const r = $('#ureset'); if (r) r.onclick = () => { if (confirm('Reset the AI usage counter on this device?')) { FEEDBACK.resetUsage(); drawUsage(); } };
   }
+  const daysLeftHtml = (days) => (days !== null && days >= 0 ? `<b>${days}</b> day${days === 1 ? '' : 's'} to your interview. ` : '');
   const readinessHtml = () => `<div class="rdy">${TRACKS.map((t) => { const m = mastery(t), d = diagResult() && diagResult().tracks[t.id]; return `<div class="rrow tc" style="--h:${hueOf(t.id)}"><span class="rt">${esc(t.title)}</span><span class="rbar"><i style="width:${m}%"></i></span><span class="rv">${m}%${d ? ` <small>diag ${d.right}/${d.total}</small>` : ''}</span></div>`; }).join('')}</div>`;
 
   function statsHtml() {
