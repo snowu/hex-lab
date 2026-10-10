@@ -665,3 +665,5 @@ details.schema{margin:0 14px 10px;background:var(--panel2)}details.schema pre{fo
 .chat-ctx{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);margin-bottom:8px}
 .chat-row{display:flex;gap:8px;align-items:flex-end}
 .chat-row textarea{flex:1;resize:vertical;min-height:44px;max-height:180px;font:inherit;font-size:14px;padding:8px;background:var(--bg);color:var(--ink);border:1px solid var(--line2)}
+/* With the chat panel open the page is narrower: use the compact header (nav wraps under the controls) so nothing hides under the panel */
+@media(min-width:1100px){body.chat-open .top-in{flex-wrap:wrap;gap:10px;padding:10px 14px}body.chat-open .top nav{order:3;width:100%;margin:0;overflow:auto}body.chat-open .top nav a{padding:6px 10px}}
