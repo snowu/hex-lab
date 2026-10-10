@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Senior Interview Lab</title>
+<meta name="description" content="Interactive prep for senior engineering interviews in the AI era, with an open-banking (Neonomics) track.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧗</text></svg>">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#/">🧗 Senior Interview Lab</a>
+  <nav>
+    <a href="#/" data-nav="home">Learn</a>
+    <a href="#/review" data-nav="review">Flashcards</a>
+    <a href="#/mock" data-nav="mock">Mock</a>
+    <a href="#/resources" data-nav="resources">Resources</a>
+  </nav>
+  <form id="searchForm" role="search"><input id="q" type="search" placeholder="Search lessons, cards, links…  ( / )" autocomplete="off" aria-label="Search"></form>
+  <button id="themeBtn" class="icon" title="Toggle theme" aria-label="Toggle theme">◐</button>
+</header>
+<main id="app" tabindex="-1"></main>
+<footer class="foot">Progress is stored only in your browser. Content is original, with links to free third-party material. Neonomics-specific notes come from public sources, so verify them against <a href="https://neonomics.io" target="_blank" rel="noopener">neonomics.io</a> and their docs.</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script>window.TRACKS = [];</script>
+<script src="content/t1-playbook.js"></script>
+<script src="content/t2-coding.js"></script>
+<script src="content/t3-design.js"></script>
+<script src="content/t4-reliability.js"></script>
+<script src="content/t5-ai.js"></script>
+<script src="content/t6-openbanking.js"></script>
+<script src="content/t7-cloud.js"></script>
+<script src="content/cards.js"></script>
+<script src="content/mock.js"></script>
+<script src="content/resources.js"></script>
+
+
+
+
+
+
+
+<script src="assets/app.js"></script>
+</body>
+</html>
