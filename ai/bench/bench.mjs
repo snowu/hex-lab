@@ -4,6 +4,13 @@
 import { FIXTURES } from './fixtures.mjs';
 import { writeFileSync } from 'node:fs';
 
+/* Load the repo-root .env (gitignored) without printing it; real environment variables win. */
+import { readFileSync, existsSync } from 'node:fs';
+const envFile = new URL('../../.env', import.meta.url);
+if (existsSync(envFile)) for (const line of readFileSync(envFile, 'utf8').split('\n')) {
+  const m = /^\s*(?:export\s+)?([A-Z0-9_]+)\s*=\s*(.*?)\s*$/.exec(line);
+  if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].replace(/^(['"])(.*)\1$/, '$2');
+}
 const BASE = process.env.OPENCODE_BASE || 'https://opencode.ai/zen/go/v1';
 const KEY = process.env.OPENCODE_API_KEY;
 if (!KEY) { console.error('Set OPENCODE_API_KEY'); process.exit(2); }

@@ -1,0 +1,490 @@
+[
+ {
+  "model": "deepseek-v4-flash",
+  "n": 10,
+  "errors": 10,
+  "json": 0,
+  "caught": 0,
+  "avgMs": null,
+  "avgTok": null,
+  "rows": [
+   {
+    "fx": "code-off-by-one",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 495
+   },
+   {
+    "fx": "code-off-by-one",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 446
+   },
+   {
+    "fx": "code-quadratic",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 173
+   },
+   {
+    "fx": "code-quadratic",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 170
+   },
+   {
+    "fx": "code-correct",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 189
+   },
+   {
+    "fx": "code-correct",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 199
+   },
+   {
+    "fx": "design-no-idempotency",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 194
+   },
+   {
+    "fx": "design-no-idempotency",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 174
+   },
+   {
+    "fx": "story-no-result",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 184
+   },
+   {
+    "fx": "story-no-result",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 174
+   }
+  ]
+ },
+ {
+  "model": "glm-5.3-flash",
+  "n": 10,
+  "errors": 10,
+  "json": 0,
+  "caught": 0,
+  "avgMs": null,
+  "avgTok": null,
+  "rows": [
+   {
+    "fx": "code-off-by-one",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 172
+   },
+   {
+    "fx": "code-off-by-one",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 185
+   },
+   {
+    "fx": "code-quadratic",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 210
+   },
+   {
+    "fx": "code-quadratic",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 163
+   },
+   {
+    "fx": "code-correct",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 173
+   },
+   {
+    "fx": "code-correct",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 174
+   },
+   {
+    "fx": "design-no-idempotency",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 268
+   },
+   {
+    "fx": "design-no-idempotency",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 177
+   },
+   {
+    "fx": "story-no-result",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 160
+   },
+   {
+    "fx": "story-no-result",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 192
+   }
+  ]
+ },
+ {
+  "model": "qwen3.8-flash",
+  "n": 10,
+  "errors": 10,
+  "json": 0,
+  "caught": 0,
+  "avgMs": null,
+  "avgTok": null,
+  "rows": [
+   {
+    "fx": "code-off-by-one",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 190
+   },
+   {
+    "fx": "code-off-by-one",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 182
+   },
+   {
+    "fx": "code-quadratic",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 185
+   },
+   {
+    "fx": "code-quadratic",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 174
+   },
+   {
+    "fx": "code-correct",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 194
+   },
+   {
+    "fx": "code-correct",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 180
+   },
+   {
+    "fx": "design-no-idempotency",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 197
+   },
+   {
+    "fx": "design-no-idempotency",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 175
+   },
+   {
+    "fx": "story-no-result",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 187
+   },
+   {
+    "fx": "story-no-result",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 202
+   }
+  ]
+ },
+ {
+  "model": "mimo-v2.6-flash",
+  "n": 10,
+  "errors": 10,
+  "json": 0,
+  "caught": 0,
+  "avgMs": null,
+  "avgTok": null,
+  "rows": [
+   {
+    "fx": "code-off-by-one",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 176
+   },
+   {
+    "fx": "code-off-by-one",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 189
+   },
+   {
+    "fx": "code-quadratic",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 183
+   },
+   {
+    "fx": "code-quadratic",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 179
+   },
+   {
+    "fx": "code-correct",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 172
+   },
+   {
+    "fx": "code-correct",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 330
+   },
+   {
+    "fx": "design-no-idempotency",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 172
+   },
+   {
+    "fx": "design-no-idempotency",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 199
+   },
+   {
+    "fx": "story-no-result",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 174
+   },
+   {
+    "fx": "story-no-result",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 180
+   }
+  ]
+ },
+ {
+  "model": "minimax-m2.7",
+  "n": 10,
+  "errors": 10,
+  "json": 0,
+  "caught": 0,
+  "avgMs": null,
+  "avgTok": null,
+  "rows": [
+   {
+    "fx": "code-off-by-one",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 344
+   },
+   {
+    "fx": "code-off-by-one",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 166
+   },
+   {
+    "fx": "code-quadratic",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 216
+   },
+   {
+    "fx": "code-quadratic",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 180
+   },
+   {
+    "fx": "code-correct",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 170
+   },
+   {
+    "fx": "code-correct",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 217
+   },
+   {
+    "fx": "design-no-idempotency",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 189
+   },
+   {
+    "fx": "design-no-idempotency",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 164
+   },
+   {
+    "fx": "story-no-result",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 186
+   },
+   {
+    "fx": "story-no-result",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 175
+   }
+  ]
+ },
+ {
+  "model": "kimi-k2.6",
+  "n": 10,
+  "errors": 10,
+  "json": 0,
+  "caught": 0,
+  "avgMs": null,
+  "avgTok": null,
+  "rows": [
+   {
+    "fx": "code-off-by-one",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 191
+   },
+   {
+    "fx": "code-off-by-one",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 176
+   },
+   {
+    "fx": "code-quadratic",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 184
+   },
+   {
+    "fx": "code-quadratic",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 175
+   },
+   {
+    "fx": "code-correct",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 195
+   },
+   {
+    "fx": "code-correct",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 171
+   },
+   {
+    "fx": "design-no-idempotency",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 255
+   },
+   {
+    "fx": "design-no-idempotency",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 168
+   },
+   {
+    "fx": "story-no-result",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 178
+   },
+   {
+    "fx": "story-no-result",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 165
+   }
+  ]
+ },
+ {
+  "model": "hy3",
+  "n": 10,
+  "errors": 10,
+  "json": 0,
+  "caught": 0,
+  "avgMs": null,
+  "avgTok": null,
+  "rows": [
+   {
+    "fx": "code-off-by-one",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 167
+   },
+   {
+    "fx": "code-off-by-one",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 168
+   },
+   {
+    "fx": "code-quadratic",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 230
+   },
+   {
+    "fx": "code-quadratic",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 169
+   },
+   {
+    "fx": "code-correct",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 193
+   },
+   {
+    "fx": "code-correct",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 299
+   },
+   {
+    "fx": "design-no-idempotency",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 182
+   },
+   {
+    "fx": "design-no-idempotency",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 182
+   },
+   {
+    "fx": "story-no-result",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 173
+   },
+   {
+    "fx": "story-no-result",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 163
+   }
+  ]
+ },
+ {
+  "model": "claude-haiku-5-5",
+  "n": 10,
+  "errors": 10,
+  "json": 0,
+  "caught": 0,
+  "avgMs": null,
+  "avgTok": null,
+  "rows": [
+   {
+    "fx": "code-off-by-one",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 186
+   },
+   {
+    "fx": "code-off-by-one",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 185
+   },
+   {
+    "fx": "code-quadratic",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 193
+   },
+   {
+    "fx": "code-quadratic",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 171
+   },
+   {
+    "fx": "code-correct",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 172
+   },
+   {
+    "fx": "code-correct",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 171
+   },
+   {
+    "fx": "design-no-idempotency",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 182
+   },
+   {
+    "fx": "design-no-idempotency",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 187
+   },
+   {
+    "fx": "story-no-result",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 175
+   },
+   {
+    "fx": "story-no-result",
+    "error": "400 {\"type\":\"error\",\"error\":{\"type\":\"MissingSessionID\",\"message\":\"Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencod",
+    "ms": 175
+   }
+  ]
+ }
+]
