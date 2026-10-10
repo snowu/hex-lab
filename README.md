@@ -4,13 +4,18 @@ Interactive prep for **senior engineering interviews in the AI era**, with a ded
 Pure static site (no build step), hosted on GitHub Pages.
 
 ## What's inside
-- **7 tracks, 26 lessons**: Senior Playbook, Coding Fluency, System Design, Distributed Systems & Reliability, AI-Era Engineering, Neonomics & Open Banking, Scale/Kafka/AWS/Terraform
-- **24 Python coding exercises** with a CodeMirror editor. Python runs in your browser via [Pyodide](https://pyodide.org) (CPython compiled to WebAssembly, loaded from a CDN on first use, about 10 MB, then cached) in a Web Worker with a timeout, with hints and reference solutions
+- **8 tracks, 33 lessons**: Senior Playbook, Coding Fluency, **Coding Patterns**, System Design, Distributed Systems & Reliability, AI-Era Engineering, Neonomics & Open Banking, Scale/Kafka/AWS/Terraform
+- **36 Python coding exercises** (12 are timed pattern drills) with a CodeMirror editor. Python runs in your browser via [Pyodide](https://pyodide.org) (CPython compiled to WebAssembly, loaded from a CDN on first use, about 10 MB, then cached) in a Web Worker with a timeout, with hints and reference solutions
 - **Interactive lessons**: quizzes, step-through walkthroughs, reveal-and-self-check blocks
 - **5 live simulations**: Kafka partitions/consumer groups, circuit breaker, consistent-hash ring, token bucket, and a bank-outage simulator with production-like numbers (log-normal latencies, p50/p95/p99, a healthy baseline, then a scripted incident; shared pool vs timeout / bulkhead / breaker)
 - **6 bug hunts** (click the buggy lines) and **4 predict-the-output** snippets that you can then run for real (all Python)
 - **Every lesson works as text, as practice, or both** (switch at the top of a lesson)
 - **Vim motions** in the editor (toggle, remembered), with `:run` / `:w` to run the tests
+- **Timed mode** on every exercise: a countdown with hints locked, attempts and best times recorded
+- **Design lab**: 8 backend design reps (clock, six structured steps, hints, side-by-side comparison with a reference, rubric self-score), an estimation trainer with generated scenarios, numbers to know
+- **Plan**: a daily session (15/30/60 min) built from your due cards, unsolved drills, design reps and weakest track; a 20-question diagnostic with a self-rating; readiness bars and an activity heatmap
+- **Story bank**: STAR stories with a rule-based coach, competency coverage gaps and a timed out-loud practice mode
+- **Backup**: export and import all progress as JSON
 - **Reset all progress** from the footer
 - **56 flashcards** with Leitner spaced repetition
 - **Mock interview**: random question, timer, rubric

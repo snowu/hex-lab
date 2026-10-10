@@ -1379,13 +1379,15 @@ def apply_order(graph):
   },
 };
 
-/* Resolve { type: 'code', ref } stubs in the lesson files into full exercise sections. */
-(function () {
+/* Resolve { type: 'code', ref } stubs in the lesson files into full exercise sections.
+   Other exercise files add to window.EXERCISES and call window.resolveExercises() again. */
+window.resolveExercises = function () {
   for (const t of TRACKS) for (const l of t.lessons) for (const s of l.sections) {
     if (s.type === 'code' && s.ref) {
       const ex = window.EXERCISES[s.ref];
-      if (!ex) throw new Error('exercises-py: unknown exercise ref "' + s.ref + '" in lesson ' + l.id);
+      if (!ex) throw new Error('exercises: unknown exercise ref "' + s.ref + '" in lesson ' + l.id);
       Object.assign(s, ex); s.id = s.ref; delete s.ref;
     }
   }
-})();
+};
+window.resolveExercises();

@@ -82,6 +82,11 @@ const streak = () => {
   let n = 0; while (set.has(dstr(d))) { n++; d.setDate(d.getDate() - 1); }
   return n;
 };
+const todayKey = () => dstr(new Date());
+function logAct(kind, n = 1) { const all = store.get('activity', {}), d = (all[todayKey()] = all[todayKey()] || {}); d[kind] = (d[kind] || 0) + n; store.set('activity', all); }
+const actToday = () => store.get('activity', {})[todayKey()] || {};
+const fmtClock = (sec) => String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(Math.floor(sec % 60)).padStart(2, '0');
+const attemptsOf = (id) => store.get('attempts', []).filter((x) => x.id === id);
 function touchDay() { const t = dstr(new Date()); if (!days.includes(t)) { days.push(t); store.set('days', days); } }
 function addXp(n, msg) {
   xp += n; store.set('xp', xp); touchDay(); renderXp();
@@ -90,7 +95,7 @@ function addXp(n, msg) {
 function mark(lid, k, award, msg) {
   const p = (progress[lid] = progress[lid] || {});
   if (p[k]) return false;
-  p[k] = true; store.set('progress', progress); addXp(award, msg); return true;
+  p[k] = true; store.set('progress', progress); logAct('practice'); addXp(award, msg); return true;
 }
 function renderXp() {
   const L = level(), lo = 40 * (L - 1) ** 2, hi = 40 * L ** 2, s = streak();
@@ -144,7 +149,7 @@ function route() {
   app.innerHTML = '<h1>Not found</h1><p><a href="#/">Back home</a></p>';
 }
 function setNav(h) {
-  const key = h.startsWith('#/review') ? 'review' : h.startsWith('#/mock') ? 'mock' : h.startsWith('#/resources') ? 'resources' : 'home';
+  const key = ['review', 'mock', 'resources', 'plan', 'design', 'stories', 'data'].find((k) => h.startsWith('#/' + k)) || 'home';
   $$('.top nav a').forEach((a) => a.classList.toggle('on', a.dataset.nav === key));
 }
 addEventListener('hashchange', route);
@@ -170,6 +175,7 @@ function viewHome() {
       <p class="lead">${TRACKS.length} tracks with ${exTotal} Python coding challenges, ${bugTotal} bug hunts and ${simTotal} interactive simulations, plus flashcards and mock interviews. From system design and Kafka to AWS, Terraform and a dedicated open-banking track for Neonomics. Every lesson works as text, as practice, or both.</p>
       <div class="cta">
         <a class="btn primary" href="#/lesson/${(nx ? nx.l : TRACKS[0].lessons[0]).id}">${ic('play', 16)} ${nx && (nx.resume || nx.started) ? 'Continue learning' : 'Start learning'}</a>
+        <a class="btn" href="#/plan">${ic('target', 16)} Today's plan</a>
         <a class="btn" href="#/review">${ic('cards', 16)} ${due} cards due</a>
         <button class="btn ghost" id="heroSearch">${ic('search', 16)} Search <kbd>Ctrl K</kbd></button>
       </div></div>
@@ -297,19 +303,25 @@ function viewLesson(id) {
   addEventListener('scroll', onScroll, { passive: true }); onScroll();
   cleanup = () => { io.disconnect(); removeEventListener('scroll', onScroll); disposers.forEach((d) => d()); };
 }
+/* The authored quizzes put the right answer in the same slot far too often, so shuffle on every render. */
+function shuffleOpts(s) {
+  const idx = s.options.map((_, i) => i);
+  for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+  return { options: idx.map((i) => s.options[i]), answer: idx.indexOf(s.answer) };
+}
 const label = (icn, txt) => `<div class="sec-label">${ic(icn, 14)} ${txt}</div>`;
 function rText(el, s) { el.innerHTML = `<div class="html">${s.html}</div>`; }
 function rReveal(el, s) { el.innerHTML = `<details><summary>${esc(s.title)}</summary><div class="html">${s.html}</div></details>`; }
 function rQuiz(el, s, l, idx, sync) {
-  const key = keysOf(l)[idx]; let done = false;
-  el.innerHTML = `${label('target', 'Quick check')}<div class="quiz"><div class="q">${s.q}</div>${s.options.map((o, i) => `<button class="opt" data-i="${i}"><span class="l">${'ABCD'[i]}</span><span>${o}</span></button>`).join('')}<div class="explain" hidden></div></div>`;
+  const key = keysOf(l)[idx], sh = shuffleOpts(s); let done = false;
+  el.innerHTML = `${label('target', 'Quick check')}<div class="quiz"><div class="q">${s.q}</div>${sh.options.map((o, i) => `<button class="opt" data-i="${i}"><span class="l">${'ABCD'[i]}</span><span>${o}</span></button>`).join('')}<div class="explain" hidden></div></div>`;
   const ex = $('.explain', el);
   if ((progress[l.id] || {})[key]) { /* already solved earlier: show the answer */
-    const b = $(`.opt[data-i="${s.answer}"]`, el); b.classList.add('right'); $$('.opt', el).forEach((x) => (x.disabled = true)); ex.hidden = false; ex.classList.add('ok'); ex.innerHTML = s.explain; done = true;
+    const b = $(`.opt[data-i="${sh.answer}"]`, el); b.classList.add('right'); $$('.opt', el).forEach((x) => (x.disabled = true)); ex.hidden = false; ex.classList.add('ok'); ex.innerHTML = s.explain; done = true;
   }
   $$('.opt', el).forEach((b) => (b.onclick = () => {
     if (done) return;
-    if (+b.dataset.i === s.answer) {
+    if (+b.dataset.i === sh.answer) {
       done = true; b.classList.add('right'); $$('.opt', el).forEach((x) => (x.disabled = true));
       ex.hidden = false; ex.classList.add('ok'); ex.innerHTML = s.explain;
       mark(l.id, key, 10, 'Nice one'); sync();
@@ -381,13 +393,13 @@ async function runPython(code, tests, { allowEmpty = false, onLoading } = {}) {
   });
 }
 const LOADING = '<div class="sumbar"><b>Loading the Python runtime…</b><span class="muted">first run only, about 10 MB, then it is cached</span></div>';
-function rCode(el, s, l, idx, sync, hue) {
+function rCode(el, s, l, idx, sync, hue, disposers) {
   const key = keysOf(l)[idx], dk = 'pydraft:' + l.id + ':' + key.slice(1), solved = () => !!(progress[l.id] || {})[key];
   el.innerHTML = `${label('terminal', 'Challenge')}<div class="ex tc brk">
-    <div class="ex-head"><div class="ex-title">${esc(s.title)}</div><span class="chip st ${solved() ? 'good' : ''}">${solved() ? ic('check', 12, 3) + ' Solved' : 'Unsolved'}</span></div>
+    <div class="ex-head"><div class="ex-title">${esc(s.title)}</div>${s.level ? `<span class="chip">${esc(s.level)} · ${s.minutes || 20} min</span>` : `<span class="chip">${s.minutes || 20} min</span>`}<span class="chip best" hidden></span><span class="chip st ${solved() ? 'good' : ''}">${solved() ? ic('check', 12, 3) + ' Solved' : 'Unsolved'}</span></div>
     <div class="ex-prompt">${s.prompt}</div>
-    <div class="ex-win"><div class="ex-tab"><span class="tl3"><i></i><i></i><i></i></span><span class="file">solution.py</span><span class="sp"></span><span class="vmode"></span><button type="button" class="vimbtn" title="Toggle Vim keybindings">vim: off</button><span><kbd>Ctrl</kbd> <kbd>↵</kbd> run</span></div><div class="editor"></div><div class="vimhint" hidden>h j k l move · w b e words · 0 $ line · gg G file · i a o insert · x dd yy p edit · u undo · ciw · / search · <b>:run</b> or <b>:w</b> runs the tests</div></div>
-    <div class="ex-actions"><button class="btn primary run">${ic('play', 15)} Run tests</button><button class="btn hint">${ic('bulb', 15)} Hint</button><button class="btn sol">${ic('eye', 15)} Solution</button><span class="sp"></span><button class="btn ghost reset">${ic('rotate', 15)} Reset</button></div>
+    <div class="ex-win"><div class="ex-tab"><span class="tl3"><i></i><i></i><i></i></span><span class="file">solution.py</span><span class="sp"></span><span class="tclock" hidden></span><span class="vmode"></span><button type="button" class="vimbtn" title="Toggle Vim keybindings">vim: off</button><span><kbd>Ctrl</kbd> <kbd>↵</kbd> run</span></div><div class="editor"></div><div class="vimhint" hidden>h j k l move · w b e words · 0 $ line · gg G file · i a o insert · x dd yy p edit · u undo · ciw · / search · <b>:run</b> or <b>:w</b> runs the tests</div></div>
+    <div class="ex-actions"><button class="btn primary run">${ic('play', 15)} Run tests</button><button class="btn timed" title="Timed attempt: countdown, hints locked">${ic('clock', 15)} Timed</button><button class="btn hint">${ic('bulb', 15)} Hint</button><button class="btn sol">${ic('eye', 15)} Solution</button><span class="sp"></span><button class="btn ghost reset">${ic('rotate', 15)} Reset</button></div>
     <div class="out" aria-live="polite"></div></div>`;
   const host = $('.editor', el), start = store.get(dk, s.starter);
   let get, set;
@@ -429,8 +441,39 @@ function rCode(el, s, l, idx, sync, hue) {
       const st = $('.st', el); st.className = 'chip st good'; st.innerHTML = ic('check', 12, 3) + ' Solved';
       if (first) { const b = runBtn.getBoundingClientRect(); confetti(b.left + b.width / 2, b.top, hue); }
       sync();
+      if (timer) endTimed(true);
     }
   }
+  /* ---- timed mode: a countdown with hints locked; attempts are recorded ---- */
+  const limit = (s.minutes || 20) * 60, timedBtn = $('.timed', el), clock = $('.tclock', el), hintBtn = $('.hint', el), solBtn = $('.sol', el), bestChip = $('.best', el);
+  let timer = null;
+  const showBest = () => { const ok = attemptsOf(s.id).filter((x) => x.ok); bestChip.hidden = !ok.length; if (ok.length) bestChip.textContent = 'best ' + fmtClock(Math.min(...ok.map((x) => x.secs))); };
+  const lock = (on) => { hintBtn.disabled = solBtn.disabled = on; };
+  function endTimed(ok, gaveUp) {
+    if (!timer) return;
+    const secs = Math.min(limit, Math.round((Date.now() - timer.t0) / 1000)), firstOk = ok && !attemptsOf(s.id).some((x) => x.ok);
+    clearInterval(timer.iv); timer = null; clock.hidden = true; lock(false); timedBtn.innerHTML = ic('clock', 15) + ' Timed';
+    const all = store.get('attempts', []); all.push({ id: s.id, secs, ok, ts: Date.now(), limit }); store.set('attempts', all.slice(-500));
+    logAct('drill'); showBest();
+    const banner = ok
+      ? `<div class="allpass">${ic('trophy', 20)} Solved in ${fmtClock(secs)} (budget ${fmtClock(limit)})${secs <= limit * 0.6 ? ': comfortably inside the budget' : ''}</div>`
+      : `<div class="callout warn"><b>${gaveUp ? 'Attempt ended.' : 'Time is up.'}</b> Hints and the solution are unlocked. Read the solution, then do it again from scratch tomorrow: that is how it sticks.</div>`;
+    out.insertAdjacentHTML('afterbegin', banner);
+    if (firstOk) addXp(25, 'Solved against the clock');
+  }
+  const tick = () => {
+    const left = limit - (Date.now() - timer.t0) / 1000;
+    clock.textContent = 'time ' + fmtClock(Math.max(0, left)); clock.classList.toggle('low', left < limit * 0.2);
+    if (left <= 0) endTimed(false);
+  };
+  timedBtn.onclick = async () => {
+    if (timer) { endTimed(false, true); return; }
+    if (!PY.isReady) { out.innerHTML = LOADING; try { await pyStart(); } catch { /* run() reports it */ } out.innerHTML = ''; }
+    timer = { t0: Date.now(), iv: setInterval(tick, 250) }; clock.hidden = false; lock(true);
+    timedBtn.innerHTML = ic('x', 15) + ' Give up'; out.innerHTML = `<div class="callout tip">Timed attempt started: <b>${fmtClock(limit)}</b>. Say your plan out loud first. Hints are locked.</div>`; tick();
+  };
+  if (disposers) disposers.push(() => { if (timer) { clearInterval(timer.iv); timer = null; } });
+  showBest();
   runBtn.onclick = run;
   $('.hint', el).onclick = () => { out.innerHTML = `<div class="callout tip"><b>Hint.</b> ${s.hint || 'Start with the simplest failing test.'}</div>`; };
   $('.sol', el).onclick = () => { out.innerHTML = `<div class="callout warn"><b>Spoiler.</b> One reasonable solution, but try first.</div><pre><code>${esc(s.solution)}</code></pre>${s.notes ? `<div class="callout">${s.notes}</div>` : ''}`; };
@@ -485,18 +528,18 @@ function rBug(el, s, l, idx, sync, hue) {
 
 /* ---------- predict the output ---------- */
 function rPredict(el, s, l, idx, sync) {
-  const key = keysOf(l)[idx]; let done = false;
+  const key = keysOf(l)[idx], sh = shuffleOpts(s); let done = false;
   el.innerHTML = `${label('bulb', 'Predict the output')}<div class="quiz"><div class="ex-title" style="margin-bottom:8px">${esc(s.title)}</div>${s.intro ? `<div class="ex-prompt" style="padding:0 0 8px">${s.intro}</div>` : ''}
     <pre><code>${esc(s.code)}</code></pre><div class="q" style="margin-top:14px">${s.question}</div>
-    ${s.options.map((o, i) => `<button class="opt" data-i="${i}"><span class="l">${'ABCD'[i]}</span><span>${o}</span></button>`).join('')}
+    ${sh.options.map((o, i) => `<button class="opt" data-i="${i}"><span class="l">${'ABCD'[i]}</span><span>${o}</span></button>`).join('')}
     <div class="explain" hidden></div>
     <div class="ex-actions" style="padding:12px 0 0"><button class="btn run">${ic('play', 15)} Run it for real</button><span class="muted">executes the snippet in the sandbox and shows its actual output</span></div><div class="out" style="padding:0"></div></div>`;
   const ex = $('.explain', el), out = $('.out', el);
   const finish = (b) => { done = true; if (b) b.classList.add('right'); $$('.opt', el).forEach((x) => (x.disabled = true)); ex.hidden = false; ex.classList.add('ok'); ex.innerHTML = s.explain; };
-  if ((progress[l.id] || {})[key]) finish($(`.opt[data-i="${s.answer}"]`, el));
+  if ((progress[l.id] || {})[key]) finish($(`.opt[data-i="${sh.answer}"]`, el));
   $$('.opt', el).forEach((b) => (b.onclick = () => {
     if (done) return;
-    if (+b.dataset.i === s.answer) { finish(b); mark(l.id, key, 15, 'Called it'); sync(); }
+    if (+b.dataset.i === sh.answer) { finish(b); mark(l.id, key, 15, 'Called it'); sync(); }
     else { b.classList.add('wrong'); b.disabled = true; ex.hidden = false; ex.classList.remove('ok'); ex.textContent = 'Not that one. Trace it step by step, or run it to see.'; }
   }));
   $('.run', el).onclick = async () => {
@@ -539,7 +582,7 @@ function viewReview() {
     st.box = r === 0 ? 0 : r === 1 ? Math.max(1, st.box) : Math.min(BOX_DAYS.length - 1, st.box + (r === 3 ? 2 : 1));
     st.due = Date.now() + (r === 0 ? 5 * 60e3 : BOX_DAYS[st.box] * 864e5);
     cardState[id] = st; store.set('cards', cardState);
-    xp += 2; store.set('xp', xp); touchDay(); renderXp();
+    xp += 2; store.set('xp', xp); touchDay(); logAct('cards'); renderXp();
     if (r === 0) deck.push(c);
     cur++; flipped = false; draw();
   };
@@ -604,7 +647,7 @@ function viewMock() {
     if (!rec) {
       rec = { id: cid(q), kind: q.kind, ts: Date.now(), secs, hit: 0, total: q.rubric.length };
       const all = mockHist(); all.push(rec); store.set('mockhist', all.slice(-200));
-      addXp(15, 'Mock interview done'); renderStats();
+      addXp(15, 'Mock interview done'); logAct('mock'); renderStats();
     }
     const rev = (q.lessons || []).map((id) => findLesson(id)).filter(Boolean);
     $('#rub').innerHTML = `<h3>A strong answer covers</h3><p style="color:var(--muted);margin:0 0 6px;font-size:.9rem">Tick what you covered. Took ${fmtT(secs)}. <span id="cov"></span></p><ul class="rubric">${q.rubric.map((r) => `<li><span class="cb">${ic('check', 12, 3.4)}</span><span>${r}</span></li>`).join('')}</ul>
@@ -709,6 +752,10 @@ $('#wipe').onclick = () => {
   try { keys.forEach((k) => localStorage.removeItem(k)); } catch {}
   location.hash = '#/'; location.reload();
 };
+
+/* ---------- extension API for the separate view files (design lab, plan, stories, ...) ---------- */
+window.LAB = { shuffleOpts, $, $$, esc, strip, store, ic, app, addXp, logAct, actToday, toast, confetti, hueOf, fmtClock, label, TRACKS, CARDS, MOCK, RES, findLesson, lessonPct, trackPct, itemsOf, keysOf, dueCards, mockSummary, streak, level, routes, setCleanup: (f) => { cleanup = f; }, getProgress: () => progress, getXp: () => xp, cardStateOf: () => cardState, runPython, pyStart, PY, LOADING, renderXp, HUE, trackHue };
+(window.LAB_VIEWS || []).forEach((init) => init(window.LAB));
 
 renderXp();
 route();

@@ -83,6 +83,15 @@ if (cases.length) {
   }
 }
 
+// design lab content
+const DESIGNS = vm.runInContext('window.DESIGNS || []', ctx), ESTIMATES = vm.runInContext('window.ESTIMATES || []', ctx), STEPS = vm.runInContext('window.DESIGN_STEPS || []', ctx);
+for (const d of DESIGNS) {
+  for (const s of STEPS) if (!d.ref?.[s.id] || d.ref[s.id].length < 80) fail(`design ${d.id}: missing or thin reference for step ${s.id}`);
+  if (d.rubric?.length !== 8) fail(`design ${d.id}: rubric should have 8 items`);
+  if (d.hints?.length !== 3) fail(`design ${d.id}: needs 3 hints`);
+  if (!d.followups?.length || !d.tradeoffs?.length) fail(`design ${d.id}: needs follow-ups and trade-offs`);
+}
+for (const e of ESTIMATES) for (let i = 0; i < 200; i++) { const g = e.gen(Math.random); if (!(g.answer > 0 && Number.isFinite(g.answer)) || !g.q || !g.steps?.length) { fail(`estimate ${e.id}: bad generated scenario ${JSON.stringify(g)}`); break; } }
 CARDS.forEach((c, i) => { if (!c.q || !c.a || !c.track) fail('card ' + i + ' malformed'); });
 MOCK.forEach((m, i) => {
   if (!m.q || !m.kind || !m.rubric?.length || !m.minutes) fail('mock ' + i + ' malformed');
@@ -90,6 +99,6 @@ MOCK.forEach((m, i) => {
   for (const id of m.lessons || []) if (!ids.has(id)) fail('mock ' + i + ' links to unknown lesson ' + id);
 });
 RESOURCES.forEach((r, i) => { if (!/^https:\/\//.test(r.url) || !r.title || !r.cat || !r.note) fail('resource ' + i + ' malformed'); });
-console.log(`${TRACKS.length} tracks, ${ids.size} lessons, ${exercises} python exercises, ${bugs} bug hunts, ${predicts} predicts, ${sims} sims, ${quizzes} quizzes, ${CARDS.length} cards, ${MOCK.length} mock questions, ${RESOURCES.length} resources`);
+console.log(`${TRACKS.length} tracks, ${ids.size} lessons, ${exercises} python exercises, ${bugs} bug hunts, ${predicts} predicts, ${sims} sims, ${DESIGNS.length} design reps, ${ESTIMATES.length} estimation types, ${quizzes} quizzes, ${CARDS.length} cards, ${MOCK.length} mock questions, ${RESOURCES.length} resources`);
 if (bad) { console.error(bad + ' problem(s)'); process.exit(1); }
 console.log('All content valid ✓');
