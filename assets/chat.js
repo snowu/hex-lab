@@ -133,7 +133,10 @@
   $('#chatClear').onclick = () => { if (!msgs.length || confirm('Clear this conversation?')) { msgs = []; save(); draw(); } };
   $('#chatCtx').onchange = (e) => { useCtx = e.target.checked; ctxLabel(); };
   sendBtn.onclick = () => send(input.value);
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input.value); } });
+  /* On a phone keyboard Enter means newline; sending is the Send button. */
+  const touch = matchMedia('(pointer:coarse)').matches;
+  if (touch) input.placeholder = 'Ask about this page…';
+  input.addEventListener('keydown', (e) => { if (!touch && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input.value); } });
   panel.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
   document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'j') { e.preventDefault(); toggle(); } });
   addEventListener('hashchange', () => { if (!panel.hidden) setTimeout(ctxLabel, 400); });

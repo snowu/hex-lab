@@ -734,3 +734,45 @@ main.kata-wide{max-width:1640px}
 .top-in{max-width:1400px}
 @media(max-width:1420px){.search-btn .s-t,.search-btn kbd,.xp .xb{display:none}.search-btn{min-width:0}.top-in{gap:14px}}
 @media(max-width:1180px){.top-in{flex-wrap:wrap;gap:10px;padding:10px 14px}.top nav{order:3;width:100%;margin:0;overflow:auto}.top nav a{padding:6px 10px}}
+
+/* ================= MOBILE: reading and interactive lessons first ================= */
+/* Header: one compact row that scrolls away with the page; the section nav becomes a bottom tab bar (reclaims ~120px while reading). */
+@media (max-width:760px){
+  .top{position:static}
+  .top-in{flex-wrap:nowrap;gap:8px;padding:8px 12px}
+  .brand-t{display:none}
+  .top-r{gap:6px}
+  .top nav{position:fixed;left:0;right:0;bottom:0;z-index:60;order:0;width:auto;margin:0;display:flex;overflow-x:auto;background:var(--bg);border-top:1px solid var(--line2);padding:0 4px env(safe-area-inset-bottom);scrollbar-width:none}
+  .top nav::-webkit-scrollbar{display:none}
+  .top nav a{flex:0 0 auto;padding:14px 13px;font-size:.82rem;border:0;border-top:2px solid transparent;box-shadow:none}
+  .top nav a::before,.top nav a.on::before{display:none}
+  .top nav a.on{border-top-color:var(--accent);background:transparent;box-shadow:none}
+  body{padding-bottom:calc(52px + env(safe-area-inset-bottom))}
+  #toasts{bottom:calc(66px + env(safe-area-inset-bottom))}
+  /* interactive cards */
+  .ex-head{flex-wrap:wrap;gap:8px}.ex-head .ex-title{flex:1 1 55%}.chip{white-space:nowrap}
+  .ex-actions{gap:8px}.ex-actions .sp{display:none}.ex-actions .btn{flex:1 1 calc(50% - 8px);justify-content:center}.ex-actions .run,.ex-actions .bcheck{flex-basis:100%}
+  .bl code{white-space:pre-wrap;overflow-wrap:anywhere}
+  .CodeMirror{font-size:14px}
+  .kata-desc .kd-body{font-size:15.5px}
+  /* the tutor chat takes the whole screen and follows the on-screen keyboard */
+  #chat{width:100vw;height:100dvh;bottom:auto;border-left:0;z-index:95}
+  .chat-foot{padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+  body.chat-open{overflow:hidden}
+}
+/* Touch devices at any width: comfortable targets, no iOS focus-zoom, no keyboard hints */
+@media (pointer:coarse){
+  .btn,.fchip,.seg button,.tabs button,.chat-head .icon-btn{min-height:42px}
+  .bl{min-height:40px;align-items:center}
+  input[type=checkbox],input[type=radio]{width:22px;height:22px}
+  input[type=range]{min-height:28px}
+  input,textarea,select{font-size:16px}
+  .ask-mini{min-height:30px;padding:3px 10px;font-size:12px}
+  .ex-tab>span:last-child,.btn.ghost kbd,kbd{display:none}
+  .crumbs a{padding:8px 2px}
+  .foot a,.linkbtn{padding:8px 4px;display:inline-block}
+}
+@media (pointer:coarse){.has-ask .ex-head{padding-right:76px}.bl{min-height:36px}}
+
+input[type=checkbox],input[type=radio],input[type=range]{accent-color:var(--accent)}
+@media (pointer:coarse){.CodeMirror textarea,.CodeMirror-code+textarea,textarea.inp,textarea{font-size:16px!important}}

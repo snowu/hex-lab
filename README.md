@@ -106,3 +106,10 @@ Worker route `/interview` (modes `turn` and `grade`), general model only.
 Every Worker response reports provider token counts; the browser keeps a per-day counter (`silu:usage`, device-local, not synced) and the
 Plan page shows today / this month / 60 days, per model, with the share of the OpenCode Go monthly cap. Prices are list prices (DeepSeek doubles at peak hours), so
 it is headroom, not a bill.
+
+## Mobile
+
+Phones are a first-class target, reading and interactive lessons first. At <=760px the header is one short row that scrolls away and the
+section nav becomes a bottom tab bar; on touch devices buttons and bug-hunt lines are 36-42px tall, inputs are 16px (no iOS focus zoom),
+keyboard hints are hidden, flashcards say "tap", and the tutor chat is full-screen (Enter = newline, Send button sends).
+`tests/e2e/mobile.mjs` (390x844, touch) guards all of it, including "no sideways scrolling on any page".
