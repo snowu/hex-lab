@@ -57,15 +57,24 @@ for (const t of TRACKS) for (const l of t.lessons) {
     if (s.type === 'code') {
       exercises++;
       if (s.ref) fail(where + ' unresolved exercise ref ' + s.ref);
-      for (const f of ['title', 'prompt', 'starter', 'tests', 'solution', 'hint']) if (!s[f]) fail(`${where} exercise missing "${f}"`);
-      cases.push({ id: 'sol:' + where, kind: 'sol', section: s, code: s.solution, tests: s.tests });
-      cases.push({ id: 'start:' + where, kind: 'start', section: s, code: s.starter, tests: s.tests });
+      const sqlKind = s.kind === 'sql' || s.kind === 'ddl';
+      for (const f of sqlKind ? ['title', 'prompt', 'starter', 'solution', 'schema', 'hint'] : ['title', 'prompt', 'starter', 'tests', 'solution', 'hint']) if (!s[f]) fail(`${where} exercise missing "${f}"`);
+      if (sqlKind) {
+        if (s.kind === 'ddl' && !s.verify) fail(`${where} ddl exercise needs verify`);
+        if (s.kind === 'sql' && !s.expect) fail(`${where} sql exercise needs expect rows`);
+        const spec = (sql) => ({ kind: s.kind, sql, schema: s.schema, seed: s.seed, hidden: s.hidden, solution: s.solution, ordered: s.ordered, names: s.names, verify: s.verify });
+        cases.push({ id: 'sol:' + where, kind: 'sol', section: s, sql_spec: spec(s.solution) });
+        cases.push({ id: 'start:' + where, kind: 'start', section: s, sql_spec: spec(s.starter) });
+      } else {
+        cases.push({ id: 'sol:' + where, kind: 'sol', section: s, code: s.solution, tests: s.tests });
+        cases.push({ id: 'start:' + where, kind: 'start', section: s, code: s.starter, tests: s.tests });
+      }
     }
   }
 }
 
 if (cases.length) {
-  const run = spawnSync('python3', [path.join(root, 'scripts/pyrun.py')], { input: JSON.stringify(cases.map(({ id, code, tests, allow_empty }) => ({ id, code, tests, allow_empty }))), encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const run = spawnSync('python3', [path.join(root, 'scripts/pyrun.py')], { input: JSON.stringify(cases.map(({ id, code, tests, allow_empty, sql_spec }) => ({ id, code, tests, allow_empty, sql_spec }))), encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   if (run.error || run.status !== 0) { console.error('✗ python3 failed:', run.error?.message || run.stderr.slice(-800)); process.exit(1); }
   const byId = Object.fromEntries(JSON.parse(run.stdout).map((r) => [r.id, r]));
   for (const c of cases) {
@@ -73,8 +82,13 @@ if (cases.length) {
     if (c.kind === 'sol') {
       if (r.fatal || r.results.some((x) => !x.pass)) fail(`"${s.title}" solution fails: ${r.fatal || r.results.filter((x) => !x.pass).map((x) => x.name + ' → ' + x.err).join('; ')}`);
       else if (!r.results.length) fail(`"${s.title}" has no tests`);
+      else if (s.kind === 'sql') {
+        const norm = (rows) => (s.ordered ? rows : [...rows].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))).map((x) => JSON.stringify(x));
+        if (r.expected.total !== s.expect.length || JSON.stringify(norm(r.expected.rows)) !== JSON.stringify(norm(s.expect))) fail(`"${s.title}" reference result differs from declared expect.\n   actual:   ${JSON.stringify(r.expected.rows)}\n   expected: ${JSON.stringify(s.expect)}`);
+      }
     } else if (c.kind === 'start') {
-      if (r.fatal) fail(`"${s.title}" starter does not even run: ${r.fatal}`);
+      if (s.kind === 'sql' || s.kind === 'ddl') { if (!r.fatal && r.results.length && r.results.every((x) => x.pass)) fail(`"${s.title}" starter already passes`); }
+      else if (r.fatal) fail(`"${s.title}" starter does not even run: ${r.fatal}`);
       else if (r.results.length && r.results.every((x) => x.pass)) fail(`"${s.title}" starter already passes its tests`);
     } else if (c.kind === 'predict') {
       if (r.fatal) fail(`predict "${s.title}" errors: ${r.fatal}`);

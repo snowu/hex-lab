@@ -21,6 +21,8 @@ const P = {
   ai: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7z"/>',
   openbanking: '<line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/>',
   cloud: '<path d="M18 10h-1.3A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>',
+  data: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/>',
+  patterns: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 17.5h7M17.5 14v7"/>',
   search: '<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
@@ -49,7 +51,7 @@ const P = {
   sim: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
 };
 const ic = (n, s = 18, sw = 1.8) => `<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">${P[n] || ''}</svg>`;
-const HUE = { playbook: 255, coding: 190, design: 150, reliability: 28, ai: 320, openbanking: 44, cloud: 215 };
+const HUE = { playbook: 255, coding: 190, patterns: 165, design: 150, data: 200, reliability: 28, ai: 320, openbanking: 44, cloud: 215 };
 const hueOf = (id) => HUE[id] ?? ([...String(id)].reduce((a, c) => a + c.charCodeAt(0), 0) % 360);
 const trackOf = (lessonId) => TRACKS.find((t) => t.lessons.some((l) => l.id === lessonId));
 const ring = (pct, size = 46) => `<span class="pct ${size >= 48 ? 'lg' : ''}" style="--p:${pct}"><b>${pct}%</b><i></i></span>`;
@@ -172,7 +174,7 @@ function viewHome() {
     <section class="hero"><div class="hero-l">
       <span class="eyebrow"><span class="p">$</span> ./senior-prep <b>--mode=ai-era</b></span>
       <h1>Practice like it's the <span class="grad">real interview.</span><span class="cur"></span></h1>
-      <p class="lead">${TRACKS.length} tracks with ${exTotal} Python coding challenges, ${bugTotal} bug hunts and ${simTotal} interactive simulations, plus flashcards and mock interviews. From system design and Kafka to AWS, Terraform and a dedicated open-banking track for Neonomics. Every lesson works as text, as practice, or both.</p>
+      <p class="lead">${TRACKS.length} tracks with ${exTotal} runnable coding challenges (Python and SQL), ${bugTotal} bug hunts and ${simTotal} interactive simulations, plus flashcards and mock interviews. From system design and Kafka to AWS, Terraform and a dedicated open-banking track for Neonomics. Every lesson works as text, as practice, or both.</p>
       <div class="cta">
         <a class="btn primary" href="#/lesson/${(nx ? nx.l : TRACKS[0].lessons[0]).id}">${ic('play', 16)} ${nx && (nx.resume || nx.started) ? 'Continue learning' : 'Start learning'}</a>
         <a class="btn" href="#/plan">${ic('target', 16)} Today's plan</a>
@@ -344,6 +346,8 @@ function rSteps(el, s, l, idx, sync, hue) {
   return draw;
 }
 
+const tableHtml = (t) => `<div class="sqlt"><table><tr>${t.cols.map((c) => `<th>${esc(c)}</th>`).join('')}</tr>${t.rows.map((r) => `<tr>${r.map((v) => `<td class="${v === null ? 'nul' : typeof v === 'number' ? 'num' : ''}">${v === null ? 'NULL' : esc(v)}</td>`).join('')}</tr>`).join('')}</table>${t.total > t.rows.length ? `<small class="muted">… ${t.total - t.rows.length} more rows</small>` : t.rows.length ? '' : '<small class="muted">no rows</small>'}</div>`;
+
 /* ---------- vim mode ---------- */
 const VIM = { on: store.get('vim', false), eds: [] };
 function applyVim() {
@@ -382,29 +386,33 @@ function pyStart() {
 }
 function pyKill() { if (PY.worker) PY.worker.terminate(); Object.assign(PY, { worker: null, ready: null, isReady: false }); PY.pending.clear(); }
 const warmPython = () => setTimeout(() => pyStart().catch(() => {}), 800);
-async function runPython(code, tests, { allowEmpty = false, onLoading } = {}) {
+async function runPy(payload, onLoading) {
   if (!PY.isReady && onLoading) onLoading();
   try { await pyStart(); } catch (e) { pyKill(); return { fatal: "Couldn't load the Python runtime (" + e.message + '). It is fetched from a CDN on first use, so you need to be online.', results: [], logs: [] }; }
   const w = PY.worker, id = ++PY.id;
   return new Promise((resolve) => {
     const t = setTimeout(() => { pyKill(); resolve({ fatal: 'Timed out after 6s. Infinite loop or too slow? (The Python runtime restarts on the next run.)', results: [], logs: [] }); }, 6000);
     PY.pending.set(id, (data) => { clearTimeout(t); resolve(data); });
-    w.postMessage({ id, code, tests, allowEmpty });
+    w.postMessage({ id, ...payload });
   });
 }
+const runPython = (code, tests, { allowEmpty = false, onLoading } = {}) => runPy({ code, tests, allowEmpty }, onLoading);
+const runSql = (spec, onLoading) => runPy({ spec }, onLoading);
 const LOADING = '<div class="sumbar"><b>Loading the Python runtime…</b><span class="muted">first run only, about 10 MB, then it is cached</span></div>';
 function rCode(el, s, l, idx, sync, hue, disposers) {
+  const isSql = s.kind === 'sql' || s.kind === 'ddl';
   const key = keysOf(l)[idx], dk = 'pydraft:' + l.id + ':' + key.slice(1), solved = () => !!(progress[l.id] || {})[key];
   el.innerHTML = `${label('terminal', 'Challenge')}<div class="ex tc brk">
     <div class="ex-head"><div class="ex-title">${esc(s.title)}</div>${s.level ? `<span class="chip">${esc(s.level)} · ${s.minutes || 20} min</span>` : `<span class="chip">${s.minutes || 20} min</span>`}<span class="chip best" hidden></span><span class="chip st ${solved() ? 'good' : ''}">${solved() ? ic('check', 12, 3) + ' Solved' : 'Unsolved'}</span></div>
     <div class="ex-prompt">${s.prompt}</div>
-    <div class="ex-win"><div class="ex-tab"><span class="tl3"><i></i><i></i><i></i></span><span class="file">solution.py</span><span class="sp"></span><span class="tclock" hidden></span><span class="vmode"></span><button type="button" class="vimbtn" title="Toggle Vim keybindings">vim: off</button><span><kbd>Ctrl</kbd> <kbd>↵</kbd> run</span></div><div class="editor"></div><div class="vimhint" hidden>h j k l move · w b e words · 0 $ line · gg G file · i a o insert · x dd yy p edit · u undo · ciw · / search · <b>:run</b> or <b>:w</b> runs the tests</div></div>
+    ${isSql ? `<details class="schema"><summary>Schema &amp; sample data</summary><pre><code>${esc(s.schema)}</code></pre>${s.seed ? `<pre><code>${esc(s.seed.split('\n').slice(0, 14).join('\n'))}${s.seed.split('\n').length > 14 ? '\n-- … more rows' : ''}</code></pre>` : ''}<p class="muted">Runs on SQLite in your browser. A second, hidden dataset checks that you did not hard-code the answer.</p></details>` : ''}
+    <div class="ex-win"><div class="ex-tab"><span class="tl3"><i></i><i></i><i></i></span><span class="file">${isSql ? 'query.sql' : 'solution.py'}</span><span class="sp"></span><span class="tclock" hidden></span><span class="vmode"></span><button type="button" class="vimbtn" title="Toggle Vim keybindings">vim: off</button><span><kbd>Ctrl</kbd> <kbd>↵</kbd> run</span></div><div class="editor"></div><div class="vimhint" hidden>h j k l move · w b e words · 0 $ line · gg G file · i a o insert · x dd yy p edit · u undo · ciw · / search · <b>:run</b> or <b>:w</b> runs the tests</div></div>
     <div class="ex-actions"><button class="btn primary run">${ic('play', 15)} Run tests</button><button class="btn timed" title="Timed attempt: countdown, hints locked">${ic('clock', 15)} Timed</button><button class="btn hint">${ic('bulb', 15)} Hint</button><button class="btn sol">${ic('eye', 15)} Solution</button><span class="sp"></span><button class="btn ghost reset">${ic('rotate', 15)} Reset</button></div>
     <div class="out" aria-live="polite"></div></div>`;
   const host = $('.editor', el), start = store.get(dk, s.starter);
   let get, set;
   if (window.CodeMirror) {
-    const cm = CodeMirror(host, { value: start, mode: 'python', lineNumbers: true, indentUnit: 4, tabSize: 4, indentWithTabs: false, matchBrackets: true, autoCloseBrackets: true, viewportMargin: Infinity,
+    const cm = CodeMirror(host, { value: start, mode: isSql ? 'text/x-sql' : 'python', lineNumbers: true, indentUnit: isSql ? 2 : 4, tabSize: isSql ? 2 : 4, indentWithTabs: false, matchBrackets: true, autoCloseBrackets: true, viewportMargin: Infinity,
       extraKeys: { Tab: (c) => c.execCommand('insertSoftTab'), 'Ctrl-Enter': () => run(), 'Cmd-Enter': () => run() } });
     get = () => cm.getValue(); set = (v) => cm.setValue(v); cm.on('change', () => store.set(dk, cm.getValue()));
     cm._run = () => run();
@@ -426,7 +434,9 @@ function rCode(el, s, l, idx, sync, hue, disposers) {
   const out = $('.out', el), runBtn = $('.run', el);
   async function run() {
     runBtn.disabled = true; out.innerHTML = PY.isReady ? '<div class="sumbar"><b>Running…</b></div>' : LOADING;
-    const r = await runPython(get(), s.tests, { onLoading: () => (out.innerHTML = LOADING) });
+    const r = isSql
+      ? await runSql({ kind: s.kind, sql: get(), schema: s.schema, seed: s.seed, hidden: s.hidden, solution: s.solution, ordered: s.ordered, names: s.names, verify: s.verify }, () => (out.innerHTML = LOADING))
+      : await runPython(get(), s.tests, { onLoading: () => (out.innerHTML = LOADING) });
     runBtn.disabled = false;
     const pass = r.results.filter((x) => x.pass).length, all = r.results.length;
     let h = '';
@@ -435,6 +445,7 @@ function rCode(el, s, l, idx, sync, hue, disposers) {
     if (r.fatal) h += `<div class="res fail"><span class="ric">${ic('x', 15, 2.6)}</span><div class="nm">Error<small>${esc(r.fatal)}</small></div></div>`;
     h += r.results.map((x) => `<div class="res ${x.pass ? 'pass' : 'fail'}"><span class="ric">${ic(x.pass ? 'check' : 'x', 15, 2.6)}</span><div><span class="nm">${esc(x.name)}</span>${x.err ? `<small>${esc(x.err)}</small>` : ''}</div></div>`).join('');
     if (r.logs && r.logs.length) h += `<div class="logs">${esc(r.logs.join('\n'))}</div>`;
+    if (r.table) h += `<div class="sqlres"><div><div class="sh">your result</div>${tableHtml(r.table)}</div>${pass < all && r.expected ? `<div><div class="sh">expected (visible data)</div>${tableHtml(r.expected)}</div>` : ''}</div>`;
     out.innerHTML = h;
     if (all && pass === all) {
       const first = mark(l.id, key, 50, 'Challenge solved');
@@ -554,7 +565,7 @@ const BOX_DAYS = [0, 1, 3, 7, 21, 60];
 const cid = (c) => { let h = 0; for (const ch of c.q) h = (h * 31 + ch.charCodeAt(0)) | 0; return 'c' + (h >>> 0).toString(36); };
 let cardState = store.get('cards', {});
 const dueCards = (track) => CARDS.filter((c) => (!track || c.track === track) && (!cardState[cid(c)] || cardState[cid(c)].due <= Date.now()));
-const trackHue = (name) => ({ Playbook: 255, Design: 150, Reliability: 28, Kafka: 275, AWS: 215, Terraform: 262, AI: 320, 'Open Banking': 44 }[name] ?? hueOf(name));
+const trackHue = (name) => ({ Database: 200, Patterns: 165, Playbook: 255, Design: 150, Reliability: 28, Kafka: 275, AWS: 215, Terraform: 262, AI: 320, 'Open Banking': 44 }[name] ?? hueOf(name));
 function viewReview() {
   document.title = 'Flashcards · Senior Interview Lab';
   let filter = '', deck = [], cur = 0, flipped = false, total = 0;
@@ -606,7 +617,7 @@ function mockSummary() {
   return { h, by, seen: new Set(h.map((a) => a.id)), avg, weakest: w && { kind: w[0], n: w[1].n, avg: w[1].avg } };
 }
 const ago = (ts) => { const m = Math.round((Date.now() - ts) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' d ago'; };
-const MOCK_HUE = { Behavioral: 255, 'System Design': 150, 'Neonomics / Open Banking': 44, 'Scale & Cloud': 215, 'AI Era': 320 };
+const MOCK_HUE = { Databases: 200, 'Coding under pressure': 165, Behavioral: 255, 'System Design': 150, 'Neonomics / Open Banking': 44, 'Scale & Cloud': 215, 'AI Era': 320 };
 function viewMock() {
   document.title = 'Mock interview · Senior Interview Lab';
   let kind = store.get('mockkind', ''), q = null, t0 = 0, iv = null, secs = 0, rec = null;
@@ -670,8 +681,8 @@ function viewMock() {
 }
 
 /* ---------- resources ---------- */
-const catIcon = (c) => ({ 'Neonomics & Open Banking': 'openbanking', 'System Design': 'design', Kafka: 'route', AWS: 'cloud', Terraform: 'cloud', 'Coding Practice': 'coding', 'AI Engineering': 'ai', 'Security & Career': 'reliability' }[c] || 'book');
-const catHue = (c) => ({ 'Neonomics & Open Banking': 44, 'System Design': 150, Kafka: 275, AWS: 215, Terraform: 262, 'Coding Practice': 190, 'AI Engineering': 320, 'Security & Career': 28 }[c] ?? hueOf(c));
+const catIcon = (c) => ({ Databases: 'data', 'Neonomics & Open Banking': 'openbanking', 'System Design': 'design', Kafka: 'route', AWS: 'cloud', Terraform: 'cloud', 'Coding Practice': 'coding', 'AI Engineering': 'ai', 'Security & Career': 'reliability' }[c] || 'book');
+const catHue = (c) => ({ Databases: 200, 'Neonomics & Open Banking': 44, 'System Design': 150, Kafka: 275, AWS: 215, Terraform: 262, 'Coding Practice': 190, 'AI Engineering': 320, 'Security & Career': 28 }[c] ?? hueOf(c));
 function viewResources() {
   document.title = 'Free resources · Senior Interview Lab';
   const cats = [...new Set(RES.map((r) => r.cat))]; let f = '';
@@ -754,7 +765,7 @@ $('#wipe').onclick = () => {
 };
 
 /* ---------- extension API for the separate view files (design lab, plan, stories, ...) ---------- */
-window.LAB = { shuffleOpts, $, $$, esc, strip, store, ic, app, addXp, logAct, actToday, toast, confetti, hueOf, fmtClock, label, TRACKS, CARDS, MOCK, RES, findLesson, lessonPct, trackPct, itemsOf, keysOf, dueCards, mockSummary, streak, level, routes, setCleanup: (f) => { cleanup = f; }, getProgress: () => progress, getXp: () => xp, cardStateOf: () => cardState, runPython, pyStart, PY, LOADING, renderXp, HUE, trackHue };
+window.LAB = { shuffleOpts, $, $$, esc, strip, store, ic, app, addXp, logAct, actToday, toast, confetti, hueOf, fmtClock, label, TRACKS, CARDS, MOCK, RES, findLesson, lessonPct, trackPct, itemsOf, keysOf, dueCards, mockSummary, streak, level, routes, setCleanup: (f) => { cleanup = f; }, getProgress: () => progress, getXp: () => xp, cardStateOf: () => cardState, runPython, runSql, pyStart, PY, LOADING, renderXp, HUE, trackHue };
 (window.LAB_VIEWS || []).forEach((init) => init(window.LAB));
 
 renderXp();

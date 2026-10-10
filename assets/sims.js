@@ -358,4 +358,79 @@ SIMS.outage = (root) => {
   iv = setInterval(() => { if (cfg.running) { for (let k = 0; k < cfg.speed; k++) step(); draw(); } }, 100);
   return () => clearInterval(iv);
 };
+
+/* =========================================================
+   Transaction isolation: two concurrent transactions, Postgres semantics
+   ========================================================= */
+SIMS.isolation = (root) => {
+  const LEVELS = { rc: 'Read committed (default)', rr: 'Repeatable read', ser: 'Serializable' };
+  const SCEN = {
+    lost: { name: 'Lost update: two withdrawals', setup: 'balance = 100. T1 withdraws 30, T2 withdraws 50. The correct final balance is 20.',
+      approaches: { plain: 'read the balance, then write the computed value', forupd: 'SELECT … FOR UPDATE first', atomic: 'UPDATE … SET balance = balance - x' } },
+    nonrep: { name: 'Non-repeatable read: a report reads twice', setup: 'balance = 100. T1 (a report) reads it twice. T2 withdraws 30 and commits in between.' },
+    phantom: { name: 'Phantom: counting pending payments', setup: '3 payments are pending. T1 counts them twice. T2 inserts a new pending payment and commits in between.' },
+    skew: { name: 'Write skew: two doctors on call', setup: 'Alice and Bob are on call. Rule: at least one must stay on call. Each tries to go off call.',
+      approaches: { plain: 'count the on-call doctors, then update my own row', forupd: 'SELECT … FOR UPDATE on the on-call rows first' } },
+  };
+  const st = { scen: 'lost', level: 'rc', appr: 'plain', shown: 0 };
+  const T = (who, text, note) => ({ who, text, note });
+  function outcome() {
+    const { scen, level, appr } = st, snap = level !== 'rc', RETRY = 'ERROR 40001: could not serialize access due to concurrent update';
+    if (scen === 'lost') {
+      if (appr === 'plain') return level === 'rc'
+        ? { steps: [T(1, 'SELECT balance → 100'), T(2, 'SELECT balance → 100'), T(1, 'UPDATE balance = 70 · COMMIT'), T(2, 'UPDATE balance = 50 · COMMIT', 'overwrites T1: computed from a stale 100')], final: 'balance = 50', verdict: 'bad', why: 'Both read 100 before either wrote, so T1’s withdrawal vanished. 30 euros created from nothing. This is a lost update.' }
+        : { steps: [T(1, 'SELECT balance → 100'), T(2, 'SELECT balance → 100'), T(1, 'UPDATE balance = 70 · COMMIT'), T(2, 'UPDATE balance = 50', RETRY), T(2, 'ROLLBACK, retry: SELECT → 70'), T(2, 'UPDATE balance = 20 · COMMIT')], final: 'balance = 20', verdict: 'retry', why: 'The database noticed T2’s snapshot was stale and refused the write. The result is correct only because the application retried the transaction.' };
+      if (appr === 'forupd') return level === 'rc'
+        ? { steps: [T(1, 'SELECT … FOR UPDATE → 100 (row locked)'), T(2, 'SELECT … FOR UPDATE', 'blocks, waiting for T1'), T(1, 'UPDATE balance = 70 · COMMIT'), T(2, 'unblocks, reads the new row → 70'), T(2, 'UPDATE balance = 20 · COMMIT')], final: 'balance = 20', verdict: 'ok', why: 'The lock serialises the two read-modify-write cycles, and Read committed re-reads the latest committed row after waiting.' }
+        : { steps: [T(1, 'SELECT … FOR UPDATE → 100 (row locked)'), T(2, 'SELECT … FOR UPDATE', 'blocks, waiting for T1'), T(1, 'UPDATE balance = 70 · COMMIT'), T(2, 'unblocks', RETRY), T(2, 'ROLLBACK, retry: SELECT … FOR UPDATE → 70'), T(2, 'UPDATE balance = 20 · COMMIT')], final: 'balance = 20', verdict: 'retry', why: 'At snapshot levels the locked row has changed since T2’s snapshot, so T2 must restart. Correct, with a retry.' };
+      return level === 'rc'
+        ? { steps: [T(1, 'UPDATE balance = balance - 30 → 70 (row locked)'), T(2, 'UPDATE balance = balance - 50', 'blocks, waiting for T1'), T(1, 'COMMIT'), T(2, 'unblocks, re-evaluates on 70 → 20'), T(2, 'COMMIT')], final: 'balance = 20', verdict: 'ok', why: 'The best fix: no read in the application at all. The arithmetic happens inside the database against the latest committed value.' }
+        : { steps: [T(1, 'UPDATE balance = balance - 30 → 70'), T(2, 'UPDATE balance = balance - 50', 'blocks, waiting for T1'), T(1, 'COMMIT'), T(2, 'unblocks', RETRY), T(2, 'ROLLBACK, retry: UPDATE balance = balance - 50 → 20 · COMMIT')], final: 'balance = 20', verdict: 'retry', why: 'Still correct, but snapshot levels turn the conflict into an error you must retry. At Read committed this needs no retry.' };
+    }
+    if (scen === 'nonrep') return level === 'rc'
+      ? { steps: [T(1, 'SELECT balance → 100'), T(2, 'UPDATE balance = 70 · COMMIT'), T(1, 'SELECT balance → 70', 'a different answer in the same transaction')], final: 'report shows 100 then 70', verdict: 'bad', why: 'Each statement at Read committed sees the latest committed data, so a multi-statement report can be internally inconsistent.' }
+      : { steps: [T(1, 'SELECT balance → 100'), T(2, 'UPDATE balance = 70 · COMMIT'), T(1, 'SELECT balance → 100', 'same snapshot as before')], final: 'report shows 100 and 100', verdict: 'ok', why: 'One snapshot for the whole transaction: the report is consistent. This is why long reports belong in Repeatable read.' };
+    if (scen === 'phantom') return level === 'rc'
+      ? { steps: [T(1, 'SELECT count(*) WHERE status = \'pending\' → 3'), T(2, 'INSERT pending payment · COMMIT'), T(1, 'SELECT count(*) … → 4', 'a new row appeared')], final: 'counts 3 then 4', verdict: 'bad', why: 'A phantom: the set of rows matching the predicate changed under T1.' }
+      : { steps: [T(1, 'SELECT count(*) WHERE status = \'pending\' → 3'), T(2, 'INSERT pending payment · COMMIT'), T(1, 'SELECT count(*) … → 3', 'snapshot hides the new row')], final: 'counts 3 and 3', verdict: 'ok', why: 'Postgres’s Repeatable read is snapshot isolation, which also prevents phantoms. (The SQL standard allows them at this level; Postgres is stricter.)' };
+    /* write skew */
+    if (appr === 'plain') {
+      if (level === 'ser') return { steps: [T(1, 'SELECT count(*) WHERE on_call → 2'), T(2, 'SELECT count(*) WHERE on_call → 2'), T(1, 'UPDATE alice SET on_call = false · COMMIT'), T(2, 'UPDATE bob SET on_call = false', 'ERROR 40001: could not serialize access due to read/write dependencies among transactions'), T(2, 'ROLLBACK, retry: count → 1, so refuse to go off call')], final: '1 doctor still on call', verdict: 'retry', why: 'Serializable detects that the two transactions each read what the other wrote, and aborts one. After the retry the rule holds.' };
+      return { steps: [T(1, 'SELECT count(*) WHERE on_call → 2'), T(2, 'SELECT count(*) WHERE on_call → 2'), T(1, 'UPDATE alice SET on_call = false · COMMIT'), T(2, 'UPDATE bob SET on_call = false · COMMIT', 'different rows, so no conflict is detected')], final: '0 doctors on call', verdict: 'bad', why: 'Write skew: each transaction was valid on its own snapshot, but together they broke the rule. It survives ' + (level === 'rr' ? 'Repeatable read' : 'Read committed') + '. Only Serializable, row locks or a constraint prevent it.' };
+    }
+    return level === 'rc'
+      ? { steps: [T(1, 'SELECT … WHERE on_call FOR UPDATE → alice, bob (rows locked)'), T(2, 'SELECT … WHERE on_call FOR UPDATE', 'blocks, waiting for T1'), T(1, 'UPDATE alice SET on_call = false · COMMIT'), T(2, 'unblocks, re-reads → only bob on call'), T(2, 'refuses to go off call · ROLLBACK')], final: '1 doctor still on call', verdict: 'ok', why: 'Locking the rows that the decision depends on serialises the two transactions, and Read committed re-reads the committed state after waiting.' }
+      : { steps: [T(1, 'SELECT … FOR UPDATE → alice, bob (rows locked)'), T(2, 'SELECT … FOR UPDATE', 'blocks, waiting for T1'), T(1, 'UPDATE alice SET on_call = false · COMMIT'), T(2, 'unblocks', RETRY), T(2, 'ROLLBACK, retry: sees only bob → refuse')], final: '1 doctor still on call', verdict: 'retry', why: 'Correct, with a retry: the rows T2 locked changed after its snapshot was taken.' };
+  }
+  const apprs = () => SCEN[st.scen].approaches;
+  root.innerHTML = `
+    <div class="sim-ctl"><span class="grp"><b>Scenario</b><select id="isc">${Object.entries(SCEN).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('')}</select></span>
+      <span class="grp"><b>Isolation</b><select id="ilv">${Object.entries(LEVELS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></span>
+      <span class="grp" id="iap"></span></div>
+    <p class="sim-note" id="iset"></p>
+    <div class="tx2" id="itl"></div>
+    <div class="sim-ctl"><span class="grp"><button class="btn sm primary" data-a="step">Next step</button><button class="btn sm" data-a="all">Play all</button><button class="btn sm ghost" data-a="reset">Reset</button></span></div>
+    <div id="ires"></div>`;
+  const draw = () => {
+    const o = outcome(), sc = SCEN[st.scen];
+    $('#iset', root).textContent = sc.setup;
+    $('#iap', root).innerHTML = sc.approaches ? `<b>Approach</b><select id="iaps">${Object.entries(sc.approaches).map(([k, v]) => `<option value="${k}" ${k === st.appr ? 'selected' : ''}>${v}</option>`).join('')}</select>` : '';
+    const sel = $('#iaps', root); if (sel) sel.onchange = () => { st.appr = sel.value; st.shown = 0; draw(); };
+    $('#itl', root).innerHTML = `<div class="tlh2"><span>T1</span><span>T2</span></div>${o.steps.slice(0, st.shown).map((s, i) => `<div class="trow ${s.who === 1 ? 'l' : 'r'}"><span class="n">${i + 1}</span><div class="cell ${s.note && /ERROR/.test(s.note) ? 'err' : ''}"><code>${esc(s.text)}</code>${s.note ? `<small>${esc(s.note)}</small>` : ''}</div></div>`).join('') || '<p class="muted">Press “Next step” to run the timeline.</p>'}`;
+    $('#ires', root).innerHTML = st.shown >= o.steps.length ? `<div class="iverdict ${o.verdict}"><b>${o.verdict === 'ok' ? 'Correct' : o.verdict === 'retry' ? 'Correct, after a retry' : 'ANOMALY'}: ${esc(o.final)}</b><p>${esc(o.why)}</p></div>` : '';
+  };
+  root.addEventListener('change', (e) => {
+    if (e.target.id === 'isc') { st.scen = e.target.value; st.appr = 'plain'; st.shown = 0; draw(); }
+    if (e.target.id === 'ilv') { st.level = e.target.value; st.shown = 0; draw(); }
+  });
+  root.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-a]'); if (!b) return; const n = outcome().steps.length;
+    if (b.dataset.a === 'step') st.shown = Math.min(n, st.shown + 1);
+    if (b.dataset.a === 'all') st.shown = n;
+    if (b.dataset.a === 'reset') st.shown = 0;
+    draw();
+  });
+  draw();
+  return () => {};
+};
 })();

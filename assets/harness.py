@@ -10,6 +10,7 @@ import inspect
 import io
 import json
 import math
+import sqlite3
 
 
 class _Raises:
@@ -75,7 +76,7 @@ async def _exec(src, filename, ns):
         await result
 
 
-async def run(code, tests="", allow_empty=False, test_timeout=2.0):
+async def run(code, tests="", allow_empty=False, test_timeout=2.0, extra=None):
     registry = []
     out = io.StringIO()
 
@@ -86,6 +87,7 @@ async def run(code, tests="", allow_empty=False, test_timeout=2.0):
         return register(fn) if fn is not None else register
 
     ns = {"__name__": "__lab__", "test": test, "eq": eq, "raises": raises, "close": close}
+    ns.update(extra or {})
     results = []
     with contextlib.redirect_stdout(out):
         try:
@@ -113,3 +115,83 @@ async def run(code, tests="", allow_empty=False, test_timeout=2.0):
 
 async def run_json(code, tests="", allow_empty=False):
     return json.dumps(await run(code, tests, allow_empty))
+
+
+# ---------------------------------------------------------------- SQL exercises
+# spec: {kind: 'sql'|'ddl', sql, schema, seed, hidden?, solution?, ordered?, names?, verify?}
+#   sql  : compares the user's single query with the reference solution on the visible data and on a second dataset
+#   ddl  : executes the user's script (CREATE INDEX ...), then runs `verify` (Python tests) with `conn` and `sql` in scope
+
+def _connect(spec, with_hidden=False):
+    conn = sqlite3.connect(":memory:")
+    ops = [0]
+
+    def guard():
+        ops[0] += 1
+        return 1 if ops[0] > 4000 else 0  # abort runaway queries (about 4M VM steps)
+
+    conn.set_progress_handler(guard, 1000)
+    conn.executescript(spec["schema"])
+    if spec.get("seed"):
+        conn.executescript(spec["seed"])
+    if with_hidden and spec.get("hidden"):
+        conn.executescript(spec["hidden"])
+    return conn
+
+
+def _query(conn, sql):
+    cur = conn.execute(sql)
+    cols = [d[0] for d in (cur.description or [])]
+    return cols, [list(r) for r in cur.fetchall()]
+
+
+def _norm(rows, ordered):
+    out = [[round(v, 6) if isinstance(v, float) else v for v in r] for r in rows]
+    return out if ordered else sorted(out, key=lambda r: [repr(v) for v in r])
+
+
+def _diff(got, want):
+    if len(got) != len(want):
+        return f"expected {len(want)} row(s), got {len(got)}"
+    for i, (g, w) in enumerate(zip(got, want)):
+        if g != w:
+            return f"row {i + 1} differs: expected {w!r}, got {g!r}"
+    return None
+
+
+async def run_sql(spec):
+    user = spec.get("sql", "")
+    if spec.get("kind") == "ddl":
+        try:
+            conn = _connect(spec)
+            conn.executescript(user)
+        except sqlite3.Error as e:
+            return {"fatal": f"SQL error: {e}", "logs": [], "results": []}
+        return await run("", spec["verify"], extra={"conn": conn, "sql": user, "query": lambda s: _query(conn, s)[1], "plan": lambda s: " | ".join(r[3] for r in conn.execute("EXPLAIN QUERY PLAN " + s))})
+    if not user.strip():
+        return {"fatal": "Write a query first.", "logs": [], "results": []}
+    results, ordered = [], bool(spec.get("ordered"))
+    try:
+        ucols, urows = _query(_connect(spec), user)
+    except sqlite3.Error as e:
+        return {"fatal": f"SQL error: {e}", "logs": [], "results": []}
+    ecols, erows = _query(_connect(spec), spec["solution"])
+    shape_ok = len(ucols) == len(ecols) and (not spec.get("names") or [c.lower() for c in ucols] == [c.lower() for c in ecols])
+    results.append({"name": "returns the expected columns" + (" (names matter here)" if spec.get("names") else ""), "pass": shape_ok,
+                    **({} if shape_ok else {"err": f"expected {ecols}, got {ucols}"})})
+    got, want = _norm(urows, ordered), _norm(erows, ordered)
+    d = _diff(got, want) if shape_ok else "fix the columns first"
+    results.append({"name": "returns the expected rows" + (" in the expected order" if ordered else ""), "pass": d is None, **({} if d is None else {"err": d})})
+    if spec.get("hidden"):
+        try:
+            _, hu = _query(_connect(spec, True), user)
+            _, he = _query(_connect(spec, True), spec["solution"])
+            d2 = _diff(_norm(hu, ordered), _norm(he, ordered)) if shape_ok else "fix the columns first"
+        except sqlite3.Error as e:
+            d2 = f"SQL error on the second dataset: {e}"
+        results.append({"name": "also correct on a second dataset (no hard-coding)", "pass": d2 is None, **({} if d2 is None else {"err": d2})})
+    return {"logs": [], "results": results, "table": {"cols": ucols, "rows": urows[:30], "total": len(urows)}, "expected": {"cols": ecols, "rows": erows[:30], "total": len(erows)}}
+
+
+async def run_sql_json(spec_json):
+    return json.dumps(await run_sql(json.loads(spec_json)), default=str)

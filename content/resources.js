@@ -44,4 +44,10 @@ window.RESOURCES = [
   { cat: 'Security & Career', title: 'OWASP API Security Top 10', url: 'https://owasp.org/API-Security/', note: 'BOLA/IDOR and other API risks you should spot in code review.' },
   { cat: 'Security & Career', title: 'The Pragmatic Engineer: senior+ levels', url: 'https://blog.pragmaticengineer.com/', note: 'Industry perspective on levels, expectations and interviews.' },
   { cat: 'Security & Career', title: 'Stripe: Idempotent requests', url: 'https://docs.stripe.com/api/idempotent_requests', note: 'Reference design for idempotency keys in a payments API.' },
+  { cat: 'Databases', title: 'Use The Index, Luke', url: 'https://use-the-index-luke.com/', note: 'Free book on SQL indexing and performance, with Postgres, MySQL and Oracle notes.' },
+  { cat: 'Databases', title: 'PostgreSQL: transaction isolation', url: 'https://www.postgresql.org/docs/current/transaction-iso.html', note: 'The official description of each isolation level and the anomalies it prevents.' },
+  { cat: 'Databases', title: 'PostgreSQL: explicit locking', url: 'https://www.postgresql.org/docs/current/explicit-locking.html', note: 'Row and table lock modes, FOR UPDATE, SKIP LOCKED, advisory locks.' },
+  { cat: 'Databases', title: 'PG Exercises', url: 'https://pgexercises.com/', note: 'Free interactive SQL practice on a real Postgres dataset.' },
+  { cat: 'Databases', title: 'SQLBolt', url: 'https://sqlbolt.com/', note: 'Short interactive SQL lessons if you want to refresh the basics.' },
+  { cat: 'Databases', title: 'Dalibo EXPLAIN visualiser', url: 'https://explain.dalibo.com/', note: 'Paste a Postgres EXPLAIN (ANALYZE) and see where the time goes.' },
 ];

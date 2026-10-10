@@ -29,7 +29,10 @@ out = []
 for case in json.load(sys.stdin):
     signal.alarm(15)
     try:
-        res = asyncio.run(harness.run(case["code"], case.get("tests", ""), case.get("allow_empty", False)))
+        if "sql_spec" in case:
+            res = asyncio.run(harness.run_sql(case["sql_spec"]))
+        else:
+            res = asyncio.run(harness.run(case["code"], case.get("tests", ""), case.get("allow_empty", False)))
     except CaseTimeout:
         res = {"fatal": "timed out after 15s (infinite loop?)", "logs": [], "results": []}
     finally:
