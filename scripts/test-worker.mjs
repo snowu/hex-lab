@@ -134,6 +134,16 @@ await t('usage: every route reports the provider token counts and the model', as
   j = await (await handle(req({ messages: [{ role: 'user', content: 'hi' }] }, { path: '/chat' }), env, async () => new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] })))).json();
   assert.deepEqual(j.usage, { model: 'deepseek-v4-flash', in: 0, out: 0 });
 });
+await t('chat: the tutor\'s own long replies are accepted back as history (the 2000 cap is for what the learner types)', async () => {
+  const f = async () => new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] }));
+  const longReply = 'x'.repeat(6000);
+  const msgs = [{ role: 'user', content: 'q1' }, { role: 'assistant', content: longReply }, { role: 'user', content: 'follow up' }];
+  assert.equal((await handle(req({ messages: msgs }, { path: '/chat' }), env, f)).status, 200);
+  assert.equal((await handle(req({ messages: [{ role: 'user', content: 'x'.repeat(2001) }] }, { path: '/chat' }), env, f)).status, 400);
+  assert.equal((await handle(req({ messages: [...msgs.slice(0, 1), { role: 'assistant', content: 'x'.repeat(CHAT_LIMITS.assistant + 1) }, msgs[2]] }, { path: '/chat' }), env, f)).status, 400);
+  const full = Array.from({ length: 12 }, (_, i) => ({ role: i % 2 ? 'assistant' : 'user', content: i % 2 ? 'y'.repeat(6000) : 'z'.repeat(2000) }));
+  assert.equal((await handle(req({ messages: [...full.slice(0, 11), { role: 'user', content: 'last' }], context: 'c'.repeat(9000) }, { path: '/chat' }), env, f)).status, 200);
+});
 await t('health never reveals the key', async () => {
   const r = await handle(req(null, { method: 'GET', path: '/health' }), env); const j = await r.json();
   assert.equal(j.configured, true); assert.ok(!JSON.stringify(j).includes('"k"'));
