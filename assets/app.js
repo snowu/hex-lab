@@ -3,7 +3,7 @@
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const strip = (h) => String(h).replace(/<[^>]*>/g, ' ').replace(/&[a-z]+;/g, ' ').replace(/\s+/g, ' ');
+const strip = (h) => String(h).replace(/<[^>]*>/g, ' ').replace(/&[a-z#0-9]+;/g, ' ').replace(/\s+/g, ' ').trim();
 const store = {
   get(k, d) { try { const v = localStorage.getItem('sil:' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem('sil:' + k, JSON.stringify(v)); } catch {} },
@@ -11,28 +11,112 @@ const store = {
 const app = $('#app');
 const TRACKS = window.TRACKS, CARDS = window.CARDS || [], MOCK = window.MOCK || [], RES = window.RESOURCES || [];
 
-/* ---------- progress ---------- */
-let progress = store.get('progress', {}); // { lessonId: { 'q0': true, 'c1': true } }
+/* ---------- icons ---------- */
+const P = {
+  playbook: '<circle cx="12" cy="12" r="9"/><polygon points="15.5 8.5 13.5 13.5 8.5 15.5 10.5 10.5 15.5 8.5"/>',
+  coding: '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
+  design: '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
+  reliability: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>',
+  ai: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7z"/>',
+  openbanking: '<line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/>',
+  cloud: '<path d="M18 10h-1.3A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>',
+  search: '<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+  check: '<polyline points="20 6 9 17 4 12"/>',
+  x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>',
+  flame: '<path d="M12 2c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 .5 1.5 1.5 2 2 2 0-3-1-5 1-8z"/>',
+  bolt: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+  play: '<polygon points="6 4 20 12 6 20 6 4"/>',
+  bulb: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/>',
+  eye: '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>',
+  rotate: '<polyline points="1 4 1 10 7 10"/><path d="M3.5 15a9 9 0 1 0 2.1-9.4L1 10"/>',
+  arrow: '<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>',
+  arrowL: '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
+  cards: '<rect x="3" y="6" width="14" height="14" rx="2"/><path d="M7 6V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2"/>',
+  mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>',
+  link: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>',
+  book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5V22h16"/>',
+  trophy: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
+  terminal: '<polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>',
+  target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+  route: '<circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h6a4 4 0 0 0 0-8h-4a4 4 0 0 1 0-8h6"/>',
+  list: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/>',
+  home: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',
+};
+const ic = (n, s = 18, sw = 1.8) => `<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n] || ''}</svg>`;
+const HUE = { playbook: 255, coding: 190, design: 150, reliability: 28, ai: 320, openbanking: 44, cloud: 215 };
+const hueOf = (id) => HUE[id] ?? ([...String(id)].reduce((a, c) => a + c.charCodeAt(0), 0) % 360);
+const trackOf = (lessonId) => TRACKS.find((t) => t.lessons.some((l) => l.id === lessonId));
+const ring = (pct, size = 46, sw = 4, label = true) => {
+  const r = (size - sw) / 2, c = 2 * Math.PI * r;
+  return `<span class="ring" style="width:${size}px;height:${size}px"><svg width="${size}" height="${size}"><circle class="bg" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${sw}"/><circle class="fg" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${sw}" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - pct / 100)}"/></svg>${label ? `<span class="t">${pct}%</span>` : ''}</span>`;
+};
+
+/* ---------- progress, xp, streak ---------- */
+let progress = store.get('progress', {});
+let xp = store.get('xp', 0);
+let days = store.get('days', []);
+const dstr = (d) => d.toISOString().slice(0, 10);
 const itemsOf = (l) => l.sections.map((s, i) => ({ s, k: (s.type === 'quiz' ? 'q' : 'c') + i })).filter((x) => x.s.type === 'quiz' || x.s.type === 'code');
 const lessonPct = (l) => {
-  const items = itemsOf(l); const p = progress[l.id] || {};
+  const items = itemsOf(l), p = progress[l.id] || {};
   if (!items.length) return p.read ? 100 : 0;
   return Math.round((items.filter((x) => p[x.k]).length / items.length) * 100);
 };
 const trackPct = (t) => Math.round(t.lessons.reduce((a, l) => a + lessonPct(l), 0) / t.lessons.length);
-const mark = (lid, k) => { (progress[lid] = progress[lid] || {})[k] = true; store.set('progress', progress); };
+const trackMin = (t) => t.lessons.reduce((a, l) => a + l.minutes, 0);
 const findLesson = (id) => { for (const t of TRACKS) { const i = t.lessons.findIndex((l) => l.id === id); if (i >= 0) return { t, l: t.lessons[i], i }; } };
+const level = () => Math.floor(Math.sqrt(xp / 40)) + 1;
+const streak = () => {
+  const set = new Set(days), d = new Date();
+  if (!set.has(dstr(d))) d.setDate(d.getDate() - 1);
+  let n = 0; while (set.has(dstr(d))) { n++; d.setDate(d.getDate() - 1); }
+  return n;
+};
+function touchDay() { const t = dstr(new Date()); if (!days.includes(t)) { days.push(t); store.set('days', days); } }
+function addXp(n, msg) {
+  xp += n; store.set('xp', xp); touchDay(); renderXp();
+  if (msg) toast(`+${n} XP · ${msg}`);
+}
+function mark(lid, k, award, msg) {
+  const p = (progress[lid] = progress[lid] || {});
+  if (p[k]) return false;
+  p[k] = true; store.set('progress', progress); addXp(award, msg); return true;
+}
+function renderXp() {
+  const L = level(), lo = 40 * (L - 1) ** 2, hi = 40 * L ** 2, s = streak();
+  $('#xp').innerHTML = `<span class="lv">${L}</span><span>${xp} XP</span><span class="xb"><i style="width:${Math.round(((xp - lo) / (hi - lo)) * 100)}%"></i></span>${s ? `<span class="fl">${ic('flame', 15)}${s}</span>` : ''}`;
+  $('#xp').title = `Level ${L} · ${hi - xp} XP to next level${s ? ` · ${s}-day streak` : ''}`;
+}
+function toast(msg) {
+  const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = ic('bolt', 16) + esc(msg);
+  $('#toasts').appendChild(t); setTimeout(() => t.remove(), 2700);
+}
+function confetti(x, y, hue = 255) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const c = $('#fx'), g = c.getContext('2d'), dpr = devicePixelRatio || 1;
+  c.width = innerWidth * dpr; c.height = innerHeight * dpr; g.scale(dpr, dpr);
+  const cols = [`hsl(${hue} 90% 70%)`, `hsl(${(hue + 60) % 360} 90% 65%)`, '#4fd1c5', '#ffd166', '#ff8fab', '#8b97ff'];
+  const ps = Array.from({ length: 90 }, () => ({ x, y, vx: (Math.random() - .5) * 11, vy: -Math.random() * 11 - 3, s: 4 + Math.random() * 5, r: Math.random() * 6, vr: (Math.random() - .5) * .4, c: cols[Math.floor(Math.random() * cols.length)] }));
+  let t0 = performance.now();
+  (function frame(t) {
+    const dt = Math.min(2, (t - t0) / 16.7); t0 = t; g.clearRect(0, 0, innerWidth, innerHeight);
+    let alive = 0;
+    for (const p of ps) { p.vy += .28 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.r += p.vr * dt; if (p.y < innerHeight + 20) alive++;
+      g.save(); g.translate(p.x, p.y); g.rotate(p.r); g.fillStyle = p.c; g.fillRect(-p.s / 2, -p.s / 3, p.s, p.s * .6); g.restore(); }
+    if (alive) requestAnimationFrame(frame); else g.clearRect(0, 0, innerWidth, innerHeight);
+  })(t0);
+}
 
 /* ---------- theme ---------- */
-const applyTheme = (t) => { if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; };
-applyTheme(store.get('theme', null));
-$('#themeBtn').onclick = () => {
-  const dark = matchMedia('(prefers-color-scheme: dark)').matches;
-  const cur = document.documentElement.dataset.theme || (dark ? 'dark' : 'light');
-  const next = cur === 'dark' ? 'light' : 'dark'; store.set('theme', next); applyTheme(next);
-  $$('.CodeMirror').forEach((el) => el.CodeMirror && el.CodeMirror.setOption('theme', next === 'dark' ? 'material-darker' : 'default'));
-};
-const cmTheme = () => (document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')) === 'dark' ? 'material-darker' : 'default';
+const sysDark = () => matchMedia('(prefers-color-scheme: dark)').matches;
+const curTheme = () => document.documentElement.dataset.theme || (sysDark() ? 'dark' : 'light');
+function setTheme(t) { if (t) document.documentElement.dataset.theme = t; $('#themeBtn').innerHTML = ic(curTheme() === 'dark' ? 'sun' : 'moon', 18); }
+setTheme(store.get('theme', null));
+$('#themeBtn').onclick = () => { const n = curTheme() === 'dark' ? 'light' : 'dark'; store.set('theme', n); setTheme(n); };
+$('#sIc').innerHTML = ic('search', 16); $('#cIc').innerHTML = ic('search', 18);
 
 /* ---------- router ---------- */
 const routes = [
@@ -42,12 +126,13 @@ const routes = [
   [/^#\/review$/, viewReview],
   [/^#\/mock$/, viewMock],
   [/^#\/resources$/, viewResources],
-  [/^#\/search\/(.*)$/, viewSearch],
 ];
 let cleanup = null;
 function route() {
   if (cleanup) { cleanup(); cleanup = null; }
+  $('#pbar i').style.width = '0';
   const h = decodeURIComponent(location.hash || '#/');
+  app.classList.remove('in'); void app.offsetWidth; app.classList.add('in');
   for (const [re, fn] of routes) { const m = h.match(re); if (m) { fn(...m.slice(1)); setNav(h); window.scrollTo(0, 0); return; } }
   app.innerHTML = '<h1>Not found</h1><p><a href="#/">Back home</a></p>';
 }
@@ -57,90 +142,164 @@ function setNav(h) {
 }
 addEventListener('hashchange', route);
 
-/* ---------- views ---------- */
+/* ---------- home ---------- */
+function nextLesson() {
+  const last = store.get('last', null), f = last && findLesson(last);
+  if (f && lessonPct(f.l) < 100) return { ...f, resume: true };
+  for (const t of TRACKS) for (const [i, l] of t.lessons.entries()) if (lessonPct(l) < 100) return { t, l, i, resume: false, started: !!progress[l.id] };
+  return null;
+}
 function viewHome() {
   document.title = 'Senior Interview Lab';
   const total = TRACKS.reduce((a, t) => a + t.lessons.length, 0);
   const done = TRACKS.reduce((a, t) => a + t.lessons.filter((l) => lessonPct(l) === 100).length, 0);
-  const due = dueCards().length;
+  const due = dueCards().length, nx = nextLesson(), s = streak();
+  const exTotal = TRACKS.reduce((a, t) => a + t.lessons.reduce((b, l) => b + l.sections.filter((x) => x.type === 'code').length, 0), 0);
   app.innerHTML = `
-    <h1>Level up for senior interviews, in the AI era</h1>
-    <p class="lead">Short interactive lessons, a real code editor with tests, flashcards with spaced repetition, and mock-interview prompts. Generic senior material plus a dedicated open-banking track for Neonomics.</p>
-    <div class="grid">
-      <div class="card"><h3>${done}/${total} lessons</h3><p>complete</p><div class="bar"><i style="width:${total ? (done / total) * 100 : 0}%"></i></div></div>
-      <a class="card" href="#/review"><h3>${due} cards due</h3><p>${CARDS.length} flashcards in total. Spaced repetition.</p></a>
-      <a class="card" href="#/mock"><h3>Mock interview</h3><p>Random question, a timer, then a self-check rubric.</p></a>
-    </div>
-    <h2>Tracks</h2>
-    <div class="grid">${TRACKS.map((t) => `
-      <a class="card" href="#/track/${t.id}">
-        <h3>${t.icon} ${esc(t.title)}</h3>
-        ${t.hot ? '<span class="tag hot">Neonomics</span>' : ''}<span class="tag">${t.lessons.length} lessons</span>
-        <p>${esc(t.blurb)}</p>
-        <div class="bar"><i style="width:${trackPct(t)}%"></i></div>
+    <section class="hero"><div class="hero-l">
+      <span class="eyebrow">${ic('bolt', 14)} <span>Senior interview prep for the <b>AI era</b></span></span>
+      <h1>Practice like it's the <span class="grad">real interview.</span></h1>
+      <p class="lead">${TRACKS.length} tracks, ${exTotal} runnable coding challenges, flashcards with spaced repetition and mock interviews, from system design and Kafka to AWS, Terraform and a dedicated open-banking track for Neonomics.</p>
+      <div class="cta">
+        <a class="btn primary" href="#/lesson/${(nx ? nx.l : TRACKS[0].lessons[0]).id}">${ic('play', 16)} ${nx && (nx.resume || nx.started) ? 'Continue learning' : 'Start learning'}</a>
+        <a class="btn" href="#/review">${ic('cards', 16)} ${due} cards due</a>
+        <button class="btn ghost" id="heroSearch">${ic('search', 16)} Search <kbd>Ctrl K</kbd></button>
+      </div></div>
+      <div class="hero-r" aria-hidden="true"><div class="pv">
+        <div class="pv-tab"><span class="tl3"><i></i><i></i><i></i></span><span class="file">rateLimiter.js</span></div>
+        <pre class="pv-code"><span class="k">class</span> <span class="f">RateLimiter</span> {
+  <span class="f">tryAcquire</span>(n = <span class="n">1</span>) {
+    <span class="k">this</span>._refill();
+    <span class="k">if</span> (<span class="k">this</span>.tokens &gt;= n) {
+      <span class="k">this</span>.tokens -= n;
+      <span class="k">return true</span>;
+    }
+    <span class="k">return false</span>;
+  }
+}</pre>
+        <div class="pv-t"><div class="pv-s"><b>6/6 passing</b><span class="segs"><i class="p"></i><i class="p"></i><i class="p"></i><i class="p"></i><i class="p"></i><i class="p"></i></span></div>
+          <div class="res pass"><span class="ric">${ic('check', 14, 2.6)}</span><span class="nm">starts full</span></div>
+          <div class="res pass"><span class="ric">${ic('check', 14, 2.6)}</span><span class="nm">refills over time</span></div>
+          <div class="res pass"><span class="ric">${ic('check', 14, 2.6)}</span><span class="nm">never exceeds capacity</span></div></div>
+        <span class="pv-xp">${ic('bolt', 14)} +50 XP</span>
+      </div></div>
+    </section>
+    <section class="stats" aria-label="Your progress">
+      <div class="stat">${ring(Math.round((done / total) * 100), 48, 5, true)}<div><div class="v">${done}/${total}</div><div class="l">lessons complete</div></div></div>
+      <div class="stat"><span class="si">${ic('bolt', 20)}</span><div><div class="v">Level ${level()}</div><div class="l">${xp} XP earned</div></div></div>
+      <div class="stat"><span class="si" style="color:#ff9a3d">${ic('flame', 20)}</span><div><div class="v">${s} day${s === 1 ? '' : 's'}</div><div class="l">current streak</div></div></div>
+      <a class="stat" href="#/review"><span class="si">${ic('cards', 20)}</span><div><div class="v">${due}</div><div class="l">flashcards due</div></div></a>
+    </section>
+    ${nx ? `<a class="cont tc" style="--h:${hueOf(nx.t.id)}" href="#/lesson/${nx.l.id}">${ring(lessonPct(nx.l), 52, 5)}<div class="tx"><div class="k">${nx.resume || nx.started ? 'Continue where you left off' : 'Up next'}</div><div class="tt">${esc(nx.l.title)}</div><div class="sub">${esc(nx.t.title)} · ${nx.l.minutes} min</div></div>${ic('arrow', 22)}</a>` : `<div class="cont tc" style="--h:150">${ic('trophy', 28)}<div class="tx"><div class="tt">Every lesson complete. Go run some mock interviews.</div></div></div>`}
+    <div class="sec-h"><h2>Tracks</h2><span>${total} lessons · ${Math.round(TRACKS.reduce((a, t) => a + trackMin(t), 0) / 60)} hours</span></div>
+    <div class="tgrid">${TRACKS.map((t) => `
+      <a class="tcard tc ${t.hot ? 'feat' : ''}" style="--h:${hueOf(t.id)}" href="#/track/${t.id}">
+        <div class="row"><span class="ticon">${ic(t.id, 24)}</span>${ring(trackPct(t), 44, 4)}</div>
+        <div class="bd"><h3>${esc(t.title)}</h3>
+        <p>${esc(t.blurb)}</p></div>
+        <div class="meta">${t.hot ? '<span class="chip hot">Neonomics focus</span>' : ''}<span class="chip">${t.lessons.length} lessons</span><span class="chip">${ic('clock', 12)} ${trackMin(t)} min</span></div>
       </a>`).join('')}</div>
-    <div class="callout tip"><b>Suggested order.</b> Playbook, then Coding Fluency and System Design in parallel, then Reliability, AI-Era, and the Open Banking track in the last week. Do the flashcards daily.</div>`;
+    <div class="sec-h"><h2>Toolkit</h2></div>
+    <div class="tools">
+      <a class="tool" href="#/review"><span class="si">${ic('cards', 22)}</span><div><b>Flashcards</b><span>${CARDS.length} cards · spaced repetition</span></div></a>
+      <a class="tool" href="#/mock"><span class="si">${ic('mic', 22)}</span><div><b>Mock interview</b><span>${MOCK.length} questions · timer · rubric</span></div></a>
+      <a class="tool" href="#/resources"><span class="si">${ic('link', 22)}</span><div><b>Free resources</b><span>${RES.length} hand-picked links</span></div></a>
+    </div>`;
+  $('#heroSearch').onclick = openPalette;
 }
 
+/* ---------- track ---------- */
 function viewTrack(id) {
   const t = TRACKS.find((x) => x.id === id); if (!t) return viewHome();
   document.title = t.title + ' · Senior Interview Lab';
+  const h = hueOf(t.id);
   app.innerHTML = `
-    <div class="crumbs"><a href="#/">Tracks</a> / ${esc(t.title)}</div>
-    <h1>${t.icon} ${esc(t.title)}</h1><p class="lead">${esc(t.blurb)}</p>
-    <ul class="lessonlist">${t.lessons.map((l, i) => {
-      const p = lessonPct(l);
-      return `<li><a class="${p === 100 ? 'done' : ''}" href="#/lesson/${l.id}"><span class="n">${p === 100 ? '✓' : i + 1}</span><span><b>${esc(l.title)}</b><br><small style="color:var(--muted)">${esc(l.summary || '')}</small></span><span class="meta">${l.minutes} min · ${p}%</span></a></li>`;
-    }).join('')}</ul>`;
+    <div class="crumbs"><a href="#/">${ic('home', 14)} Tracks</a> ${ic('arrow', 12)} <span>${esc(t.title)}</span></div>
+    <section class="thead tc" style="--h:${h}"><span class="ticon">${ic(t.id, 32)}</span><div style="flex:1"><h1>${esc(t.title)}</h1><p>${esc(t.blurb)}</p></div>${ring(trackPct(t), 64, 6)}</section>
+    <div class="tl">${t.lessons.map((l, i) => {
+      const p = lessonPct(l), ex = l.sections.filter((s) => s.type === 'code').length;
+      return `<a class="lrow tc ${p === 100 ? 'done' : ''}" style="--h:${h}" href="#/lesson/${l.id}"><span class="n">${p === 100 ? ic('check', 18, 2.6) : i + 1}</span><span class="tx"><div class="tt">${esc(l.title)}</div><div class="sub">${esc(l.summary || '')}</div></span><span class="rt">${ex ? `<span class="chip">${ic('terminal', 12)} ${ex}</span>` : ''}<span>${l.minutes} min</span><span class="mini"><i style="width:${p}%"></i></span></span></a>`;
+    }).join('')}</div>`;
 }
 
+/* ---------- lesson ---------- */
+function secMeta(s, i) {
+  if (s.type === 'quiz') { const q = strip(s.q); return { t: q.length > 44 ? q.slice(0, 44) + '…' : q, act: true }; }
+  if (s.type === 'code') return { t: s.title, act: true };
+  if (s.type === 'steps') return { t: 'Walkthrough' };
+  if (s.type === 'reveal') return { t: s.title.replace(/^[^\p{L}\p{N}“"(]+/u, '') };
+  const m = /<h[23][^>]*>(.*?)<\/h[23]>/is.exec(s.html || '');
+  if (m) return { t: strip(m[1]) };
+  return i === 0 ? { t: 'Overview' } : null;
+}
 function viewLesson(id) {
   const f = findLesson(id); if (!f) return viewHome();
-  const { t, l, i } = f;
+  const { t, l, i } = f, h = hueOf(t.id);
   document.title = l.title + ' · Senior Interview Lab';
+  store.set('last', l.id);
+  const nCode = l.sections.filter((s) => s.type === 'code').length, nQuiz = l.sections.filter((s) => s.type === 'quiz').length;
+  const metas = l.sections.map(secMeta);
+  const outline = metas.map((m, k) => m && `<li><button data-t="s${k}" class="${m.act ? 'act' : ''}"><span class="ck">${ic('check', 10, 3.4)}</span><span>${esc(m.t)}</span></button></li>`).filter(Boolean).join('');
+  const nxt = t.lessons[i + 1];
   app.innerHTML = `
-    <div class="crumbs"><a href="#/">Tracks</a> / <a href="#/track/${t.id}">${esc(t.title)}</a> / ${esc(l.title)}</div>
-    <h1>${esc(l.title)}</h1>
-    <div class="bar" title="Lesson progress"><i id="lbar" style="width:${lessonPct(l)}%"></i></div>
-    <div id="body"></div>
-    <div class="nextprev">
-      ${i > 0 ? `<a class="btn" href="#/lesson/${t.lessons[i - 1].id}">← ${esc(t.lessons[i - 1].title)}</a>` : '<span></span>'}
-      ${i < t.lessons.length - 1 ? `<a class="btn primary" href="#/lesson/${t.lessons[i + 1].id}">${esc(t.lessons[i + 1].title)} →</a>` : `<a class="btn primary" href="#/track/${t.id}">Finish track</a>`}
+    <div class="lesson tc" style="--h:${h}">
+      <aside class="outline"><p class="oh">In this lesson</p><ol>${outline}</ol><div class="sm"><b id="lpct">${lessonPct(l)}%</b> complete<br>${nQuiz} quick check${nQuiz === 1 ? '' : 's'}${nCode ? ` · ${nCode} challenge${nCode === 1 ? '' : 's'}` : ''}</div></aside>
+      <article>
+        <div class="crumbs"><a href="#/">${ic('home', 14)}</a> ${ic('arrow', 12)} <a href="#/track/${t.id}">${esc(t.title)}</a> ${ic('arrow', 12)} <span>Lesson ${i + 1}</span></div>
+        <header class="lhead"><span class="chip tc" style="--h:${h}">${ic(t.id, 13)} ${esc(t.title)}</span><h1>${esc(l.title)}</h1><p class="sum">${esc(l.summary || '')}</p>
+          <div class="metas"><span class="chip">${ic('clock', 12)} ${l.minutes} min</span>${nQuiz ? `<span class="chip">${ic('target', 12)} ${nQuiz} quick check${nQuiz === 1 ? '' : 's'}</span>` : ''}${nCode ? `<span class="chip">${ic('terminal', 12)} ${nCode} challenge${nCode === 1 ? '' : 's'}</span>` : ''}</div></header>
+        <div class="lbody" id="body"></div>
+        <div class="endcard tc" style="--h:${h}">${nxt ? `<div class="tx"><div class="k">Up next</div><div class="tt">${esc(nxt.title)}</div></div><a class="btn primary" href="#/lesson/${nxt.id}">Next lesson ${ic('arrow', 16)}</a>` : `<div class="tx"><div class="k">Track end</div><div class="tt">That's the last lesson in ${esc(t.title)}.</div></div><a class="btn primary" href="#/">Pick another track ${ic('arrow', 16)}</a>`}
+          ${i > 0 ? `<a class="btn" href="#/lesson/${t.lessons[i - 1].id}">${ic('arrowL', 16)} Previous</a>` : ''}</div>
+      </article>
     </div>`;
   const body = $('#body');
-  const bump = () => { $('#lbar').style.width = lessonPct(l) + '%'; };
-  const editors = [];
-  l.sections.forEach((s, idx) => {
-    const el = document.createElement('section'); el.className = 'sec'; body.appendChild(el);
-    ({ text: rText, quiz: rQuiz, reveal: rReveal, steps: rSteps, code: rCode }[s.type] || rText)(el, s, l, idx, bump, editors);
+  const outBtns = {}; $$('.outline button').forEach((b) => (outBtns[b.dataset.t] = b));
+  const sync = () => {
+    $('#lpct').textContent = lessonPct(l) + '%';
+    const p = progress[l.id] || {};
+    l.sections.forEach((s, k) => { const b = outBtns['s' + k]; if (b && (s.type === 'quiz' || s.type === 'code')) b.parentElement.classList.toggle('okk', !!p[(s.type === 'quiz' ? 'q' : 'c') + k]); });
+  };
+  const disposers = [];
+  l.sections.forEach((s, k) => {
+    const el = document.createElement('section'); el.className = 'sec'; el.id = 's' + k; body.appendChild(el);
+    ({ text: rText, quiz: rQuiz, reveal: rReveal, steps: rSteps, code: rCode }[s.type] || rText)(el, s, l, k, sync, h);
   });
-  if (!itemsOf(l).length) { mark(l.id, 'read'); bump(); }
-  cleanup = () => editors.forEach((e) => e.dispose && e.dispose());
+  if (!itemsOf(l).length) progress[l.id] = { ...(progress[l.id] || {}), read: true }, store.set('progress', progress);
+  sync();
+  $$('.outline button').forEach((b) => (b.onclick = () => document.getElementById(b.dataset.t).scrollIntoView({ behavior: 'smooth', block: 'start' })));
+  const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { Object.values(outBtns).forEach((b) => b.classList.remove('on')); outBtns[e.target.id] && outBtns[e.target.id].classList.add('on'); } }), { rootMargin: '-20% 0px -65% 0px' });
+  $$('.sec', body).forEach((s) => io.observe(s));
+  const onScroll = () => { const d = document.documentElement; $('#pbar i').style.width = Math.min(100, (scrollY / Math.max(1, d.scrollHeight - innerHeight)) * 100) + '%'; };
+  addEventListener('scroll', onScroll, { passive: true }); onScroll();
+  cleanup = () => { io.disconnect(); removeEventListener('scroll', onScroll); disposers.forEach((d) => d()); };
 }
-
-function rText(el, s) { el.innerHTML = s.html; }
-function rReveal(el, s) { el.innerHTML = `<details><summary>${esc(s.title)}</summary>${s.html}</details>`; }
-function rQuiz(el, s, l, idx, bump) {
-  const key = 'q' + idx; let answered = false;
-  el.innerHTML = `<div class="quiz"><div class="q">${s.q}</div>${s.options.map((o, i) => `<button class="opt" data-i="${i}">${o}</button>`).join('')}<div class="explain" hidden></div></div>`;
-  $$('.opt', el).forEach((b) => b.onclick = () => {
-    if (answered && b.classList.contains('wrong')) return;
-    const i = +b.dataset.i;
-    if (i === s.answer) {
-      b.classList.add('right'); answered = true;
-      $$('.opt', el).forEach((x) => (x.disabled = true));
-      const ex = $('.explain', el); ex.hidden = false; ex.innerHTML = '✅ ' + s.explain;
-      mark(l.id, key); bump();
-    } else { b.classList.add('wrong'); b.disabled = true; const ex = $('.explain', el); ex.hidden = false; ex.textContent = 'Not quite. Try another option.'; }
-  });
+const label = (icn, txt) => `<div class="sec-label">${ic(icn, 14)} ${txt}</div>`;
+function rText(el, s) { el.innerHTML = `<div class="html">${s.html}</div>`; }
+function rReveal(el, s) { el.innerHTML = `<details><summary>${esc(s.title)}</summary><div class="html">${s.html}</div></details>`; }
+function rQuiz(el, s, l, idx, sync) {
+  const key = 'q' + idx; let done = false;
+  el.innerHTML = `${label('target', 'Quick check')}<div class="quiz"><div class="q">${s.q}</div>${s.options.map((o, i) => `<button class="opt" data-i="${i}"><span class="l">${'ABCD'[i]}</span><span>${o}</span></button>`).join('')}<div class="explain" hidden></div></div>`;
+  const ex = $('.explain', el);
+  if ((progress[l.id] || {})[key]) { /* already solved earlier: show the answer */
+    const b = $(`.opt[data-i="${s.answer}"]`, el); b.classList.add('right'); $$('.opt', el).forEach((x) => (x.disabled = true)); ex.hidden = false; ex.classList.add('ok'); ex.innerHTML = s.explain; done = true;
+  }
+  $$('.opt', el).forEach((b) => (b.onclick = () => {
+    if (done) return;
+    if (+b.dataset.i === s.answer) {
+      done = true; b.classList.add('right'); $$('.opt', el).forEach((x) => (x.disabled = true));
+      ex.hidden = false; ex.classList.add('ok'); ex.innerHTML = s.explain;
+      mark(l.id, key, 10, 'Nice one'); sync();
+    } else { b.classList.add('wrong'); b.disabled = true; ex.hidden = false; ex.classList.remove('ok'); ex.textContent = 'Not quite. Think about the trade-off and try another option.'; }
+  }));
 }
-function rSteps(el, s) {
+function rSteps(el, s, l, idx, sync, hue) {
   let n = 0;
   const draw = () => {
-    el.innerHTML = `<div class="stepper"><div class="dots">${s.steps.map((x, i) => `<button class="${i === n ? 'on' : ''}" data-i="${i}">${i + 1}</button>`).join('')}</div>
-      <h3 style="margin-top:0">${esc(s.steps[n].title)}</h3>${s.steps[n].html}
-      <div class="nav"><button id="pv" ${n === 0 ? 'disabled' : ''}>← Back</button><button id="nx" class="primary" ${n === s.steps.length - 1 ? 'disabled' : ''}>Next →</button></div></div>`;
-    $$('.dots button', el).forEach((b) => b.onclick = () => { n = +b.dataset.i; draw(); });
+    el.innerHTML = `${label('route', 'Walkthrough')}<div class="stepper"><div class="dots">${s.steps.map((x, i) => `${i ? `<i class="${i <= n ? 'done' : ''}"></i>` : ''}<button class="${i === n ? 'on' : i < n ? 'done' : ''}" data-i="${i}" aria-label="Step ${i + 1}">${i + 1}</button>`).join('')}</div>
+      <h3>${esc(s.steps[n].title)}</h3><div class="html">${s.steps[n].html}</div>
+      <div class="nav"><button class="btn sm" id="pv" ${n === 0 ? 'disabled' : ''}>${ic('arrowL', 14)} Back</button><button id="nx" class="btn sm primary" ${n === s.steps.length - 1 ? 'disabled' : ''}>Next ${ic('arrow', 14)}</button></div></div>`;
+    $$('.dots button', el).forEach((b) => (b.onclick = () => { n = +b.dataset.i; draw(); }));
     $('#pv', el).onclick = () => { n--; draw(); }; $('#nx', el).onclick = () => { n++; draw(); };
   };
   draw();
@@ -156,46 +315,52 @@ function runInWorker(code) {
     w.postMessage({ code });
   });
 }
-function rCode(el, s, l, idx, bump, editors) {
-  const key = 'c' + idx, dk = 'draft:' + l.id + ':' + idx;
-  el.innerHTML = `<div class="ex">
-    <div class="head"><b>🛠 ${esc(s.title)}</b>${s.prompt}</div>
-    <div class="editor"></div>
-    <div class="bar2"><button class="primary run">▶ Run tests <small>(Ctrl/⌘+Enter)</small></button><button class="hint">Hint</button><button class="sol">Show solution</button><button class="reset">Reset</button><span class="status ${(progress[l.id] || {})[key] ? 'ok' : ''}">${(progress[l.id] || {})[key] ? '✓ solved' : ''}</span></div>
-    <div class="out"></div></div>`;
-  const host = $('.editor', el); const start = store.get(dk, s.starter);
+function rCode(el, s, l, idx, sync, hue) {
+  const key = 'c' + idx, dk = 'draft:' + l.id + ':' + idx, solved = () => !!(progress[l.id] || {})[key];
+  el.innerHTML = `${label('terminal', 'Challenge')}<div class="ex">
+    <div class="ex-head"><div class="ex-title">${esc(s.title)}</div><span class="chip st ${solved() ? 'good' : ''}">${solved() ? ic('check', 12, 3) + ' Solved' : 'Unsolved'}</span></div>
+    <div class="ex-prompt">${s.prompt}</div>
+    <div class="ex-win"><div class="ex-tab"><span class="tl3"><i></i><i></i><i></i></span><span class="file">solution.js</span><span class="sp"></span><span><kbd>Ctrl</kbd> <kbd>↵</kbd> run</span></div><div class="editor"></div></div>
+    <div class="ex-actions"><button class="btn primary run">${ic('play', 15)} Run tests</button><button class="btn hint">${ic('bulb', 15)} Hint</button><button class="btn sol">${ic('eye', 15)} Solution</button><span class="sp"></span><button class="btn ghost reset">${ic('rotate', 15)} Reset</button></div>
+    <div class="out" aria-live="polite"></div></div>`;
+  const host = $('.editor', el), start = store.get(dk, s.starter);
   let get, set;
   if (window.CodeMirror) {
-    const cm = CodeMirror(host, { value: start, mode: 'javascript', lineNumbers: true, theme: cmTheme(), indentUnit: 2, tabSize: 2, indentWithTabs: false, matchBrackets: true, autoCloseBrackets: true, viewportMargin: Infinity,
+    const cm = CodeMirror(host, { value: start, mode: 'javascript', lineNumbers: true, indentUnit: 2, tabSize: 2, indentWithTabs: false, matchBrackets: true, autoCloseBrackets: true, viewportMargin: Infinity,
       extraKeys: { Tab: (c) => c.execCommand('insertSoftTab'), 'Ctrl-Enter': () => run(), 'Cmd-Enter': () => run() } });
-    host.firstChild.CodeMirror = cm; get = () => cm.getValue(); set = (v) => cm.setValue(v);
-    cm.on('change', () => store.set(dk, cm.getValue()));
+    get = () => cm.getValue(); set = (v) => cm.setValue(v); cm.on('change', () => store.set(dk, cm.getValue()));
   } else {
     const ta = document.createElement('textarea'); ta.value = start; ta.spellcheck = false; host.appendChild(ta);
     ta.addEventListener('keydown', (e) => {
-      if (e.key === 'Tab') { e.preventDefault(); const a = ta.selectionStart; ta.setRangeText('  ', a, ta.selectionEnd, 'end'); }
+      if (e.key === 'Tab') { e.preventDefault(); ta.setRangeText('  ', ta.selectionStart, ta.selectionEnd, 'end'); }
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); run(); }
     });
     ta.addEventListener('input', () => store.set(dk, ta.value)); get = () => ta.value; set = (v) => { ta.value = v; store.set(dk, v); };
   }
-  const out = $('.out', el);
+  const out = $('.out', el), runBtn = $('.run', el);
   async function run() {
-    out.innerHTML = '<em>Running…</em>';
+    runBtn.disabled = true; out.innerHTML = '<div class="sumbar"><b>Running…</b></div>';
     const r = await runInWorker(get() + '\n;\n' + s.tests);
+    runBtn.disabled = false;
     const pass = r.results.filter((x) => x.pass).length, all = r.results.length;
     let h = '';
-    if (r.fatal) h += `<div class="res fail">✗ <div>Error<small>${esc(r.fatal)}</small></div></div>`;
-    h += r.results.map((x) => `<div class="res ${x.pass ? 'pass' : 'fail'}">${x.pass ? '✓' : '✗'} <div>${esc(x.name)}${x.err ? `<small>${esc(x.err)}</small>` : ''}</div></div>`).join('');
+    if (all && pass === all) h += `<div class="allpass">${ic('trophy', 20)} All ${all} tests pass</div>`;
+    else if (all) h += `<div class="sumbar"><b>${pass}/${all} passing</b><span class="segs">${r.results.map((x) => `<i class="${x.pass ? 'p' : ''}"></i>`).join('')}</span></div>`;
+    if (r.fatal) h += `<div class="res fail"><span class="ric">${ic('x', 15, 2.6)}</span><div class="nm">Error<small>${esc(r.fatal)}</small></div></div>`;
+    h += r.results.map((x) => `<div class="res ${x.pass ? 'pass' : 'fail'}"><span class="ric">${ic(x.pass ? 'check' : 'x', 15, 2.6)}</span><div><span class="nm">${esc(x.name)}</span>${x.err ? `<small>${esc(x.err)}</small>` : ''}</div></div>`).join('');
     if (r.logs && r.logs.length) h += `<div class="logs">${esc(r.logs.join('\n'))}</div>`;
-    if (all && pass === all) { h = `<div class="res pass"><b>All ${all} tests pass 🎉</b></div>` + h; mark(l.id, key); bump(); const st = $('.status', el); st.className = 'status ok'; st.textContent = '✓ solved'; }
-    else if (all) h = `<div><b>${pass}/${all} passing</b></div>` + h;
     out.innerHTML = h;
+    if (all && pass === all) {
+      const first = mark(l.id, key, 50, 'Challenge solved');
+      const st = $('.st', el); st.className = 'chip st good'; st.innerHTML = ic('check', 12, 3) + ' Solved';
+      if (first) { const b = runBtn.getBoundingClientRect(); confetti(b.left + b.width / 2, b.top, hue); }
+      sync();
+    }
   }
-  $('.run', el).onclick = run;
-  $('.hint', el).onclick = () => { out.innerHTML = `<div class="callout tip"><b>Hint:</b> ${s.hint || 'Start with the simplest failing test.'}</div>`; };
-  $('.sol', el).onclick = () => { out.innerHTML = `<div class="callout warn">Try first! Here is one reasonable solution:</div><pre><code>${esc(s.solution)}</code></pre>${s.notes ? `<p>${s.notes}</p>` : ''}`; };
+  runBtn.onclick = run;
+  $('.hint', el).onclick = () => { out.innerHTML = `<div class="callout tip"><b>Hint.</b> ${s.hint || 'Start with the simplest failing test.'}</div>`; };
+  $('.sol', el).onclick = () => { out.innerHTML = `<div class="callout warn"><b>Spoiler.</b> One reasonable solution, but try first.</div><pre><code>${esc(s.solution)}</code></pre>${s.notes ? `<div class="callout">${s.notes}</div>` : ''}`; };
   $('.reset', el).onclick = () => { if (confirm('Reset to starter code?')) { set(s.starter); out.innerHTML = ''; } };
-  editors.push({ dispose() {} });
 }
 
 /* ---------- flashcards ---------- */
@@ -203,100 +368,148 @@ const BOX_DAYS = [0, 1, 3, 7, 21, 60];
 const cid = (c) => { let h = 0; for (const ch of c.q) h = (h * 31 + ch.charCodeAt(0)) | 0; return 'c' + (h >>> 0).toString(36); };
 let cardState = store.get('cards', {});
 const dueCards = (track) => CARDS.filter((c) => (!track || c.track === track) && (!cardState[cid(c)] || cardState[cid(c)].due <= Date.now()));
+const trackHue = (name) => ({ Playbook: 255, Design: 150, Reliability: 28, Kafka: 275, AWS: 215, Terraform: 262, AI: 320, 'Open Banking': 44 }[name] ?? hueOf(name));
 function viewReview() {
   document.title = 'Flashcards · Senior Interview Lab';
-  let filter = '', deck = [], cur = 0, flipped = false;
+  let filter = '', deck = [], cur = 0, flipped = false, total = 0;
   const tracks = [...new Set(CARDS.map((c) => c.track))];
-  const build = () => { deck = dueCards(filter).sort(() => Math.random() - 0.5); cur = 0; flipped = false; draw(); };
+  const build = (all) => { deck = (all ? CARDS.filter((c) => !filter || c.track === filter) : dueCards(filter)).sort(() => Math.random() - 0.5); total = deck.length; cur = 0; flipped = false; draw(); };
   const draw = () => {
-    const filters = `<div class="filters"><button data-f="" class="${!filter ? 'on' : ''}">All</button>${tracks.map((t) => `<button data-f="${esc(t)}" class="${filter === t ? 'on' : ''}">${esc(t)}</button>`).join('')}</div>`;
+    const filters = `<div class="filters"><button class="fchip ${!filter ? 'on' : ''}" data-f="">All</button>${tracks.map((t) => `<button class="fchip ${filter === t ? 'on' : ''}" data-f="${esc(t)}">${esc(t)}</button>`).join('')}</div>`;
     let body;
-    if (cur >= deck.length) body = `<div class="card flash"><div><h2>🎉 Nothing due${filter ? ' in ' + esc(filter) : ''}</h2><p class="lead">Come back tomorrow, or practice with a mock question.</p><p><button id="again">Review everything anyway</button></p></div></div>`;
+    if (cur >= deck.length) body = `<div class="empty deck"><div class="big">${ic('trophy', 30)}</div><h2 style="margin:0 0 6px">${total ? 'Deck complete' : 'Nothing due'}${filter ? ' · ' + esc(filter) : ''}</h2><p style="color:var(--muted);margin:0 0 18px">${total ? `You reviewed ${total} card${total === 1 ? '' : 's'}. Cards you missed come back sooner.` : 'Come back tomorrow, or run a mock interview.'}</p><button class="btn" id="again">${ic('rotate', 16)} Review everything anyway</button> <a class="btn primary" href="#/mock">${ic('mic', 16)} Mock interview</a></div>`;
     else {
-      const c = deck[cur];
-      body = `<div class="card flash" id="fc"><div class="side">${flipped ? c.a : '<b>' + c.q + '</b>'}<p style="color:var(--muted);font-size:.85rem;margin-top:16px">${flipped ? '' : 'Click or press Space to reveal'}</p></div></div>
-        ${flipped ? '<div class="rate"><button data-r="0">Again</button><button data-r="1">Hard</button><button class="primary" data-r="2">Good</button><button data-r="3">Easy</button></div>' : ''}
-        <p style="text-align:center;color:var(--muted)">${cur + 1} / ${deck.length} · ${esc(c.track)}</p>`;
+      const c = deck[cur], h = trackHue(c.track);
+      body = `<div class="deck tc" style="--h:${h}"><div class="pgl"><span>Card ${Math.min(cur + 1, total)} of ${total}</span><span>${deck.length - cur} left</span></div><div class="pg"><i style="width:${(cur / Math.max(1, total)) * 100}%"></i></div>
+        <div class="fc-wrap"><div class="fc ${flipped ? 'flipped' : ''}" id="fc" tabindex="0" role="button" aria-label="Flip card"><div class="face front"><span class="chip tc tagl" style="--h:${h}">${esc(c.track)}</span><div class="qq">${c.q}</div><div class="hint">Click or press <kbd>Space</kbd> to reveal</div></div><div class="face back"><span class="chip tc tagl" style="--h:${h}">Answer</span><div class="aa">${c.a}</div></div></div></div>
+        <div class="rate" ${flipped ? '' : 'hidden'}><button class="r0" data-r="0">Again<small>1 · soon</small></button><button class="r1" data-r="1">Hard<small>2 · 1 day</small></button><button class="r2" data-r="2">Good<small>3 · days</small></button><button class="r3" data-r="3">Easy<small>4 · weeks</small></button></div></div>`;
     }
-    app.innerHTML = `<h1>Flashcards</h1><p class="lead">Say the answer out loud before flipping. Cards you miss come back sooner.</p>${filters}${body}`;
-    $$('.filters button').forEach((b) => b.onclick = () => { filter = b.dataset.f; build(); });
-    const fc = $('#fc'); if (fc) fc.onclick = () => { flipped = true; draw(); };
-    $$('.rate button').forEach((b) => b.onclick = () => rate(+b.dataset.r));
-    const ag = $('#again'); if (ag) ag.onclick = () => { deck = CARDS.filter((c) => !filter || c.track === filter).sort(() => Math.random() - 0.5); cur = 0; flipped = false; draw(); };
+    app.innerHTML = `<div class="page-h"><h1>Flashcards</h1><p>Say the answer out loud before flipping. Cards you miss come back sooner.</p></div>${filters}${body}`;
+    $$('.fchip').forEach((b) => (b.onclick = () => { filter = b.dataset.f; build(false); }));
+    const fc = $('#fc'); if (fc) { fc.onclick = flip; fc.onkeydown = (e) => { if (e.key === 'Enter') flip(); }; }
+    $$('.rate button').forEach((b) => (b.onclick = () => rate(+b.dataset.r)));
+    const ag = $('#again'); if (ag) ag.onclick = () => build(true);
   };
+  const flip = () => { if (cur >= deck.length) return; flipped = !flipped; $('#fc').classList.toggle('flipped', flipped); $('.rate').hidden = !flipped; };
   const rate = (r) => {
     const c = deck[cur], id = cid(c), st = cardState[id] || { box: 0 };
     st.box = r === 0 ? 0 : r === 1 ? Math.max(1, st.box) : Math.min(BOX_DAYS.length - 1, st.box + (r === 3 ? 2 : 1));
     st.due = Date.now() + (r === 0 ? 5 * 60e3 : BOX_DAYS[st.box] * 864e5);
     cardState[id] = st; store.set('cards', cardState);
+    xp += 2; store.set('xp', xp); touchDay(); renderXp();
     if (r === 0) deck.push(c);
     cur++; flipped = false; draw();
   };
   const key = (e) => {
-    if (e.target.matches('input,textarea')) return;
-    if (e.code === 'Space') { e.preventDefault(); if (!flipped && cur < deck.length) { flipped = true; draw(); } }
-    else if (flipped && '1234'.includes(e.key)) rate(+e.key - 1);
+    if (e.target.matches('input,textarea') || $('#cmdk') && !$('#cmdk').hidden) return;
+    if (e.code === 'Space') { e.preventDefault(); flip(); }
+    else if (flipped && '1234'.includes(e.key) && e.key) rate(+e.key - 1);
   };
   addEventListener('keydown', key); cleanup = () => removeEventListener('keydown', key);
-  build();
+  build(false);
 }
 
 /* ---------- mock interview ---------- */
 function viewMock() {
   document.title = 'Mock interview · Senior Interview Lab';
-  let kind = '', q = null, t0 = 0, iv = null, secs = 0;
+  let kind = '', q = null, t0 = 0, iv = null, secs = 0, shown = false;
   const kinds = [...new Set(MOCK.map((m) => m.kind))];
+  const kh = (k) => ({ Behavioral: 255, 'System Design': 150, 'Neonomics / Open Banking': 44, 'Scale & Cloud': 215, 'AI Era': 320 }[k] ?? hueOf(k));
+  const fmtT = (s) => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
   const draw = () => {
-    app.innerHTML = `<h1>Mock interview</h1><p class="lead">Pick a type, answer out loud (or write bullet points), then compare against the rubric. Aim to think aloud, state assumptions, and name trade-offs.</p>
-      <div class="filters"><button data-k="" class="${!kind ? 'on' : ''}">Any</button>${kinds.map((k) => `<button data-k="${esc(k)}" class="${kind === k ? 'on' : ''}">${esc(k)}</button>`).join('')}</div>
-      ${q ? `<div class="card"><span class="tag">${esc(q.kind)}</span><span class="tag">suggested ${q.minutes} min</span><h2 style="margin-top:8px">${q.q}</h2>
-        <div class="timer" id="tm">00:00</div>
-        <textarea id="notes" rows="7" style="width:100%;margin:10px 0;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit" placeholder="Your notes, assumptions, structure…"></textarea>
-        <button id="done" class="primary">Done: show rubric</button> <button id="skip">Another question</button>
-        <div id="rub"></div></div>` : '<p><button class="primary" id="go">Give me a question</button></p>'}`;
-    $$('.filters button').forEach((b) => b.onclick = () => { kind = b.dataset.k; pick(); });
+    app.innerHTML = `<div class="mock"><div class="page-h"><h1>Mock interview</h1><p>Pick a type, answer out loud (or jot bullets), then check yourself against the rubric. Think aloud, state assumptions, name trade-offs.</p></div>
+      <div class="filters"><button class="fchip ${!kind ? 'on' : ''}" data-k="">Any</button>${kinds.map((k) => `<button class="fchip ${kind === k ? 'on' : ''}" data-k="${esc(k)}">${esc(k)}</button>`).join('')}</div>
+      ${q ? `<div class="qcard tc" style="--h:${kh(q.kind)}"><span class="chip tc">${esc(q.kind)}</span> <span class="chip">${ic('clock', 12)} suggested ${q.minutes} min</span>
+        <div class="qq">${q.q}</div>
+        <div class="timer"><span class="tm" id="tm">00:00</span><span class="tb" id="tb"><i style="width:0"></i></span></div>
+        <textarea class="notes" placeholder="Your notes: assumptions, structure, trade-offs…"></textarea>
+        <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><button id="done" class="btn primary">${ic('check', 16)} I'm done: show rubric</button><button id="skip" class="btn">${ic('rotate', 16)} Another question</button></div>
+        <div id="rub"></div></div>` : `<div class="empty"><div class="big">${ic('mic', 30)}</div><h2 style="margin:0 0 6px">Ready when you are</h2><p style="color:var(--muted);margin:0 0 18px">You'll get a random question and a timer.</p><button class="btn primary" id="go">${ic('play', 16)} Give me a question</button></div>`}</div>`;
+    $$('.fchip').forEach((b) => (b.onclick = () => { kind = b.dataset.k; pick(); }));
     const go = $('#go'); if (go) go.onclick = pick;
     const sk = $('#skip'); if (sk) sk.onclick = pick;
-    const dn = $('#done'); if (dn) dn.onclick = () => { clearInterval(iv); $('#rub').innerHTML = `<h3>A strong answer covers</h3><ul class="rubric">${q.rubric.map((r) => `<li>${r}</li>`).join('')}</ul><p style="color:var(--muted)">Took ${fmtT(secs)}. Which points did you miss? Turn them into flashcards or revisit the lesson.</p>`; };
+    const dn = $('#done'); if (dn) dn.onclick = () => {
+      clearInterval(iv);
+      $('#rub').innerHTML = `<h3>A strong answer covers</h3><p style="color:var(--muted);margin:0 0 6px;font-size:.9rem">Tick what you covered. Took ${fmtT(secs)}.</p><ul class="rubric">${q.rubric.map((r) => `<li><span class="cb">${ic('check', 12, 3.4)}</span><span>${r}</span></li>`).join('')}</ul><p style="color:var(--muted);font-size:.9rem">Missed points are your study list. Revisit the matching lesson.</p>`;
+      $$('.rubric li').forEach((li) => (li.onclick = () => { li.classList.toggle('hit'); }));
+      if (!shown) { shown = true; addXp(15, 'Mock interview done'); }
+    };
     if (q) tick();
   };
-  const fmtT = (s) => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
-  const tick = () => { clearInterval(iv); const el = $('#tm'); iv = setInterval(() => { secs = Math.floor((Date.now() - t0) / 1000); if ($('#tm')) $('#tm').textContent = fmtT(secs); }, 500); if (el) el.textContent = fmtT(secs); };
-  const pick = () => { const pool = MOCK.filter((m) => !kind || m.kind === kind); let n; do { n = pool[Math.floor(Math.random() * pool.length)]; } while (pool.length > 1 && n === q); q = n; t0 = Date.now(); secs = 0; draw(); };
+  const tick = () => { clearInterval(iv); iv = setInterval(() => { secs = Math.floor((Date.now() - t0) / 1000); const tm = $('#tm'); if (!tm) return; tm.textContent = fmtT(secs); const pct = Math.min(100, (secs / (q.minutes * 60)) * 100), tb = $('#tb'); tb.firstChild.style.width = pct + '%'; tb.classList.toggle('over', secs > q.minutes * 60); }, 500); };
+  const pick = () => { const pool = MOCK.filter((m) => !kind || m.kind === kind); let n; do { n = pool[Math.floor(Math.random() * pool.length)]; } while (pool.length > 1 && n === q); q = n; t0 = Date.now(); secs = 0; shown = false; draw(); };
   cleanup = () => clearInterval(iv);
   draw();
 }
 
 /* ---------- resources ---------- */
+const catIcon = (c) => ({ 'Neonomics & Open Banking': 'openbanking', 'System Design': 'design', Kafka: 'route', AWS: 'cloud', Terraform: 'cloud', 'Coding Practice': 'coding', 'AI Engineering': 'ai', 'Security & Career': 'reliability' }[c] || 'book');
+const catHue = (c) => ({ 'Neonomics & Open Banking': 44, 'System Design': 150, Kafka: 275, AWS: 215, Terraform: 262, 'Coding Practice': 190, 'AI Engineering': 320, 'Security & Career': 28 }[c] ?? hueOf(c));
 function viewResources() {
   document.title = 'Free resources · Senior Interview Lab';
   const cats = [...new Set(RES.map((r) => r.cat))]; let f = '';
   const draw = () => {
-    app.innerHTML = `<h1>Free resources</h1><p class="lead">Hand-picked free material. Everything here is openly readable. Links open in a new tab.</p>
-      <div class="filters"><button data-c="" class="${!f ? 'on' : ''}">All</button>${cats.map((c) => `<button data-c="${esc(c)}" class="${f === c ? 'on' : ''}">${esc(c)}</button>`).join('')}</div>
-      <div class="grid">${RES.filter((r) => !f || r.cat === f).map((r) => `<a class="card" href="${esc(r.url)}" target="_blank" rel="noopener"><span class="tag">${esc(r.cat)}</span><h3>${esc(r.title)} ↗</h3><p>${esc(r.note)}</p></a>`).join('')}</div>`;
-    $$('.filters button').forEach((b) => b.onclick = () => { f = b.dataset.c; draw(); });
+    app.innerHTML = `<div class="page-h"><h1>Free resources</h1><p>Hand-picked, openly readable material. Links open in a new tab.</p></div>
+      <div class="filters"><button class="fchip ${!f ? 'on' : ''}" data-c="">All · ${RES.length}</button>${cats.map((c) => `<button class="fchip ${f === c ? 'on' : ''}" data-c="${esc(c)}">${esc(c)}</button>`).join('')}</div>
+      <div class="rgrid">${RES.filter((r) => !f || r.cat === f).map((r) => `<a class="rcard tc" style="--h:${catHue(r.cat)}" href="${esc(r.url)}" target="_blank" rel="noopener"><span class="chip tc" style="align-self:flex-start">${ic(catIcon(r.cat), 12)} ${esc(r.cat)}</span><h3><span>${esc(r.title)}</span>${ic('link', 15)}</h3><p>${esc(r.note)}</p></a>`).join('')}</div>`;
+    $$('.fchip').forEach((b) => (b.onclick = () => { f = b.dataset.c; draw(); }));
   };
   draw();
 }
 
-/* ---------- search ---------- */
-let index = null;
+/* ---------- command palette ---------- */
+let index = null, palSel = 0, palItems = [];
 function buildIndex() {
   index = [];
-  TRACKS.forEach((t) => t.lessons.forEach((l) => index.push({ kind: 'Lesson', title: l.title, sub: t.title, href: '#/lesson/' + l.id, text: (l.title + ' ' + (l.summary || '') + ' ' + l.sections.map((s) => strip((s.html || '') + ' ' + (s.q || '') + ' ' + (s.prompt || '') + ' ' + (s.steps ? s.steps.map((x) => x.title + ' ' + x.html).join(' ') : ''))).join(' ')).toLowerCase() })));
-  CARDS.forEach((c) => index.push({ kind: 'Card', title: strip(c.q), sub: strip(c.a).slice(0, 140), href: '#/review', text: (strip(c.q) + ' ' + strip(c.a)).toLowerCase() }));
-  RES.forEach((r) => index.push({ kind: 'Resource', title: r.title, sub: r.note, href: r.url, ext: true, text: (r.title + ' ' + r.note + ' ' + r.cat).toLowerCase() }));
-  MOCK.forEach((m) => index.push({ kind: 'Mock', title: strip(m.q), sub: m.kind, href: '#/mock', text: (strip(m.q) + ' ' + m.rubric.join(' ')).toLowerCase() }));
+  TRACKS.forEach((t) => {
+    index.push({ kind: 'Track', icon: t.id, hue: hueOf(t.id), title: t.title, sub: t.blurb, href: '#/track/' + t.id, text: (t.title + ' ' + t.blurb).toLowerCase() });
+    t.lessons.forEach((l) => index.push({ kind: 'Lesson', icon: t.id, hue: hueOf(t.id), title: l.title, sub: t.title + ' · ' + (l.summary || ''), href: '#/lesson/' + l.id,
+      text: (l.title + ' ' + (l.summary || '') + ' ' + l.sections.map((s) => strip((s.html || '') + ' ' + (s.q || '') + ' ' + (s.prompt || '') + ' ' + (s.title || '') + ' ' + (s.steps ? s.steps.map((x) => x.title + ' ' + x.html).join(' ') : ''))).join(' ')).toLowerCase() }));
+  });
+  CARDS.forEach((c) => index.push({ kind: 'Flashcard', icon: 'cards', hue: trackHue(c.track), title: strip(c.q), sub: strip(c.a).slice(0, 120), href: '#/review', text: (strip(c.q) + ' ' + strip(c.a)).toLowerCase() }));
+  MOCK.forEach((m) => index.push({ kind: 'Mock', icon: 'mic', hue: 255, title: strip(m.q), sub: m.kind, href: '#/mock', text: (strip(m.q) + ' ' + m.rubric.join(' ')).toLowerCase() }));
+  RES.forEach((r) => index.push({ kind: 'Resource', icon: 'link', hue: catHue(r.cat), title: r.title, sub: r.note, href: r.url, ext: true, text: (r.title + ' ' + r.note + ' ' + r.cat).toLowerCase() }));
 }
-function viewSearch(qs) {
+const QUICK = () => [
+  { kind: 'Go to', icon: 'home', title: 'Learn', sub: 'All tracks', href: '#/' }, { kind: 'Go to', icon: 'cards', title: 'Flashcards', sub: 'Spaced repetition', href: '#/review' },
+  { kind: 'Go to', icon: 'mic', title: 'Mock interview', sub: 'Random question + timer', href: '#/mock' }, { kind: 'Go to', icon: 'link', title: 'Free resources', sub: 'Curated links', href: '#/resources' },
+  ...TRACKS.map((t) => ({ kind: 'Tracks', icon: t.id, hue: hueOf(t.id), title: t.title, sub: `${t.lessons.length} lessons`, href: '#/track/' + t.id })),
+];
+function openPalette() { $('#cmdk').hidden = false; $('#cq').value = ''; renderPal(); $('#cq').focus(); }
+function closePalette() { $('#cmdk').hidden = true; }
+function renderPal() {
   if (!index) buildIndex();
-  const terms = qs.toLowerCase().split(/\s+/).filter(Boolean);
-  const hits = terms.length ? index.map((d) => ({ d, score: terms.reduce((a, t) => a + (d.title.toLowerCase().includes(t) ? 5 : 0) + (d.text.includes(t) ? 1 : -100), 0) })).filter((x) => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 40) : [];
-  app.innerHTML = `<h1>Search: “${esc(qs)}”</h1>${hits.length ? hits.map(({ d }) => `<div class="hit"><span class="tag">${d.kind}</span><a href="${esc(d.href)}" ${d.ext ? 'target="_blank" rel="noopener"' : ''}>${esc(d.title)}</a><small>${esc(d.sub)}</small></div>`).join('') : '<p>No results.</p>'}`;
+  const terms = $('#cq').value.toLowerCase().split(/\s+/).filter(Boolean);
+  palItems = terms.length
+    ? index.map((d) => ({ d, score: terms.reduce((a, t) => a + (d.title.toLowerCase().includes(t) ? 6 : 0) + (d.text.includes(t) ? 1 : -100), 0) + (d.kind === 'Lesson' ? 1 : 0) })).filter((x) => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 30).map((x) => x.d)
+    : QUICK();
+  palSel = 0;
+  let lastKind = '', h = '';
+  palItems.forEach((d, i) => {
+    if (d.kind !== lastKind) { h += `<div class="cg">${esc(d.kind)}</div>`; lastKind = d.kind; }
+    h += `<a class="ci tc ${i === 0 ? 'sel' : ''}" style="--h:${d.hue ?? 255}" data-i="${i}" href="${esc(d.href)}" ${d.ext ? 'target="_blank" rel="noopener"' : ''}><span class="cic">${ic(d.icon, 16)}</span><span class="ct"><b>${esc(d.title)}</b><small>${esc(d.sub || '')}</small></span></a>`;
+  });
+  $('#cres').innerHTML = h || '<div class="cnone">No results. Try another word.</div>';
+  $$('#cres .ci').forEach((a) => { a.onclick = () => closePalette(); a.onmousemove = () => selPal(+a.dataset.i); });
 }
-$('#searchForm').onsubmit = (e) => { e.preventDefault(); const v = $('#q').value.trim(); if (v) location.hash = '#/search/' + encodeURIComponent(v); };
-addEventListener('keydown', (e) => { if (e.key === '/' && !e.target.matches('input,textarea,.CodeMirror *')) { e.preventDefault(); $('#q').focus(); } });
+function selPal(i) {
+  const els = $$('#cres .ci'); if (!els.length) return;
+  palSel = (i + els.length) % els.length;
+  els.forEach((e, k) => e.classList.toggle('sel', k === palSel)); els[palSel].scrollIntoView({ block: 'nearest' });
+}
+$('#searchBtn').onclick = openPalette;
+$('#cq').addEventListener('input', renderPal);
+$('#cmdk').addEventListener('click', (e) => { if (e.target.hasAttribute('data-close')) closePalette(); });
+addEventListener('keydown', (e) => {
+  const open = !$('#cmdk').hidden;
+  if ((e.key === 'k' && (e.ctrlKey || e.metaKey)) || (e.key === '/' && !open && !e.target.matches('input,textarea,.CodeMirror *'))) { e.preventDefault(); open ? closePalette() : openPalette(); return; }
+  if (!open) return;
+  if (e.key === 'Escape') closePalette();
+  else if (e.key === 'ArrowDown') { e.preventDefault(); selPal(palSel + 1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); selPal(palSel - 1); }
+  else if (e.key === 'Enter') { const a = $$('#cres .ci')[palSel]; if (a) { e.preventDefault(); a.click(); } }
+});
 
+renderXp();
 route();
 })();

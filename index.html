@@ -5,25 +5,48 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Senior Interview Lab</title>
 <meta name="description" content="Interactive prep for senior engineering interviews in the AI era, with an open-banking (Neonomics) track.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧗</text></svg>">
+<meta name="theme-color" content="#0b0d12">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%237c8cff'/><stop offset='1' stop-color='%234fd1c5'/></linearGradient></defs><rect width='32' height='32' rx='8' fill='url(%23g)'/><path d='M8 22l6-12 4 8 2-4 4 8' fill='none' stroke='%230b0d12' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
+<div id="pbar" aria-hidden="true"><i></i></div>
 <header class="top">
-  <a class="brand" href="#/">🧗 Senior Interview Lab</a>
-  <nav>
-    <a href="#/" data-nav="home">Learn</a>
-    <a href="#/review" data-nav="review">Flashcards</a>
-    <a href="#/mock" data-nav="mock">Mock</a>
-    <a href="#/resources" data-nav="resources">Resources</a>
-  </nav>
-  <form id="searchForm" role="search"><input id="q" type="search" placeholder="Search lessons, cards, links…  ( / )" autocomplete="off" aria-label="Search"></form>
-  <button id="themeBtn" class="icon" title="Toggle theme" aria-label="Toggle theme">◐</button>
+  <div class="top-in">
+    <a class="brand" href="#/" aria-label="Senior Interview Lab home">
+      <span class="logo"><svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c8cff"/><stop offset="1" stop-color="#4fd1c5"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="url(#lg)"/><path d="M8 22l6-12 4 8 2-4 4 8" fill="none" stroke="#0b0d12" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <span class="brand-t">Interview&nbsp;Lab</span>
+    </a>
+    <nav aria-label="Main">
+      <a href="#/" data-nav="home">Learn</a>
+      <a href="#/review" data-nav="review">Flashcards</a>
+      <a href="#/mock" data-nav="mock">Mock</a>
+      <a href="#/resources" data-nav="resources">Resources</a>
+    </nav>
+    <div class="top-r">
+      <button id="searchBtn" class="search-btn" aria-label="Search"><span id="sIc"></span><span class="s-t">Search</span><kbd>Ctrl K</kbd></button>
+      <div id="xp" class="xp" title="Your level"></div>
+      <button id="themeBtn" class="icon-btn" title="Toggle theme" aria-label="Toggle theme"></button>
+    </div>
+  </div>
 </header>
 <main id="app" tabindex="-1"></main>
-<footer class="foot">Progress is stored only in your browser. Content is original, with links to free third-party material. Neonomics-specific notes come from public sources, so verify them against <a href="https://neonomics.io" target="_blank" rel="noopener">neonomics.io</a> and their docs.</footer>
+<footer class="foot">Progress is stored only in your browser. Content is original, with links to free third-party material. Neonomics-specific notes come from public sources, so verify them against <a href="https://docs.neonomics.io" target="_blank" rel="noopener">their docs</a>.</footer>
+
+<div id="cmdk" class="cmdk" hidden>
+  <div class="cmdk-bg" data-close></div>
+  <div class="cmdk-box" role="dialog" aria-modal="true" aria-label="Search">
+    <div class="cmdk-in"><span id="cIc"></span><input id="cq" placeholder="Search lessons, flashcards, mock questions, resources…" autocomplete="off" spellcheck="false" aria-label="Search"><kbd>esc</kbd></div>
+    <div id="cres" class="cmdk-res" role="listbox"></div>
+    <div class="cmdk-foot"><span><kbd>↑</kbd><kbd>↓</kbd> navigate</span><span><kbd>↵</kbd> open</span></div>
+  </div>
+</div>
+<div id="toasts" aria-live="polite"></div>
+<canvas id="fx" aria-hidden="true"></canvas>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
@@ -40,13 +63,6 @@
 <script src="content/cards.js"></script>
 <script src="content/mock.js"></script>
 <script src="content/resources.js"></script>
-
-
-
-
-
-
-
 <script src="assets/app.js"></script>
 </body>
 </html>
