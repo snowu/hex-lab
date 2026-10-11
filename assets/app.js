@@ -324,13 +324,13 @@ function rQuiz(el, s, l, idx, sync) {
   el.innerHTML = `${label('target', 'Quick check')}<div class="quiz has-ask">${askBtn(`Quick check question: ${strip(s.q)}\nOptions: ${sh.options.map((o, i) => 'ABCD'[i] + ') ' + strip(o)).join(' | ')}\nThe correct option is ${'ABCD'[sh.answer]}.\n\nExplain in more depth why that is correct, why each other option is wrong, and what a senior interviewer might ask next.`, 'Ask AI why')}<div class="q">${s.q}</div>${sh.options.map((o, i) => `<button class="opt" data-i="${i}"><span class="l">${'ABCD'[i]}</span><span>${o}</span></button>`).join('')}<div class="explain" hidden></div></div>`;
   const ex = $('.explain', el);
   if ((progress[l.id] || {})[key]) { /* already solved earlier: show the answer */
-    const b = $(`.opt[data-i="${sh.answer}"]`, el); b.classList.add('right'); $$('.opt', el).forEach((x) => (x.disabled = true)); ex.hidden = false; ex.classList.add('ok'); ex.innerHTML = s.explain; done = true;
+    const b = $(`.opt[data-i="${sh.answer}"]`, el); b.classList.add('right'); $$('.opt', el).forEach((x) => (x.disabled = true)); ex.hidden = false; ex.classList.add('ok'); ex.innerHTML = s.explain + cardBtn(strip(s.q), `${strip(sh.options[sh.answer])}\n\n${strip(s.explain)}`); done = true;
   }
   $$('.opt', el).forEach((b) => (b.onclick = () => {
     if (done) return;
     if (+b.dataset.i === sh.answer) {
       done = true; b.classList.add('right'); $$('.opt', el).forEach((x) => (x.disabled = true));
-      ex.hidden = false; ex.classList.add('ok'); ex.innerHTML = s.explain;
+      ex.hidden = false; ex.classList.add('ok'); ex.innerHTML = s.explain + cardBtn(strip(s.q), `${strip(sh.options[sh.answer])}\n\n${strip(s.explain)}`);
       mark(l.id, key, 10, 'Nice one'); sync();
     } else { b.classList.add('wrong'); b.disabled = true; ex.hidden = false; ex.classList.remove('ok'); ex.textContent = 'Not quite. Think about the trade-off and try another option.'; }
   }));
@@ -518,7 +518,7 @@ function rBug(el, s, l, idx, sync, hue) {
     <div class="out" aria-live="polite"></div></div>`;
   const out = $('.out', el), cnt = $('.selc', el);
   const paint = (n, cls) => { const b = $(`.bl[data-n="${n}"]`, el); if (b) b.classList.add(cls); };
-  const explain = () => `<div class="bugwhy">${s.bugs.map((b) => `<div class="callout"><b>Line ${b.line}.</b> ${b.why}</div>`).join('')}${s.notes ? `<div class="callout tip">${s.notes}</div>` : ''}</div>`;
+  const explain = () => `<div class="bugwhy">${s.bugs.map((b) => `<div class="callout"><b>Line ${b.line}.</b> ${b.why}</div>`).join('')}${s.notes ? `<div class="callout tip">${s.notes}</div>` : ''}${cardBtn(`Bug hunt "${s.title}": which lines are wrong, and why?\n\n\`\`\`\n${s.code}\n\`\`\``, s.bugs.map((b) => `Line ${b.line}: ${strip(b.why)}`).join('\n'))}</div>`;
   const upd = () => { cnt.textContent = sel.size ? `${sel.size} line${sel.size > 1 ? 's' : ''} selected` : 'click lines to select'; }; upd();
   $$('.bl', el).forEach((b) => (b.onclick = () => {
     const n = +b.dataset.n; $$('.bl', el).forEach((x) => x.classList.remove('hit', 'miss', 'fp'));
@@ -552,7 +552,7 @@ function rPredict(el, s, l, idx, sync) {
     <div class="explain" hidden></div>
     <div class="ex-actions" style="padding:12px 0 0"><button class="btn run">${ic('play', 15)} Run it for real</button><span class="muted">executes the snippet in the sandbox and shows its actual output</span></div><div class="out" style="padding:0"></div></div>`;
   const ex = $('.explain', el), out = $('.out', el);
-  const finish = (b) => { done = true; if (b) b.classList.add('right'); $$('.opt', el).forEach((x) => (x.disabled = true)); ex.hidden = false; ex.classList.add('ok'); ex.innerHTML = s.explain; };
+  const finish = (b) => { done = true; if (b) b.classList.add('right'); $$('.opt', el).forEach((x) => (x.disabled = true)); ex.hidden = false; ex.classList.add('ok'); ex.innerHTML = s.explain + cardBtn(`${s.title}: ${strip(s.question)}\n\n\`\`\`\n${s.code}\n\`\`\``, `${strip(sh.options[sh.answer])}\n\n${strip(s.explain)}`); };
   if ((progress[l.id] || {})[key]) finish($(`.opt[data-i="${sh.answer}"]`, el));
   $$('.opt', el).forEach((b) => (b.onclick = () => {
     if (done) return;
@@ -570,12 +570,38 @@ function rPredict(el, s, l, idx, sync) {
 const BOX_DAYS = [0, 1, 3, 7, 21, 60];
 const cid = (c) => { let h = 0; for (const ch of c.q) h = (h * 31 + ch.charCodeAt(0)) | 0; return 'c' + (h >>> 0).toString(36); };
 let cardState = store.get('cards', {});
+/* ---- my cards: cards you make from your own mistakes, questions and chats (stored in sil:mycards, so they sync and export with progress) ---- */
+const MYTRACK = 'My cards';
+const cardHtml = (t) => String(t).split(/(```[\s\S]*?```)/g).map((chunk) => (chunk.startsWith('```') && chunk.endsWith('```') && chunk.length >= 6
+  ? `<pre><code>${esc(chunk.slice(3, -3).replace(/^[a-zA-Z0-9_+-]*\n/, '').replace(/\n$/, ''))}</code></pre>`
+  : esc(chunk).replace(/`([^`\n]+)`/g, '<code>$1</code>').replace(/\n/g, '<br>'))).join('');
+const myCards = store.get('mycards', []);
+myCards.forEach((c) => CARDS.push(c));
+function addCard(q, a, src) {
+  q = String(q || '').trim().slice(0, 1500); a = String(a || '').trim().slice(0, 2500);
+  if (!q || !a) { toast('A card needs a question and an answer'); return false; }
+  const card = { track: MYTRACK, q: cardHtml(q), a: cardHtml(a), custom: true, src: src || 'manual', ts: Date.now() };
+  if (CARDS.some((c) => cid(c) === cid(card))) { toast('That card already exists'); return false; }
+  myCards.push(card); store.set('mycards', myCards); CARDS.push(card); addXp(3, 'Card added to My cards');
+  return true;
+}
+function removeCard(card) {
+  const i = myCards.findIndex((c) => cid(c) === cid(card)); if (i >= 0) { myCards.splice(i, 1); store.set('mycards', myCards); }
+  const j = CARDS.findIndex((c) => cid(c) === cid(card)); if (j >= 0) CARDS.splice(j, 1);
+  delete cardState[cid(card)]; store.set('cards', cardState);
+}
+/* "Add to my cards" button used under explanations (delegated click below) */
+const cardBtn = (q, a) => `<div class="mc-row"><button type="button" class="btn ghost sm addcard" data-q="${esc(q)}" data-a="${esc(a)}">${ic('cards', 14)} Add to my cards</button></div>`;
+document.addEventListener('click', (e) => {
+  const b = e.target.closest && e.target.closest('.addcard'); if (!b || b.disabled) return;
+  if (addCard(b.dataset.q, b.dataset.a, 'lesson')) { b.disabled = true; b.innerHTML = ic('check', 14, 3) + ' In My cards'; }
+});
 const dueCards = (track) => CARDS.filter((c) => (!track || c.track === track) && (!cardState[cid(c)] || cardState[cid(c)].due <= Date.now()));
 const trackHue = (name) => ({ 'Full-stack': 100, Database: 200, Patterns: 165, Playbook: 255, Design: 150, Reliability: 28, Kafka: 275, AWS: 215, Terraform: 262, AI: 320, 'Open Banking': 44 }[name] ?? hueOf(name));
 function viewReview() {
   document.title = 'Flashcards · Senior Interview Lab';
   let filter = '', deck = [], cur = 0, flipped = false, total = 0;
-  const tracks = [...new Set(CARDS.map((c) => c.track))];
+  const tracks = [...new Set(CARDS.map((c) => c.track))];  /* includes "My cards" once you have made one */
   const build = (all) => { deck = (all ? CARDS.filter((c) => !filter || c.track === filter) : dueCards(filter)).sort(() => Math.random() - 0.5); total = deck.length; cur = 0; flipped = false; draw(); };
   const draw = () => {
     const filters = `<div class="filters"><button class="fchip ${!filter ? 'on' : ''}" data-f="">All</button>${tracks.map((t) => `<button class="fchip ${filter === t ? 'on' : ''}" data-f="${esc(t)}">${esc(t)}</button>`).join('')}</div>`;
@@ -584,11 +610,18 @@ function viewReview() {
     else {
       const c = deck[cur], h = trackHue(c.track);
       body = `<div class="deck tc" style="--h:${h}"><div class="pgl"><span>Card ${Math.min(cur + 1, total)} of ${total}</span><span>${deck.length - cur} left</span></div><div class="pg"><i style="width:${(cur / Math.max(1, total)) * 100}%"></i></div>
-        <div class="fc-wrap has-ask">${askBtn(`Flashcard (${strip(c.track)}). Question: ${strip(c.q)}\nCard answer: ${strip(c.a)}\n\nThat answer is too terse. Explain it properly: the intuition, a concrete example with numbers or code, why it matters in an interview, common misconceptions, and one follow-up a senior interviewer might ask.`, 'Ask AI to explain this card')}<div class="fc ${flipped ? 'flipped' : ''}" id="fc" tabindex="0" role="button" aria-label="Flip card"><div class="face front"><span class="chip tc tagl" style="--h:${h}">${esc(c.track)}</span><div class="qq">${c.q}</div><div class="hint">${matchMedia('(pointer:coarse)').matches ? 'Tap the card to reveal' : 'Click or press <kbd>Space</kbd> to reveal'}</div></div><div class="face back"><span class="chip tc tagl" style="--h:${h}">Answer</span><div class="aa">${c.a}</div></div></div></div>
+        <div class="fc-wrap has-ask">${askBtn(`Flashcard (${strip(c.track)}). Question: ${strip(c.q)}\nCard answer: ${strip(c.a)}\n\nThat answer is too terse. Explain it properly: the intuition, a concrete example with numbers or code, why it matters in an interview, common misconceptions, and one follow-up a senior interviewer might ask.`, 'Ask AI to explain this card')}<div class="fc ${flipped ? 'flipped' : ''}" id="fc" tabindex="0" role="button" aria-label="Flip card"><div class="face front"><span class="chip tc tagl" style="--h:${h}">${esc(c.track)}</span><div class="qq">${c.q}</div><div class="hint">${matchMedia('(pointer:coarse)').matches ? 'Tap the card to reveal' : 'Click or press <kbd>Space</kbd> to reveal'}</div></div><div class="face back"><span class="chip tc tagl" style="--h:${h}">Answer</span><div class="aa">${c.a}</div>${c.custom ? '<button type="button" class="linkbtn delcard" title="Delete this card">delete card</button>' : ''}</div></div></div>
         <div class="rate" ${flipped ? '' : 'hidden'}><button class="r0" data-r="0">Again<small>1 · soon</small></button><button class="r1" data-r="1">Hard<small>2 · 1 day</small></button><button class="r2" data-r="2">Good<small>3 · days</small></button><button class="r3" data-r="3">Easy<small>4 · weeks</small></button></div></div>`;
     }
-    app.innerHTML = `<div class="page-h"><h1>Flashcards</h1><p>Say the answer out loud before flipping. Cards you miss come back sooner.</p></div>${filters}${body}`;
+    app.innerHTML = `<div class="page-h"><h1>Flashcards</h1><p>Say the answer out loud before flipping. Cards you miss come back sooner.</p><button class="btn sm" id="newcard">${ic('cards', 14)} New card</button> <span class="muted">Missed something? Use <b>Add to my cards</b> under any explanation, or the chat's <b>+ card</b>.</span></div><div id="cardform" hidden></div>${filters}${body}`;
     $$('.fchip').forEach((b) => (b.onclick = () => { filter = b.dataset.f; build(false); }));
+    $('#newcard').onclick = () => {
+      const f = $('#cardform'); f.hidden = !f.hidden; if (f.hidden) return;
+      f.innerHTML = `<div class="cardform tc"><label class="lbl">Front (question)</label><textarea id="cfq" rows="2" maxlength="1500" placeholder="What do I want to remember?"></textarea><label class="lbl">Back (answer)</label><textarea id="cfa" rows="4" maxlength="2500" placeholder="Use \`code\` for code and blank lines for paragraphs."></textarea><div class="dbar"><button class="btn primary" id="cfsave">Save card</button><button class="btn ghost" id="cfx">Cancel</button></div></div>`;
+      $('#cfq').focus(); $('#cfx').onclick = () => { f.hidden = true; };
+      $('#cfsave').onclick = () => { if (addCard($('#cfq').value, $('#cfa').value, 'manual')) { f.hidden = true; if (!tracks.includes(MYTRACK)) tracks.push(MYTRACK); filter = MYTRACK; build(false); } };
+    };
+    const dc = $('.delcard'); if (dc) dc.onclick = (e) => { e.stopPropagation(); if (confirm('Delete this card?')) { const c0 = deck[cur]; removeCard(c0); deck.splice(cur, 1); total = Math.max(0, total - 1); flipped = false; if (!CARDS.some((c) => c.track === MYTRACK)) { tracks.splice(tracks.indexOf(MYTRACK), 1); if (filter === MYTRACK) filter = ''; } draw(); } };
     const fc = $('#fc'); if (fc) { fc.onclick = flip; fc.onkeydown = (e) => { if (e.key === 'Enter') flip(); }; }
     $$('.rate button').forEach((b) => (b.onclick = () => rate(+b.dataset.r)));
     const ag = $('#again'); if (ag) ag.onclick = () => build(true);
@@ -824,7 +857,7 @@ $('#wipe').onclick = async () => {
 };
 
 /* ---------- extension API for the separate view files (design lab, plan, stories, ...) ---------- */
-window.LAB = { rCode, mark, askBtn, shuffleOpts, $, $$, esc, strip, store, ic, app, addXp, logAct, actToday, toast, confetti, hueOf, fmtClock, label, TRACKS, CARDS, MOCK, RES, findLesson, lessonPct, trackPct, itemsOf, keysOf, dueCards, mockSummary, streak, level, routes, setCleanup: (f) => { cleanup = f; }, getProgress: () => progress, getXp: () => xp, cardStateOf: () => cardState, runPython, runSql, pyStart, PY, LOADING, renderXp, HUE, trackHue };
+window.LAB = { addCard, removeCard, cardBtn, rCode, mark, askBtn, shuffleOpts, $, $$, esc, strip, store, ic, app, addXp, logAct, actToday, toast, confetti, hueOf, fmtClock, label, TRACKS, CARDS, MOCK, RES, findLesson, lessonPct, trackPct, itemsOf, keysOf, dueCards, mockSummary, streak, level, routes, setCleanup: (f) => { cleanup = f; }, getProgress: () => progress, getXp: () => xp, cardStateOf: () => cardState, runPython, runSql, pyStart, PY, LOADING, renderXp, HUE, trackHue };
 (window.LAB_VIEWS || []).forEach((init) => init(window.LAB));
 
 renderXp();

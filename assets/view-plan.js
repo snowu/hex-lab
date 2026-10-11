@@ -35,6 +35,8 @@
     const act = actToday(), tasks = [], self = store.get('self', {}), due = dueCards().length;
     const cardsTarget = Math.min(due, mins <= 15 ? 10 : mins <= 30 ? 15 : 25);
     if (due) tasks.push({ icon: 'cards', title: `Review ${cardsTarget} flashcards`, detail: `${due} due. Say each answer out loud before flipping.`, href: '#/review', done: (act.cards || 0) >= cardsTarget, min: Math.ceil(cardsTarget / 3) });
+    const kd = window.KATA_SR ? KATA_SR.due() : [];
+    if (kd.length) tasks.push({ icon: 'terminal', title: `Kata review: ${kd[0].name}`, detail: `${kd.length} kata${kd.length === 1 ? '' : 's'} due for spaced review. Solve it again from scratch, no peeking.`, href: '#/kata/' + kd[0].slug, done: (act.kata || 0) >= 1, min: 15 });
     const drill = pickDrill(Math.min(mins, 30)), codeWeak = (self.code || 3) <= 2;
     if (drill) tasks.push({ icon: 'clock', title: `Timed drill: ${drill.s.title}`, detail: `${drill.t.title} · budget ${drill.s.minutes || 20} min. Press Timed and talk through your plan first.`, href: '#/lesson/' + drill.l.id, done: (act.drill || 0) >= 1, min: drill.s.minutes || 20 });
     if (codeWeak && mins >= 60) { const d2 = pickDrill(30); if (d2 && d2.s.id !== drill.s.id) tasks.push({ icon: 'clock', title: `Second timed drill: ${d2.s.title}`, detail: `${d2.t.title} · budget ${d2.s.minutes || 20} min`, href: '#/lesson/' + d2.l.id, done: (act.drill || 0) >= 2, min: d2.s.minutes || 20 }); }

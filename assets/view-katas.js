@@ -1,7 +1,7 @@
 /* Katas: Exercism's Python practice exercises (MIT), run in the browser with their own unittest suites.
    Other languages: the same exercise via the Exercism CLI, plus AI feedback on a pasted solution. */
 (window.LAB_VIEWS = window.LAB_VIEWS || []).push((H) => {
-  const { $, $$, esc, store, ic, app, toast, hueOf, askBtn } = H;
+  const { $, $$, esc, store, ic, app, toast, hueOf, askBtn, logAct } = H;
   const DATA = window.KATAS;
   if (!DATA) return;
   const ITEMS = DATA.items, BY = Object.fromEntries(ITEMS.map((k) => [k.slug, k]));
@@ -13,6 +13,22 @@
   const PICKS = new Set(['two-bucket', 'knapsack', 'word-search', 'dominoes', 'linked-list', 'simple-linked-list', 'binary-search-tree', 'circular-buffer', 'bank-account', 'custom-set', 'rest-api', 'forth', 'tournament', 'anagram', 'alphametics', 'change', 'book-store', 'minesweeper', 'connect', 'go-counting', 'sublist', 'grep', 'react', 'satellite', 'pov', 'binary-search', 'sieve', 'list-ops', 'transpose', 'wordy', 'tree-building', 'bowling', 'poker', 'zipper', 'variable-length-quantity', 'robot-simulator', 'word-count']);
   for (const s of [...PICKS]) if (!BY[s]) PICKS.delete(s);
   const TRACKS = [['javascript', 'JavaScript'], ['typescript', 'TypeScript'], ['go', 'Go'], ['rust', 'Rust'], ['java', 'Java'], ['kotlin', 'Kotlin'], ['csharp', 'C#'], ['ruby', 'Ruby'], ['cpp', 'C++'], ['elixir', 'Elixir'], ['php', 'PHP'], ['swift', 'Swift']];
+  /* ---------- spaced repetition: a solved kata comes back after 2, 5, 14, 30, 60 days; passing it again once due moves it up a box ---------- */
+  const SR_KEY = 'kreview', SR_DAYS = [2, 5, 14, 30, 60], DAY = 864e5;
+  const srAll = () => store.get(SR_KEY, {});
+  const isDue = (slug) => { const r = srAll()[slug]; return !!r && r.due <= Date.now(); };
+  const dueKatas = () => ITEMS.filter((k) => isDue(k.slug)).sort((a, b) => srAll()[a.slug].due - srAll()[b.slug].due);
+  const inDays = (ms) => { const d = Math.max(1, Math.round(ms / DAY)); return d === 1 ? 'tomorrow' : `in ${d} days`; };
+  /** called whenever the tests all pass; returns what happened so the page can say it */
+  function recordPass(slug) {
+    const all = srAll(), r = all[slug], now = Date.now();
+    if (!r) { all[slug] = { box: 0, due: now + SR_DAYS[0] * DAY, last: now, n: 1 }; store.set(SR_KEY, all); logAct('kata'); return { kind: 'new', text: `Review scheduled ${inDays(SR_DAYS[0] * DAY)}.` }; }
+    if (r.due <= now) { r.box = Math.min(SR_DAYS.length - 1, r.box + 1); r.due = now + SR_DAYS[r.box] * DAY; r.last = now; r.n = (r.n || 1) + 1; store.set(SR_KEY, all); logAct('kata'); return { kind: 'advanced', text: `Review done. Next one ${inDays(SR_DAYS[r.box] * DAY)}.` }; }
+    return { kind: 'early', text: `Solved again. Your next review is ${inDays(r.due - now)}.` };
+  }
+  const shaky = (slug) => { const all = srAll(); all[slug] = { box: 0, due: Date.now() + DAY, last: Date.now(), n: (all[slug] && all[slug].n) || 1 }; store.set(SR_KEY, all); };
+  const srLine = (slug) => { const r = srAll()[slug]; return !r ? '' : r.due <= Date.now() ? 'Due for review now: solve it again from scratch to move it up.' : `Next review ${inDays(r.due - Date.now())}.`; };
+  window.KATA_SR = { due: dueKatas, isDue, recordPass };
   H.routes.push([/^#\/katas$/, () => viewKatas()], [/^#\/kata\/([\w-]+)$/, (slug) => viewKata(slug)]);
 
   /* ---------- small, safe markdown for the exercise instructions ---------- */
@@ -58,25 +74,25 @@
   const view = { q: '', band: 'all', status: 'all', picks: false };
   function viewKatas() {
     const done = ITEMS.filter((k) => solved(k.slug)).length;
-    const next = ITEMS.find((k) => PICKS.has(k.slug) && !solved(k.slug)) || ITEMS.find((k) => !solved(k.slug));
+    const dueNow = dueKatas(), next = dueNow[0] || ITEMS.find((k) => PICKS.has(k.slug) && !solved(k.slug)) || ITEMS.find((k) => !solved(k.slug));
     const rows = () => ITEMS.filter((k) =>
       (view.band === 'all' || band(k.difficulty) === view.band) &&
-      (view.status === 'all' || (view.status === 'solved') === solved(k.slug)) &&
+      (view.status === 'all' || (view.status === 'due' ? isDue(k.slug) : (view.status === 'solved') === solved(k.slug))) &&
       (!view.picks || PICKS.has(k.slug)) &&
       (!view.q || (k.slug + ' ' + k.name + ' ' + k.blurb).toLowerCase().includes(view.q)));
     app.innerHTML = `<div class="page-h"><h1>Code katas</h1><p>${ITEMS.length} practice exercises with real unit tests, run in your browser (Python). Other languages through the Exercism CLI, with AI feedback on whatever you paste.</p></div>
-      <div class="kstats tc"><div><b>${done}</b><span>solved of ${ITEMS.length}</span></div><span class="mbar"><i style="width:${Math.round((done / ITEMS.length) * 100)}%"></i></span>
-        ${next ? `<a class="btn primary" href="#/kata/${next.slug}">${ic('play', 15)} ${done ? 'Next' : 'Start'}: ${esc(next.name)}</a>` : ''}<button class="btn" id="krand">${ic('rotate', 15)} Random kata</button></div>
+      <div class="kstats tc"><div><b>${done}</b><span>solved of ${ITEMS.length}${dueNow.length ? ` · <b class="kdue">${dueNow.length} due for review</b>` : ''}</span></div><span class="mbar"><i style="width:${Math.round((done / ITEMS.length) * 100)}%"></i></span>
+        ${next ? `<a class="btn primary" href="#/kata/${next.slug}">${ic('play', 15)} ${dueNow.length ? 'Review' : done ? 'Next' : 'Start'}: ${esc(next.name)}</a>` : ''}<button class="btn" id="krand">${ic('rotate', 15)} Random kata</button></div>
       <div class="kfilters"><input id="kq" class="inp" type="search" placeholder="Search katas…" value="${esc(view.q)}" aria-label="Search katas">
         ${BANDS.map(([k, n]) => `<button class="fchip ${view.band === k ? 'on' : ''}" data-b="${k}">${n}</button>`).join('')}<span class="ksep"></span>
-        ${[['all', 'Any status'], ['todo', 'To do'], ['solved', 'Solved']].map(([k, n]) => `<button class="fchip ${view.status === k ? 'on' : ''}" data-s="${k}">${n}</button>`).join('')}<span class="ksep"></span>
+        ${[['all', 'Any status'], ['todo', 'To do'], ['solved', 'Solved'], ['due', 'Due']].map(([k, n]) => `<button class="fchip ${view.status === k ? 'on' : ''}" data-s="${k}">${n}</button>`).join('')}<span class="ksep"></span>
         <button class="fchip ${view.picks ? 'on' : ''}" id="kpicks" title="Classics that map well to backend interviews">Interview picks</button></div>
       <div id="klist"></div>
       <p class="muted kcredit">Exercises from <a href="https://exercism.org" target="_blank" rel="noopener">Exercism</a> (MIT licence, authors credited on each kata).</p>`;
     const draw = () => {
       const r = rows();
       $('#klist').innerHTML = r.length ? `<div class="klist">${r.map((k) => `<a class="krow tc ${solved(k.slug) ? 'done' : ''}" style="--h:${hueOf(band(k.difficulty))}" href="#/kata/${k.slug}">
-          <span class="kck">${solved(k.slug) ? ic('check', 14, 3) : ''}</span><span class="kn">${esc(k.name)}${PICKS.has(k.slug) ? ' <span class="chip">pick</span>' : ''}${k.refactor ? ' <span class="chip">refactor</span>' : ''}</span>
+          <span class="kck">${solved(k.slug) ? ic('check', 14, 3) : ''}</span><span class="kn">${esc(k.name)}${PICKS.has(k.slug) ? ' <span class="chip">pick</span>' : ''}${isDue(k.slug) ? ' <span class="chip hot">due</span>' : ''}${k.refactor ? ' <span class="chip">refactor</span>' : ''}</span>
           <span class="kb">${esc(k.blurb)}</span><span class="kd" title="Difficulty ${k.difficulty}/10">${'■'.repeat(Math.min(5, Math.ceil(k.difficulty / 2)))}${'□'.repeat(5 - Math.min(5, Math.ceil(k.difficulty / 2)))}</span></a>`).join('')}</div>` : '<div class="empty"><p class="muted">No katas match.</p></div>';
     };
     draw();
@@ -124,6 +140,7 @@
           ${k.refactor ? '<div class="callout tip"><b>Refactoring kata.</b> The starter already passes the tests. Make the code cleaner without breaking them.</div>' : ''}
           <div class="kd-body ex-prompt">${md(k.instructions)}</div>
           <p class="muted kcredit">Exercise by ${esc((k.authors || []).join(', ') || 'Exercism contributors')}${(k.contributors || []).length ? ` and ${k.contributors.length} contributor${k.contributors.length > 1 ? 's' : ''}` : ''}, from <a href="https://github.com/${esc(DATA.source)}/tree/${esc(DATA.ref)}/exercises/practice/${esc(slug)}" target="_blank" rel="noopener">Exercism</a> (MIT licence).</p>
+          <p class="muted" id="ksr">${esc(srLine(slug))}</p><div class="dbar" id="kshaky" ${srAll()[slug] ? '' : 'hidden'}><button class="btn ghost sm" id="kshakybtn">Mark as shaky (review tomorrow)</button></div>
           <div class="dbar kpn">${prev ? `<a class="btn ghost" href="#/kata/${prev.slug}">${ic('arrowL', 14)} ${esc(prev.name)}</a>` : '<span></span>'}<span class="sp"></span>${nxt ? `<a class="btn" href="#/kata/${nxt.slug}">${esc(nxt.name)} ${ic('arrow', 14)}</a>` : ''}</div>
         </div></section>
         <div class="kata-work">
@@ -139,7 +156,9 @@
           </details>
         </div>
       </div>`;
-    H.rCode($('#kcode'), sec, lesson, 0, () => {}, hue, disposers);
+    const say = (txt) => { $('#ksr').textContent = txt; $('#kshaky').hidden = false; };
+    H.rCode($('#kcode'), sec, lesson, 0, () => { const r = recordPass(slug); say(r.text); if (r.kind !== 'early') toast(r.text); }, hue, disposers);
+    $('#kshakybtn').onclick = () => { shaky(slug); say('Review tomorrow.'); };
     const cmd = () => {
       const t = $('#ktrack').value;
       $('#kcmd').textContent = `exercism download --track=${t} --exercise=${slug}\ncd <the folder it prints>\n# read README.md / HELP.md there to run the tests, then:\nexercism submit <your solution file>`;
@@ -147,6 +166,6 @@
     };
     $('#ktrack').onchange = cmd; cmd();
     if (window.FEEDBACK) FEEDBACK.mount($('#kfb'), { kind: 'code', prompt: `Code kata "${k.name}": ${k.blurb}`, getAnswer: () => $('#kpaste').value });
-    $('#kdone').onclick = () => { if (H.mark(lid(slug), 'c0', 50, 'Kata solved')) toast('Marked as solved'); $('#kdone').textContent = 'Solved'; };
+    $('#kdone').onclick = () => { if (H.mark(lid(slug), 'c0', 50, 'Kata solved')) toast('Marked as solved'); const r = recordPass(slug); say(r.text); $('#kdone').textContent = 'Solved'; };
   }
 });

@@ -80,6 +80,30 @@
     if (role === 'assistant') rich(d, text); else d.textContent = text;
     log.appendChild(d); log.scrollTop = log.scrollHeight; return d;
   }
+  /* ---------- "+ card": the tutor condenses a reply into one flashcard you can edit, then it joins My cards ---------- */
+  const parseCard = (raw) => { const a = raw.indexOf('{'), z = raw.lastIndexOf('}'); try { const o = JSON.parse(raw.slice(a, z + 1)); return o && typeof o.q === 'string' && typeof o.a === 'string' ? o : null; } catch { return null; } };
+  function decorate(el, i) {
+    if (!window.LAB || !LAB.addCard || msgs[i].role !== 'assistant' || !msgs[i - 1] || msgs[i - 1].role !== 'user') return;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chat-card'; b.textContent = '+ card'; b.title = 'Turn this answer into a flashcard';
+    b.onclick = () => makeCard(i, el, b); el.appendChild(b);
+  }
+  async function makeCard(i, el, btn) {
+    const question = msgs[i - 1].content, answer = msgs[i].content;
+    btn.disabled = true; btn.textContent = 'making card…';
+    let card = null;
+    try {
+      const prompt = `Turn this tutoring exchange into ONE flashcard for spaced repetition. Reply with ONLY a JSON object {"q": "a short, specific question", "a": "the answer in at most 60 words; use \`code\` for code"}.\n\nQuestion asked: ${question.slice(0, 300)}\n\nAnswer given: ${answer.slice(0, 1500)}`;
+      card = parseCard(await FEEDBACK.chat([{ role: 'user', content: prompt }], ''));
+    } catch { /* fall back to the raw exchange below */ }
+    card = card || { q: question.slice(0, 200), a: answer.slice(0, 500) };
+    btn.remove();
+    const box = document.createElement('div'); box.className = 'chat-cardedit';
+    box.innerHTML = '<label>Front</label><textarea class="cq" rows="2"></textarea><label>Back</label><textarea class="ca" rows="4"></textarea><div class="row"><button type="button" class="btn primary sm sv">Save to My cards</button><button type="button" class="btn ghost sm cx">Cancel</button></div>';
+    box.querySelector('.cq').value = card.q; box.querySelector('.ca').value = card.a;
+    box.querySelector('.cx').onclick = () => { box.remove(); decorate(el, i); };
+    box.querySelector('.sv').onclick = () => { if (LAB.addCard(box.querySelector('.cq').value, box.querySelector('.ca').value, 'chat')) { box.innerHTML = '<span class="muted">Saved to My cards ✓</span>'; } };
+    el.appendChild(box); box.querySelector('.cq').focus();
+  }
   function draw() {
     log.replaceChildren();
     if (!msgs.length) {
@@ -87,7 +111,7 @@
       h.innerHTML = '<p>Ask anything about what you are studying. With <b>Include this page</b> on, I can see the lesson, exercise or answer you have open, and the code in your editor.</p>';
       SUGGEST.forEach((q) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'fchip'; b.textContent = q; b.onclick = () => send(q); h.appendChild(b); });
       log.appendChild(h);
-    } else msgs.forEach((m) => bubble(m.role, m.content));
+    } else msgs.forEach((m, i) => { const el = bubble(m.role, m.content); if (m.role === 'assistant') decorate(el, i); });
   }
   function ctxLabel() {
     const n = gather().length;
@@ -114,7 +138,7 @@
     const wait = bubble('assistant', 'Thinking…'); wait.classList.add('wait');
     try {
       const reply = await FEEDBACK.chat(msgs.slice(-MAX_SENT).map((m) => ({ role: m.role, content: m.content })), useCtx ? gather() : '');
-      msgs.push({ role: 'assistant', content: reply }); wait.classList.remove('wait'); rich(wait, reply);
+      msgs.push({ role: 'assistant', content: reply }); wait.classList.remove('wait'); rich(wait, reply); decorate(wait, msgs.length - 1);
     } catch (e) {
       msgs.pop(); wait.classList.remove('wait'); wait.classList.add('err'); wait.textContent = e.message; input.value = text;
     }

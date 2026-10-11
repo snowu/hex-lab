@@ -113,3 +113,11 @@ Phones are a first-class target, reading and interactive lessons first. At <=760
 section nav becomes a bottom tab bar; on touch devices buttons and bug-hunt lines are 36-42px tall, inputs are 16px (no iOS focus zoom),
 keyboard hints are hidden, flashcards say "tap", and the tutor chat is full-screen (Enter = newline, Send button sends).
 `tests/e2e/mobile.mjs` (390x844, touch) guards all of it, including "no sideways scrolling on any page".
+
+## My cards and kata reviews
+
+- **My cards** (stored in `sil:mycards`, so they sync and export with progress): "Add to my cards" under every quick-check, predict-the-output and
+  bug-hunt explanation; "+ card" on tutor replies (the tutor condenses the answer into a card you can edit before saving); and a "New card" form on the
+  flashcards page. They join the normal spaced-repetition deck under the "My cards" filter. Text is escaped; `code` and fenced blocks render.
+- **Kata reviews** (`sil:kreview`): solving a kata schedules a review after 2, 5, 14, 30 and 60 days. Passing the tests again once it is due moves it up a box;
+  "Mark as shaky" brings it back tomorrow. Due katas show in the list, on the Katas button ("Review: ...") and in the daily plan.
