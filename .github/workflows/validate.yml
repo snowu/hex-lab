@@ -13,3 +13,11 @@ jobs:
       - run: node scripts/test-sync.mjs
       - run: node scripts/test-worker.mjs
       - run: node scripts/validate-katas.mjs
+      - name: Install Zig 0.17.0
+        run: |
+          curl -fsSL -o zig.tar.xz https://ziglang.org/download/0.17.0/zig-x86_64-linux-0.17.0.tar.xz
+          echo "1cbe9df9f27e6b78d14ccbca43b6703a404ef79ef1c463de901d7f088d4e2026  zig.tar.xz" | sha256sum -c -
+          mkdir -p "$HOME/zig" && tar -xJf zig.tar.xz -C "$HOME/zig" --strip-components=1
+          echo "$HOME/zig" >> "$GITHUB_PATH"
+      - run: node scripts/validate-drills.mjs --require
+      - run: node scripts/gen-drills.mjs --check

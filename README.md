@@ -121,3 +121,13 @@ keyboard hints are hidden, flashcards say "tap", and the tutor chat is full-scre
   flashcards page. They join the normal spaced-repetition deck under the "My cards" filter. Text is escaped; `code` and fenced blocks render.
 - **Kata reviews** (`sil:kreview`): solving a kata schedules a review after 2, 5, 14, 30 and 60 days. Passing the tests again once it is due moves it up a box;
   "Mark as shaky" brings it back tomorrow. Due katas show in the list, on the Katas button ("Review: ...") and in the daily plan.
+
+## Game dev section
+
+A second section on the same site (switch with the arrows button in the header or the tile on the home page; the choice is remembered per device). It has its own violet theme, tracks, flashcards, mock questions and links, and reuses everything else (progress, XP, streak, search, plan).
+
+- **5 tracks, 26 lessons**: game loop and architecture, game math and physics, game design theory, techniques and practice (procedural generation, cameras, saves, a Godot field guide, Zig for games, C++ for games, a practice ladder) and pixel art (fundamentals, colour, shading and dithering, animation, tilesets and pipeline).
+- **9 interactive simulations**: fixed vs variable timestep, tunneling and swept collision, easing and smoothing, juice, cellular-automata caves, a pixel editor (saves in the browser, exports PNG), colour ramps with hue shifting, dithering, and sprite animation.
+- **18 coding drills in Zig and C++** instead of Python. Neither can be compiled in the browser, so each drill shows the prompt, starter, tests, hint and reference solution, gives you the single file to download, and you run it locally (`zig test x.zig`, `g++ -std=c++20 x.cpp`). The same files live in `drills/zig` and `drills/cpp`. You can paste your solution for AI feedback and tick the drill off yourself. Zig drills target **Zig 0.17.0**.
+- `node scripts/validate-drills.mjs` compiles every reference solution (C++ with AddressSanitizer and UBSan) and checks every starter fails its tests; CI installs Zig for it. After editing `content/drills-game.js` run `node scripts/gen-drills.mjs`.
+- A reusable pixel art editor that goes with the pixel art track lives in its own project, `pixel-forge`.
