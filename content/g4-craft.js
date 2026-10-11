@@ -27,6 +27,108 @@ TRACKS.push({
       ],
     },
     {
+      id: 'gd-noise', title: 'Noise, terrain and Wave Function Collapse', minutes: 35,
+      summary: 'Smooth randomness for terrain and textures: value noise, octaves, domain warping, thresholds for caves and biomes, and constraint-based generation.',
+      sections: [
+        { type: 'text', html: `
+<h3>Why not just random numbers?</h3>
+<p>Plain random values are <b>white noise</b>: every sample independent, like TV static. Terrain, clouds, water and wood grain are <b>smooth but irregular</b>: nearby points have similar values, far points do not. <b>Coherent noise</b> gives you that: a deterministic function of position (and a seed) that varies smoothly, so you can ask for the value at any <code>(x, y)</code> without generating the rest, and the same seed always gives the same world.</p>
+<h3>Value noise</h3>
+<p>The simplest construction: put a pseudo-random value at every integer grid point (a <b>hash</b> of the coordinates and the seed, so no storage), and <b>interpolate</b> between the four surrounding corners. Linear interpolation shows the grid as creases; a <b>smoothstep</b> curve <code>t*t*(3-2t)</code> on the fraction makes it smooth. Lowering the frequency stretches the blobs, raising it makes them smaller.</p>
+<pre><code data-check="zig">const std = @import("std");
+
+/// A hash of an integer grid point and a seed, mapped to [0, 1). No tables, no storage: any point can be asked for at any time.
+fn hash1(x: i32, seed: u32) f32 {
+    var h: u32 = @bitCast(x);
+    h = h *% 374761393 +% seed *% 668265263;
+    h = (h ^ (h &gt;&gt; 13)) *% 1274126177;
+    h ^= h &gt;&gt; 16;
+    return @as(f32, @floatFromInt(h &amp; 0xFFFFFF)) / 16777216.0;
+}
+
+fn smooth(t: f32) f32 {
+    return t * t * (3 - 2 * t);
+}
+
+/// 1-D value noise: random values at integers, smoothly blended in between.
+fn valueNoise(x: f32, seed: u32) f32 {
+    const xi: i32 = @intFromFloat(@floor(x));
+    const t = smooth(x - @floor(x));
+    const a = hash1(xi, seed);
+    const b = hash1(xi + 1, seed);
+    return a + (b - a) * t;
+}
+
+/// Fractal noise: several octaves, each at double the frequency and a fraction (persistence) of the amplitude, normalised to [0, 1].
+fn fbm(x: f32, octaves: u32, persistence: f32, seed: u32) f32 {
+    var sum: f32 = 0;
+    var amp: f32 = 1;
+    var norm: f32 = 0;
+    var freq: f32 = 1;
+    for (0..octaves) |o| {
+        sum += valueNoise(x * freq, seed + @as(u32, @intCast(o))) * amp;
+        norm += amp;
+        amp *= persistence;
+        freq *= 2;
+    }
+    return sum / norm;
+}
+
+test "noise is deterministic, in range and continuous" {
+    try std.testing.expectEqual(valueNoise(3.7, 1), valueNoise(3.7, 1));
+    try std.testing.expect(valueNoise(3.7, 1) != valueNoise(3.7, 2)); // a different seed gives a different world
+    var x: f32 = -20;
+    var prev = valueNoise(x, 5);
+    while (x &lt; 20) : (x += 0.01) {
+        const v = valueNoise(x, 5);
+        try std.testing.expect(v &gt;= 0 and v &lt;= 1);
+        try std.testing.expect(@abs(v - prev) &lt; 0.02); // no jumps: nearby samples are close
+        prev = v;
+    }
+}
+
+test "adding octaves adds detail but keeps the range" {
+    var x: f32 = 0;
+    while (x &lt; 50) : (x += 0.37) {
+        const v = fbm(x, 5, 0.5, 9);
+        try std.testing.expect(v &gt;= 0 and v &lt;= 1);
+    }
+    // the same position differs between 1 and 5 octaves (the extra octaves contribute)
+    try std.testing.expect(fbm(7.3, 1, 0.5, 9) != fbm(7.3, 5, 0.5, 9));
+}</code></pre>
+<h3>Octaves: fractal Brownian motion (fBm)</h3>
+<p>One octave is smooth blobs. Real terrain has big mountains, then hills, then rocks, then pebbles. Sum several octaves: each has <b>double the frequency</b> (<i>lacunarity</i> 2) and a <b>fraction of the amplitude</b> (<i>persistence</i>, about 0.5), and divide by the total amplitude. The simulation below lets you add octaves and see detail appear; low persistence is smoother, high is rougher.</p>
+<h3>Perlin and simplex noise</h3>
+<p><b>Gradient noise</b> (Perlin, 1983, and the faster, less grid-aligned <b>simplex</b>) puts a random <i>direction</i> at each lattice point instead of a value and blends their influence. It has fewer blocky artefacts than value noise and a more even look. Most engines ship it: Godot's <code>FastNoiseLite</code> (Perlin, simplex, cellular, value) and <code>NoiseTexture2D</code>. Value noise is perfectly good for prototypes and it is what the simulation below uses.</p>
+<h3>Turning numbers into worlds</h3>
+<ul><li><b>Height to terrain</b>: bands of the noise value map to water, sand, grass, forest, rock, snow (try the colour option in the simulation). Thresholds are the whole art.</li><li><b>Biomes</b>: use two or three independent noises (height, moisture, temperature) and pick the biome from a table of combinations.</li><li><b>Caves</b>: threshold a noise field: below 0.45 is rock, above is open. Combine with the cellular-automata smoothing from the procgen lesson for cleaner shapes.</li><li><b>Islands</b>: multiply the noise by a falloff that is 1 in the centre and 0 at the edges.</li><li><b>Resources and decoration</b>: scatter by a separate noise, so ore appears in clusters rather than uniformly.</li><li><b>Textures and effects</b>: clouds, fire, dissolve masks, water flow (the shader lesson).</li></ul>
+<h3>Domain warping</h3>
+<p>Distort the <b>input</b> by another noise before sampling: <code>noise(p + k * noise2(p))</code>. Straight, regular features become flowing, organic ones: marble, rivers, alien landscapes. Tick the checkbox in the simulation.</p>
+<h3>Practicalities</h3>
+<ul><li><b>Seeds</b>: a seed is just another input to the hash. Derive per-layer seeds from the world seed so layers are independent.</li><li><b>Tileable noise</b>: for repeating textures wrap the lattice coordinates (modulo the period).</li><li><b>Chunking</b>: because noise is a function of position, an infinite world is generated chunk by chunk as the player moves, with neighbouring chunks matching perfectly.</li><li><b>Cost</b>: hash and interpolation per octave per sample. For large maps use a precomputed texture, a compute shader or the engine's native implementation; do not evaluate 10 octaves for every tile every frame.</li><li><b>Looks matter more than maths</b>: tune frequency, octaves and the thresholds by eye on screen, and pin the seed while you tune.</li></ul>
+<h3>Wave Function Collapse</h3>
+<p>Noise makes organic shapes but cannot guarantee that a river tile connects to another river tile. <b>Wave Function Collapse</b> (WFC) generates grids where <b>local rules</b> always hold, from an example or a tile set with adjacency constraints (which tile edges match):</p>
+<ol><li>Every cell starts as a <b>superposition</b>: any tile possible.</li><li>Pick the cell with the <b>lowest entropy</b> (fewest remaining possibilities) and <b>collapse</b> it to one tile (random, weighted).</li><li><b>Propagate</b>: remove from its neighbours the tiles that no longer fit, and keep propagating until nothing changes.</li><li>Repeat until every cell is decided. If some cell has no options left (a <b>contradiction</b>), backtrack or restart.</li></ol>
+<p>It is excellent for towns, dungeons, textures and decorative layers, because the output obeys the tile rules <i>and</i> looks varied. Its weakness is <b>global structure</b>: it knows nothing about reachability or pacing, so combine it with the validation step (flood fill, constraints on start and exit) or use it to dress up a layout made by another method.</p>
+<h3>Choosing a generator</h3>
+<table><tr><th>Need</th><th>Reach for</th></tr>
+<tr><td>Natural terrain, clouds, resource distribution</td><td>Noise (fBm, thresholds, domain warp)</td></tr>
+<tr><td>Cave-like open spaces</td><td>Cellular automata (or thresholded noise)</td></tr>
+<tr><td>Rooms and corridors with guaranteed connectivity</td><td>BSP or room placement + corridors</td></tr>
+<tr><td>Tile-consistent towns, interiors, textures</td><td>Wave Function Collapse</td></tr>
+<tr><td>Hand-feel with variety</td><td>Authored chunks assembled randomly (Spelunky style)</td></tr></table>` },
+        { pid: 'sim-noise', type: 'sim', id: 'gdnoise', title: 'Value noise, octaves and domain warping',
+          intro: '<p>A 160×100 field of fractal value noise. Terrain colours are just thresholds on the value; untick them to see the raw greyscale.</p>',
+          try: ['Set <b>octaves</b> to 1: smooth blobs. Raise it to 6: coastlines and mountains gain detail.', 'Raise <b>persistence</b>: higher octaves matter more and the map gets rougher; lower it for smooth hills.', 'Change <b>frequency</b>: the same shape zoomed in or out.', 'Change the <b>seed</b>: a completely different world from the same code.', 'Tick <b>domain warp</b>: straight blobs turn into flowing, organic forms.'] },
+        { pid: 'q-noise-1', type: 'quiz', q: 'You add more octaves to a terrain function. What changes?',
+          options: ['The map gets bigger', 'Finer detail is added at smaller scales (each octave doubles the frequency and shrinks the amplitude)', 'The seed changes', 'The values go outside 0 to 1 unless you normalise'], answer: 1, explain: 'Octaves add detail at ever smaller scales. You divide by the total amplitude to keep the range stable.' },
+        { pid: 'q-noise-2', type: 'quiz', q: 'Why is noise better than a stored random map for an infinite world?',
+          options: ['It is prettier', 'It is a function of position and seed, so any chunk can be generated on demand and neighbouring chunks line up with no storage', 'It uses more memory', 'It cannot be seeded'], answer: 1, explain: 'No state is needed: the same inputs always give the same value anywhere.' },
+        { pid: 'q-noise-3', type: 'quiz', q: 'Which generator guarantees that adjacent tiles obey edge-matching rules (road meets road)?',
+          options: ['Plain value noise', 'Wave Function Collapse with adjacency constraints', 'A random walk', 'Perlin noise'], answer: 1, explain: 'WFC propagates adjacency constraints as it decides cells, so the result satisfies the local rules by construction.' },
+      ],
+    },
+    {
       id: 'gd-camera', title: 'Cameras, screen shake and parallax', minutes: 20,
       summary: 'A 2D camera that follows well, shakes with “trauma”, and does not make pixel art shimmer.',
       sections: [

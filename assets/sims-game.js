@@ -155,7 +155,7 @@ SIMS.gdcave = (root) => {
     g.putImageData(img, 0, 0);
     const open = grid.flat().filter((v) => !v).length;
     $('#fillv', root).textContent = fill;
-    $('#stat', root).innerHTML = `<p>After <b>${steps}</b> smoothing step${steps === 1 ? '' : 's'}: <b>${rs.length}</b> separate cave${rs.length === 1 ? '' : 's'}, <b>${Math.round((open / (W * H)) * 100)}%</b> open. Green is the largest cave, amber is disconnected pockets a player could never reach. Rule: a cell becomes wall if 5 or more of its 8 neighbours are walls.</p>`;
+    $('#stat', root).innerHTML = `<p>After <b>${steps}</b> smoothing step${steps === 1 ? '' : 's'}: <b>${rs.length}</b> separate cave${rs.length === 1 ? '' : 's'}, <b>${Math.round((open / (W * H)) * 100)}%</b> open. Violet is the largest cave, amber is disconnected pockets a player could never reach. Rule: a cell becomes wall if 5 or more of its 8 neighbours are walls.</p>`;
   }
   reset(); draw();
   root.addEventListener('input', (e) => { if (e.target.id === 'fill') { fill = +e.target.value; reset(); draw(); } });
@@ -303,6 +303,262 @@ SIMS.pxanim = (root) => {
   build(); raf = requestAnimationFrame(loop);
   root.addEventListener('input', (e) => { if (e.target.id === 'fr') { frames = +e.target.value; $('#frv', root).textContent = frames; build(); } if (e.target.id === 'fp') { fps = +e.target.value; $('#fpv', root).textContent = fps; build(); } });
   root.addEventListener('change', (e) => { if (e.target.id === 'sq') { squash = e.target.checked; build(); } });
+  return () => cancelAnimationFrame(raf);
+};
+
+/* =========================================================
+   Integrators: explicit Euler vs semi-implicit vs velocity Verlet
+   ========================================================= */
+SIMS.gdintegrate = (root) => {
+  let k = 4, dt = 0.05;
+  root.innerHTML = `<div class="sim-ctl"><span class="grp">${rangeHtml('kk', 'stiffness k', 1, 30, k)}${rangeHtml('dtv', 'time step ms', 5, 300, 50, 5)}</span><span class="grp"><span id="leg"></span></span></div>
+    <canvas class="gsim" width="640" height="300"></canvas><div class="sim-note" id="note"></div>`;
+  const cv = $('canvas', root), g = cv.getContext('2d'), T = 10;
+  const COL = { exact: G.dim, explicit: G.pink, semi: G.amb, verlet: G.cy };
+  const sim = (kind) => {
+    let x = 1, v = 0; const out = [{ t: 0, x, e: 1 }], e0 = 0.5 * k, n = Math.min(2000, Math.ceil(T / dt));
+    for (let i = 1; i <= n; i++) {
+      if (kind === 'explicit') { const a = -k * x; x += v * dt; v += a * dt; }
+      else if (kind === 'semi') { v += -k * x * dt; x += v * dt; }
+      else { const a = -k * x; x += v * dt + 0.5 * a * dt * dt; const a2 = -k * x; v += 0.5 * (a + a2) * dt; }
+      out.push({ t: i * dt, x, e: (0.5 * v * v + 0.5 * k * x * x) / e0 });
+    }
+    return out;
+  };
+  function plot(x0, w, title, key, lo, hi, series) {
+    g.strokeStyle = G.dim; g.lineWidth = 1; g.strokeRect(x0 + .5, 20.5, w, 250);
+    g.fillStyle = G.ink; g.font = '12px JetBrains Mono, monospace'; g.fillText(title, x0, 14);
+    const Y = (v) => 270 - ((clamp(v, lo, hi) - lo) / (hi - lo)) * 250;
+    g.strokeStyle = 'rgba(255,255,255,.12)'; g.beginPath(); g.moveTo(x0, Y(key === 'e' ? 1 : 0)); g.lineTo(x0 + w, Y(key === 'e' ? 1 : 0)); g.stroke();
+    for (const [name, pts] of series) { g.strokeStyle = COL[name]; g.lineWidth = name === 'exact' ? 1 : 2; g.setLineDash(name === 'exact' ? [4, 4] : []); g.beginPath(); pts.forEach((p, i) => { const X = x0 + (p.t / T) * w, YY = Y(p[key]); i ? g.lineTo(X, YY) : g.moveTo(X, YY); }); g.stroke(); }
+    g.setLineDash([]);
+  }
+  function draw() {
+    const w = Math.sqrt(k), exact = Array.from({ length: 200 }, (_, i) => { const t = (i / 199) * T; return { t, x: Math.cos(w * t), e: 1 }; });
+    const ex = sim('explicit'), se = sim('semi'), ve = sim('verlet');
+    g.fillStyle = G.bg; g.fillRect(0, 0, 640, 300);
+    plot(10, 300, 'position over 10 s', 'x', -1.6, 1.6, [['exact', exact], ['explicit', ex], ['semi', se], ['verlet', ve]]);
+    plot(330, 300, 'energy / starting energy', 'e', 0, 3, [['explicit', ex], ['semi', se], ['verlet', ve]]);
+    $('#kkv', root).textContent = k; $('#dtvv', root).textContent = Math.round(dt * 1000);
+    $('#leg', root).innerHTML = Object.entries({ exact: 'exact', explicit: 'explicit Euler', semi: 'semi-implicit', verlet: 'Verlet' }).map(([n, l]) => `<span style="color:${COL[n]}">■ ${l}</span>`).join(' &nbsp; ');
+    const worst = (a) => Math.max(...a.map((p) => Math.abs(p.e - 1)));
+    $('#note', root).innerHTML = `<p>Worst energy error over the run: explicit <b>${(worst(ex) * 100).toFixed(0)}%</b>, semi-implicit <b>${(worst(se) * 100).toFixed(1)}%</b>, Verlet <b>${(worst(ve) * 100).toFixed(2)}%</b>. A frictionless spring should keep its energy forever.</p>`;
+  }
+  root.addEventListener('input', (e) => { if (e.target.id === 'kk') k = +e.target.value; if (e.target.id === 'dtv') dt = +e.target.value / 1000; draw(); });
+  draw(); return () => {};
+};
+
+/* =========================================================
+   Grid raycast (DDA)
+   ========================================================= */
+SIMS.gdraycast = (root) => {
+  const W = 24, H = 14, S = 26; let walls = new Set(), edit = false, ox = 2.5, oy = 7.5, tx = 20, ty = 4, moveOrigin = false, drag = null;
+  const r = rng32(5); for (let i = 0; i < 40; i++) walls.add(Math.floor(r() * W) + ',' + Math.floor(r() * H));
+  walls.delete(Math.floor(ox) + ',' + Math.floor(oy));
+  root.innerHTML = `<div class="sim-ctl"><span class="grp"><label class="chk"><input type="checkbox" id="ed"> paint walls (click cells)</label><label class="chk"><input type="checkbox" id="mo"> drag the origin instead</label><button class="btn sm" id="rnd">random walls</button><button class="btn sm ghost" id="clr">clear</button></span></div>
+    <canvas class="gsim touch" width="${W * S}" height="${H * S}"></canvas><div class="sim-note" id="out"></div>`;
+  const cv = $('canvas', root), g = cv.getContext('2d');
+  const dda = () => {
+    let dx = tx - ox, dy = ty - oy; const len = Math.hypot(dx, dy) || 1; dx /= len; dy /= len;
+    let cx = Math.floor(ox), cy = Math.floor(oy); const visited = [[cx, cy]], inf = Infinity;
+    const sx = dx > 0 ? 1 : -1, sy = dy > 0 ? 1 : -1, tdx = dx ? Math.abs(1 / dx) : inf, tdy = dy ? Math.abs(1 / dy) : inf;
+    let tmx = dx ? (dx > 0 ? cx + 1 - ox : ox - cx) * tdx : inf, tmy = dy ? (dy > 0 ? cy + 1 - oy : oy - cy) * tdy : inf, t = 0;
+    if (walls.has(cx + ',' + cy)) return { visited, hit: [cx, cy], t: 0, dx, dy };
+    for (let i = 0; i < 200; i++) {
+      if (tmx < tmy) { t = tmx; cx += sx; tmx += tdx; } else { t = tmy; cy += sy; tmy += tdy; }
+      if (cx < 0 || cy < 0 || cx >= W || cy >= H) return { visited, hit: null, t, dx, dy };
+      visited.push([cx, cy]); if (walls.has(cx + ',' + cy)) return { visited, hit: [cx, cy], t, dx, dy };
+    }
+    return { visited, hit: null, t, dx, dy };
+  };
+  function draw() {
+    g.fillStyle = G.bg; g.fillRect(0, 0, W * S, H * S);
+    const res = dda(); const vis = new Set(res.visited.map((c) => c.join(',')));
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const k = x + ',' + y; g.fillStyle = walls.has(k) ? '#3b2a63' : vis.has(k) ? 'rgba(185,140,255,.28)' : '#0d0919'; g.fillRect(x * S + 1, y * S + 1, S - 2, S - 2);
+    }
+    if (res.hit) { g.strokeStyle = G.amb; g.lineWidth = 2; g.strokeRect(res.hit[0] * S + 2, res.hit[1] * S + 2, S - 4, S - 4); }
+    const end = res.hit ? res.t : 40; g.strokeStyle = G.cy; g.lineWidth = 2; g.beginPath(); g.moveTo(ox * S, oy * S); g.lineTo((ox + res.dx * end) * S, (oy + res.dy * end) * S); g.stroke();
+    g.fillStyle = G.acc; g.beginPath(); g.arc(ox * S, oy * S, 5, 0, 6.3); g.fill();
+    $('#out', root).innerHTML = res.hit ? `<p>Hit cell <b>(${res.hit[0]}, ${res.hit[1]})</b> at distance <b>${res.t.toFixed(2)}</b> cells after visiting only <b>${res.visited.length}</b> cells. Sampling every 0.05 cells would need about <b>${Math.ceil(res.t / 0.05)}</b> lookups.</p>` : `<p>No wall in the way (the ray left the grid). The DDA visited <b>${res.visited.length}</b> cells.</p>`;
+  }
+  const cellOf = (e) => { const p = ptr(cv, e); return { x: p.x / S, y: p.y / S }; };
+  cv.addEventListener('pointerdown', (e) => { cv.setPointerCapture(e.pointerId); const c = cellOf(e); if (edit) { const k = Math.floor(c.x) + ',' + Math.floor(c.y); walls.has(k) ? walls.delete(k) : walls.add(k); } else if (moveOrigin) { drag = 'o'; ox = clamp(c.x, 0.01, W - 0.01); oy = clamp(c.y, 0.01, H - 0.01); } else { drag = 't'; tx = c.x; ty = c.y; } draw(); });
+  cv.addEventListener('pointermove', (e) => { if (!drag) return; const c = cellOf(e); if (drag === 'o') { ox = clamp(c.x, 0.01, W - 0.01); oy = clamp(c.y, 0.01, H - 0.01); } else { tx = c.x; ty = c.y; } draw(); });
+  const up = () => { drag = null; }; cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  root.addEventListener('change', (e) => { if (e.target.id === 'ed') edit = e.target.checked; if (e.target.id === 'mo') moveOrigin = e.target.checked; });
+  $('#rnd', root).onclick = () => { walls = new Set(); const q = rng32(Math.floor(Math.random() * 1e6)); for (let i = 0; i < 45; i++) walls.add(Math.floor(q() * W) + ',' + Math.floor(q() * H)); walls.delete(Math.floor(ox) + ',' + Math.floor(oy)); draw(); };
+  $('#clr', root).onclick = () => { walls = new Set(); draw(); };
+  draw(); return () => {};
+};
+
+/* =========================================================
+   Boids: separation, alignment, cohesion
+   ========================================================= */
+SIMS.gdboids = (root) => {
+  const cfg = { sep: 1.5, ali: 1.0, coh: 1.0, rad: 60 }; let raf = 0, last = performance.now(), target = null;
+  root.innerHTML = `<div class="sim-ctl"><span class="grp">${rangeHtml('sep', 'separation', 0, 3, 1.5, 0.1)}${rangeHtml('ali', 'alignment', 0, 3, 1, 0.1)}${rangeHtml('coh', 'cohesion', 0, 3, 1, 0.1)}${rangeHtml('rad', 'sight radius', 20, 140, 60, 5)}</span><span class="grp"><button class="btn sm ghost" id="rs">scatter</button></span></div>
+    <canvas class="gsim touch" width="640" height="320"></canvas><div class="sim-note"><p>Each boid only looks at neighbours inside its sight radius. Move the pointer over the canvas: boids are drawn toward it.</p></div>`;
+  const cv = $('canvas', root), g = cv.getContext('2d'), W = 640, H = 320, r = rng32(11);
+  let B = []; const scatter = () => { B = Array.from({ length: 70 }, () => { const a = r() * 6.28; return { x: r() * W, y: r() * H, vx: Math.cos(a) * 50, vy: Math.sin(a) * 50 }; }); }; scatter();
+  cv.addEventListener('pointermove', (e) => { const p = ptr(cv, e); target = p; }); cv.addEventListener('pointerleave', () => { target = null; });
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    for (const b of B) {
+      let sx = 0, sy = 0, ax = 0, ay = 0, cx = 0, cy = 0, n = 0;
+      for (const o of B) { if (o === b) continue; const dx = o.x - b.x, dy = o.y - b.y, d = Math.hypot(dx, dy); if (d < cfg.rad) { n++; ax += o.vx; ay += o.vy; cx += o.x; cy += o.y; if (d < cfg.rad * 0.4 && d > 0) { sx -= dx / d * (1 - d / (cfg.rad * 0.4)); sy -= dy / d * (1 - d / (cfg.rad * 0.4)); } } }
+      let fx = sx * cfg.sep * 120, fy = sy * cfg.sep * 120;
+      if (n) { fx += (ax / n - b.vx) * cfg.ali * 1.5 + (cx / n - b.x) * cfg.coh * 0.8; fy += (ay / n - b.vy) * cfg.ali * 1.5 + (cy / n - b.y) * cfg.coh * 0.8; }
+      if (target) { fx += (target.x - b.x) * 0.5; fy += (target.y - b.y) * 0.5; }
+      b.vx += fx * dt; b.vy += fy * dt; const sp = Math.hypot(b.vx, b.vy) || 1, cl = clamp(sp, 40, 90); b.vx = b.vx / sp * cl; b.vy = b.vy / sp * cl;
+    }
+    g.fillStyle = G.bg; g.fillRect(0, 0, W, H);
+    for (const b of B) {
+      b.x = (b.x + b.vx * dt + W) % W; b.y = (b.y + b.vy * dt + H) % H;
+      const a = Math.atan2(b.vy, b.vx); g.save(); g.translate(b.x, b.y); g.rotate(a); g.fillStyle = G.acc; g.beginPath(); g.moveTo(7, 0); g.lineTo(-5, 4); g.lineTo(-5, -4); g.closePath(); g.fill(); g.restore();
+    }
+    if (target) { g.strokeStyle = G.amb; g.beginPath(); g.arc(target.x, target.y, 8, 0, 6.3); g.stroke(); }
+    raf = requestAnimationFrame(frame);
+  }
+  raf = requestAnimationFrame(frame);
+  root.addEventListener('input', (e) => { const k = e.target.id; if (k in cfg) { cfg[k] = +e.target.value; $('#' + k + 'v', root).textContent = cfg[k]; } });
+  $('#rs', root).onclick = scatter;
+  return () => cancelAnimationFrame(raf);
+};
+
+/* =========================================================
+   Value noise and fractal noise (octaves)
+   ========================================================= */
+const hash2 = (x, y, s) => { let h = Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ Math.imul(s, 2147483647); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+const smooth = (t) => t * t * (3 - 2 * t);
+const vnoise = (x, y, s) => { const xi = Math.floor(x), yi = Math.floor(y), fx = smooth(x - xi), fy = smooth(y - yi); const a = hash2(xi, yi, s), b = hash2(xi + 1, yi, s), c = hash2(xi, yi + 1, s), d = hash2(xi + 1, yi + 1, s); return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy; };
+SIMS.gdnoise = (root) => {
+  const cfg = { scale: 6, oct: 4, pers: 50, seed: 3, bands: true, warp: false };
+  root.innerHTML = `<div class="sim-ctl"><span class="grp">${rangeHtml('scale', 'frequency', 1, 20, 6)}${rangeHtml('oct', 'octaves', 1, 6, 4)}${rangeHtml('pers', 'persistence %', 20, 80, 50, 5)}${rangeHtml('seed', 'seed', 1, 50, 3)}</span><span class="grp"><label class="chk"><input type="checkbox" id="bands" checked> terrain colours</label><label class="chk"><input type="checkbox" id="warp"> domain warp</label></span></div>
+    <canvas class="gsim px" width="160" height="100" style="width:100%"></canvas><div class="sim-note"><p>One octave of value noise is smooth blobs. Each extra octave doubles the frequency and shrinks the amplitude, adding finer detail. Persistence is how fast the amplitude shrinks.</p></div>`;
+  const cv = $('canvas', root), g = cv.getContext('2d');
+  const PAL = [[0, [20, 40, 110]], [0.38, [30, 80, 170]], [0.45, [220, 200, 140]], [0.5, [60, 150, 70]], [0.68, [40, 100, 50]], [0.78, [120, 110, 100]], [0.9, [235, 235, 240]]];
+  function draw() {
+    const img = g.createImageData(160, 100), p = cfg.pers / 100;
+    for (let y = 0; y < 100; y++) for (let x = 0; x < 160; x++) {
+      let u = (x / 160) * cfg.scale, v = (y / 100) * cfg.scale * 0.625;
+      if (cfg.warp) { const wx = vnoise(u * 0.7 + 17, v * 0.7, cfg.seed + 99), wy = vnoise(u * 0.7, v * 0.7 + 31, cfg.seed + 7); u += (wx - 0.5) * 2; v += (wy - 0.5) * 2; }
+      let amp = 1, f = 1, sum = 0, norm = 0; for (let o = 0; o < cfg.oct; o++) { sum += vnoise(u * f, v * f, cfg.seed + o) * amp; norm += amp; amp *= p; f *= 2; }
+      const n = sum / norm; let c;
+      if (!cfg.bands) { const gv = Math.round(n * 255); c = [gv, gv, gv]; } else { c = PAL[0][1]; for (const [t, col] of PAL) if (n >= t) c = col; }
+      img.data.set([...c, 255], (y * 160 + x) * 4);
+    }
+    g.putImageData(img, 0, 0); for (const k of ['scale', 'oct', 'pers', 'seed']) $('#' + k + 'v', root).textContent = cfg[k];
+  }
+  root.addEventListener('input', (e) => { const k = e.target.id; if (['scale', 'oct', 'pers', 'seed'].includes(k)) { cfg[k] = +e.target.value; draw(); } });
+  root.addEventListener('change', (e) => { if (e.target.id === 'bands') cfg.bands = e.target.checked; if (e.target.id === 'warp') cfg.warp = e.target.checked; draw(); });
+  draw(); return () => {};
+};
+
+/* =========================================================
+   Transform hierarchy: order of operations and shear
+   ========================================================= */
+SIMS.gdtransform = (root) => {
+  const cfg = { a1: 35, a2: -40, a3: 25, sx: 1, order: 'trs' };
+  root.innerHTML = `<div class="sim-ctl"><span class="grp">${rangeHtml('a1', 'shoulder °', -180, 180, 35)}${rangeHtml('a2', 'elbow °', -180, 180, -40)}${rangeHtml('a3', 'wrist °', -180, 180, 25)}</span><span class="grp">${rangeHtml('sx', 'parent x-scale', 0.4, 2.5, 1, 0.1)}<b>Order</b><select id="order"><option value="trs">translate · rotate · scale (correct)</option><option value="rts">rotate · translate · scale (wrong)</option></select></span></div>
+    <canvas class="gsim" width="640" height="300"></canvas><div class="sim-note" id="note"></div>`;
+  const cv = $('canvas', root), g = cv.getContext('2d');
+  const I = [1, 0, 0, 1, 0, 0], mul = (p, c) => [p[0] * c[0] + p[2] * c[1], p[1] * c[0] + p[3] * c[1], p[0] * c[2] + p[2] * c[3], p[1] * c[2] + p[3] * c[3], p[0] * c[4] + p[2] * c[5] + p[4], p[1] * c[4] + p[3] * c[5] + p[5]];
+  const T = (x, y) => [1, 0, 0, 1, x, y], R = (d) => { const a = d * Math.PI / 180, c = Math.cos(a), s = Math.sin(a); return [c, s, -s, c, 0, 0]; }, Sc = (x, y) => [x, 0, 0, y, 0, 0];
+  const ap = (m, x, y) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
+  function draw() {
+    g.fillStyle = G.bg; g.fillRect(0, 0, 640, 300);
+    const L = 90, node = (parent, angle, off, sc) => cfg.order === 'trs' ? mul(parent, mul(T(off, 0), mul(R(angle), sc))) : mul(parent, mul(R(angle), mul(T(off, 0), sc)));
+    const root0 = mul(T(120, 150), Sc(cfg.sx, 1)), m1 = node(root0, cfg.a1, 0, I), m2 = node(m1, cfg.a2, L, I), m3 = node(m2, cfg.a3, L, I);
+    const pts = [[0, 0], [L, 0]].map((p) => ap(m1, ...p)), pts2 = [[0, 0], [L, 0]].map((p) => ap(m2, ...p)), pts3 = [[0, 0], [60, 0]].map((p) => ap(m3, ...p));
+    const seg = (a, col, w) => { g.strokeStyle = col; g.lineWidth = w; g.beginPath(); g.moveTo(...a[0]); g.lineTo(...a[1]); g.stroke(); };
+    const axes = (m) => { const o = ap(m, 0, 0), x = ap(m, 24, 0), y = ap(m, 0, 24); g.lineWidth = 2; g.strokeStyle = G.pink; g.beginPath(); g.moveTo(...o); g.lineTo(...x); g.stroke(); g.strokeStyle = G.cy; g.beginPath(); g.moveTo(...o); g.lineTo(...y); g.stroke(); };
+    seg(pts, G.acc, 8); seg(pts2, G.amb, 6); seg(pts3, G.ink, 4); axes(m1); axes(m2); axes(m3);
+    g.fillStyle = G.ink; for (const p of [pts[0], pts2[0], pts3[0], pts3[1]]) g.fillRect(p[0] - 3, p[1] - 3, 6, 6);
+    const hand = pts3[1], det = (m) => m[0] * m[3] - m[1] * m[2], skew = Math.abs(m3[0] * m3[2] + m3[1] * m3[3]) / (Math.hypot(m3[0], m3[1]) * Math.hypot(m3[2], m3[3]) || 1);
+    $('#note', root).innerHTML = `<p>Hand position in the world: <b>(${hand[0].toFixed(0)}, ${hand[1].toFixed(0)})</b>. Magenta is each node's x axis, cyan its y axis. ${skew > 0.05 ? `<span style="color:${G.amb}">The axes of the last node are no longer perpendicular (shear): a non-uniform scale on a rotated child.</span>` : 'All axes are perpendicular.'}</p>`;
+    for (const k of ['a1', 'a2', 'a3', 'sx']) $('#' + k + 'v', root).textContent = cfg[k];
+  }
+  root.addEventListener('input', (e) => { const k = e.target.id; if (k in cfg && k !== 'order') { cfg[k] = +e.target.value; draw(); } });
+  root.addEventListener('change', (e) => { if (e.target.id === 'order') { cfg.order = e.target.value; draw(); } });
+  draw(); return () => {};
+};
+
+/* =========================================================
+   Event queue: producer, consumer, a full buffer and the policy for it
+   ========================================================= */
+SIMS.gdqueue = (root) => {
+  const cfg = { cap: 8, prod: 6, cons: 4, policy: 'drop-new' }; let q = [], dropped = 0, handled = 0, made = 0, acc1 = 0, acc2 = 0, last = performance.now(), raf = 0, burst = 0;
+  root.innerHTML = `<div class="sim-ctl"><span class="grp">${rangeHtml('cap', 'capacity', 2, 20, 8)}${rangeHtml('prod', 'events produced /s', 1, 20, 6)}${rangeHtml('cons', 'handled /s', 1, 20, 4)}</span><span class="grp"><b>When full</b><select id="policy"><option value="drop-new">drop the new event</option><option value="drop-old">drop the oldest</option></select><button class="btn sm" id="burst">burst ×10</button><button class="btn sm ghost" id="rs">reset</button></span></div>
+    <canvas class="gsim" width="640" height="130"></canvas><div class="sim-note" id="note"></div>`;
+  const cv = $('canvas', root), g = cv.getContext('2d');
+  const push = () => { made++; if (q.length >= cfg.cap) { dropped++; if (cfg.policy === 'drop-old') { q.shift(); q.push(made); } } else q.push(made); };
+  function frame(now) {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now; acc1 += dt * cfg.prod; acc2 += dt * cfg.cons;
+    while (acc1 >= 1) { acc1 -= 1; push(); } while (burst > 0) { burst--; push(); } while (acc2 >= 1) { acc2 -= 1; if (q.length) { q.shift(); handled++; } }
+    g.fillStyle = G.bg; g.fillRect(0, 0, 640, 130);
+    const w = Math.min(60, 600 / cfg.cap);
+    for (let i = 0; i < cfg.cap; i++) { const x = 20 + i * w; g.strokeStyle = G.dim; g.strokeRect(x + .5, 30.5, w - 6, 50); if (i < q.length) { g.fillStyle = G.acc; g.fillRect(x + 3, 33, w - 12, 44); g.fillStyle = '#07040d'; g.font = '11px JetBrains Mono, monospace'; g.fillText(q[i], x + 5, 60); } }
+    g.fillStyle = G.dim; g.font = '12px JetBrains Mono, monospace'; g.fillText('oldest ←', 20, 100); g.fillText('→ newest', 20 + (cfg.cap - 1) * w - 10, 100);
+    $('#note', root).innerHTML = `<p>produced <b>${made}</b> · handled <b>${handled}</b> · waiting <b>${q.length}</b> · <span style="color:${dropped ? G.pink : G.ink}">dropped <b>${dropped}</b></span>. If events arrive faster than they are handled, no capacity is big enough: decide what is allowed to be lost.</p>`;
+    for (const k of ['cap', 'prod', 'cons']) $('#' + k + 'v', root).textContent = cfg[k];
+    raf = requestAnimationFrame(frame);
+  }
+  raf = requestAnimationFrame(frame);
+  root.addEventListener('input', (e) => { const k = e.target.id; if (k in cfg && k !== 'policy') { cfg[k] = +e.target.value; if (k === 'cap') q = q.slice(-cfg.cap); } });
+  root.addEventListener('change', (e) => { if (e.target.id === 'policy') cfg.policy = e.target.value; });
+  $('#burst', root).onclick = () => { burst += 10; }; $('#rs', root).onclick = () => { q = []; dropped = handled = made = 0; };
+  return () => cancelAnimationFrame(raf);
+};
+
+/* =========================================================
+   Netcode: prediction, reconciliation and interpolation
+   ========================================================= */
+SIMS.gdnet = (root) => {
+  const cfg = { rtt: 160, jit: 30, loss: 5, rate: 15, delay: 100, predict: true, interp: true }; let raf = 0, last = performance.now(), tick = 0, acc = 0, auto = true, dir = 0;
+  root.innerHTML = `<div class="sim-ctl"><span class="grp">${rangeHtml('rtt', 'round trip ms', 20, 400, 160, 10)}${rangeHtml('jit', 'jitter ms', 0, 100, 30, 5)}${rangeHtml('loss', 'packet loss %', 0, 30, 5)}</span><span class="grp">${rangeHtml('rate', 'snapshots /s', 5, 30, 15)}${rangeHtml('delay', 'interpolation delay ms', 0, 300, 100, 10)}</span>
+    <span class="grp"><label class="chk"><input type="checkbox" id="predict" checked> client prediction</label><label class="chk"><input type="checkbox" id="interp" checked> interpolate others</label><button class="btn sm" id="kick">server pushes me (+60)</button></span></div>
+    <canvas class="gsim" width="640" height="260"></canvas><div class="sim-note"><p>Row 1 is you. Grey is the server's truth, the coloured box is what you see. Row 2 is another player as you see them. Everything moves on its own back and forth; use <b>server pushes me</b> to create a misprediction and watch the correction.</p></div>`;
+  const cv = $('canvas', root), g = cv.getContext('2d'), DT = 1 / 60, SPEED = 2.2, LO = 20, HI = 600;
+  let serverX = 100, serverSeq = 0, clientX = 100, seq = 0, pending = [], toServer = [], toClient = [], remoteX = 100, remoteDir = 1, snaps = [], shown = 100, simT = 0, naiveX = 100, err = 0;
+  const rnd = rng32(9), lat = () => Math.max(0, cfg.rtt / 2 + (rnd() - 0.5) * 2 * cfg.jit) / 1000;
+  const input = () => (auto ? (Math.floor(simT / 1.6) % 2 ? -1 : 1) : dir);
+  function step() {
+    simT += DT; const d = input();
+    // client: send input, predict
+    seq++; const inp = { seq, d }; if (rnd() * 100 >= cfg.loss) toServer.push({ at: simT + lat(), inp }); pending.push(inp);
+    if (cfg.predict) { clientX = clamp(clientX + d * SPEED, LO, HI); }
+    // server: process arrived inputs in order
+    toServer.sort((a, b) => a.at - b.at); while (toServer.length && toServer[0].at <= simT) { const m = toServer.shift(); serverX = clamp(serverX + m.inp.d * SPEED, LO, HI); serverSeq = Math.max(serverSeq, m.inp.seq); }
+    // remote player moves on the server and snapshots are sent at the snapshot rate
+    remoteX += remoteDir * 1.6; if (remoteX > HI || remoteX < LO) { remoteDir *= -1; remoteX = clamp(remoteX, LO, HI); }
+    tick++; if (tick % Math.max(1, Math.round(60 / cfg.rate)) === 0 && rnd() * 100 >= cfg.loss) toClient.push({ at: simT + lat(), t: simT, me: serverX, ack: serverSeq, other: remoteX });
+    toClient.sort((a, b) => a.at - b.at);
+    while (toClient.length && toClient[0].at <= simT) {
+      const s = toClient.shift(); snaps.push({ t: s.t, x: s.other }); if (snaps.length > 60) snaps.shift(); naiveX = s.me;
+      pending = pending.filter((p) => p.seq > s.ack);
+      if (cfg.predict) { let x = s.me; for (const p of pending) x = clamp(x + p.d * SPEED, LO, HI); err = x - clientX; clientX = x; }
+    }
+    // what is drawn for the remote player
+    if (cfg.interp) { const rt = simT - cfg.delay / 1000 - cfg.rtt / 2000; let a = null, b = null; for (const s of snaps) { if (s.t <= rt) a = s; else { b = s; break; } } shown = a && b ? a.x + (b.x - a.x) * ((rt - a.t) / (b.t - a.t || 1)) : (a ? a.x : (snaps[0] ? snaps[0].x : shown)); }
+    else if (snaps.length) shown = snaps[snaps.length - 1].x;
+  }
+  function frame(now) {
+    acc += Math.min(0.1, (now - last) / 1000); last = now; while (acc >= DT) { acc -= DT; step(); }
+    g.fillStyle = G.bg; g.fillRect(0, 0, 640, 260);
+    g.fillStyle = G.dim; g.font = '12px JetBrains Mono, monospace'; g.fillText('you', 8, 18); g.fillText('another player, as you see them', 8, 148);
+    g.strokeStyle = 'rgba(255,255,255,.2)'; g.strokeRect(LO - 8.5, 28.5, HI - LO + 17, 90); g.strokeRect(LO - 8.5, 158.5, HI - LO + 17, 90);
+    g.fillStyle = 'rgba(150,150,170,.55)'; g.fillRect(serverX - 12, 62, 24, 24);
+    const mine = cfg.predict ? clientX : naiveX; g.fillStyle = cfg.predict ? G.cy : G.pink; g.fillRect(mine - 10, 66, 20, 20);
+    if (cfg.predict && Math.abs(err) > 0.5) { g.fillStyle = G.amb; g.fillText('correction ' + err.toFixed(0) + ' px', mine + 16, 56); err *= 0.97; }
+    g.fillStyle = G.dim; g.fillRect(shown - 12, 190, 24, 24); g.fillStyle = cfg.interp ? G.acc : G.amb; g.fillRect(shown - 10, 192, 20, 20);
+    for (const s of snaps.slice(-12)) { g.fillStyle = 'rgba(185,140,255,.5)'; g.fillRect(s.x - 2, 226, 4, 10); }
+    raf = requestAnimationFrame(frame);
+  }
+  raf = requestAnimationFrame(frame);
+  root.addEventListener('input', (e) => { const k = e.target.id; if (k in cfg && typeof cfg[k] === 'number') { cfg[k] = +e.target.value; $('#' + k + 'v', root).textContent = cfg[k]; } });
+  root.addEventListener('change', (e) => { if (e.target.id === 'predict') { cfg.predict = e.target.checked; clientX = serverX; pending = []; } if (e.target.id === 'interp') cfg.interp = e.target.checked; });
+  $('#kick', root).onclick = () => { toClient.length = 0; serverX = clamp(serverX + 60, LO, HI); };
   return () => cancelAnimationFrame(raf);
 };
 })();

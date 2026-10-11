@@ -59,10 +59,16 @@ const P = {
   gdmath: '<line x1="3" y1="21" x2="21" y2="3"/><polyline points="14 3 21 3 21 10"/><line x1="3" y1="3" x2="3" y2="21"/><line x1="3" y1="21" x2="21" y2="21"/>',
   gddesign: '<rect x="2" y="7" width="20" height="12"/><path d="M7 11v4M5 13h4M16 12h.01M18 14h.01"/>',
   gdcraft: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+  gdpatterns: '<rect x="3" y="3" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/><path d="M11 7h4a2 2 0 0 1 2 2v4"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/>',
+  gdphysics: '<circle cx="12" cy="12" r="2"/><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/>',
+  gdgfx: '<rect x="3" y="3" width="18" height="18"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>',
+  gdai: '<rect x="5" y="5" width="14" height="14"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>',
+  gdnet: '<circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M12 7v5M12 12l-6 5M12 12l6 5"/>',
+  gdprod: '<polyline points="3 7 12 2 21 7 21 17 12 22 3 17 3 7"/><polyline points="3 7 12 12 21 7"/><line x1="12" y1="12" x2="12" y2="22"/>',
   gdpixel: '<rect x="3" y="3" width="6" height="6"/><rect x="15" y="3" width="6" height="6"/><rect x="9" y="9" width="6" height="6"/><rect x="3" y="15" width="6" height="6"/><rect x="15" y="15" width="6" height="6"/>',
 };
 const ic = (n, s = 18, sw = 1.8) => `<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">${P[n] || ''}</svg>`;
-const HUE = { playbook: 255, coding: 190, patterns: 165, design: 150, data: 200, fullstack: 100, reliability: 28, ai: 320, openbanking: 44, cloud: 215, gdloop: 140, gdmath: 195, gddesign: 280, gdcraft: 35, gdpixel: 330 };
+const HUE = { playbook: 255, coding: 190, patterns: 165, design: 150, data: 200, fullstack: 100, reliability: 28, ai: 320, openbanking: 44, cloud: 215, gdloop: 140, gdmath: 195, gddesign: 280, gdcraft: 35, gdpixel: 330, gdpatterns: 170, gdphysics: 15, gdgfx: 300, gdai: 55, gdnet: 205, gdprod: 85 };
 const hueOf = (id) => HUE[id] ?? ([...String(id)].reduce((a, c) => a + c.charCodeAt(0), 0) % 360);
 const trackOf = (lessonId) => TRACKS.find((t) => t.lessons.some((l) => l.id === lessonId));
 const ring = (pct, size = 46) => `<span class="pct ${size >= 48 ? 'lg' : ''}" style="--p:${pct}"><b>${pct}%</b><i></i></span>`;
@@ -187,10 +193,10 @@ function viewHome() {
       ${GAME ? `<span class="eyebrow"><span class="p">$</span> ./gamedev <b>--mode=build-things</b></span>
       <h1>Learn to make games, <span class="grad">one pixel at a time.</span><span class="cur"></span></h1>` : `<span class="eyebrow"><span class="p">$</span> ./senior-prep <b>--mode=ai-era</b></span>
       <h1>Practice like it's the <span class="grad">real interview.</span><span class="cur"></span></h1>`}
-      ${GAME ? `<p class="lead">${TRACKS.length} tracks on game loops, game math, design theory, craft and pixel art, with ${exTotal} Zig and C++ drills, ${bugTotal} bug hunts and ${simTotal} interactive simulations you can poke at, plus flashcards and a pixel editor. Examples lean on Godot and GDScript, the ideas apply to any engine.</p>` : `<p class="lead">${TRACKS.length} tracks with ${exTotal} runnable coding challenges (Python and SQL), ${bugTotal} bug hunts and ${simTotal} interactive simulations, plus flashcards and mock interviews. From system design and Kafka to AWS, Terraform and a dedicated open-banking track for Neonomics. Every lesson works as text, as practice, or both.</p>`}
+      ${GAME ? `<p class="lead">${TRACKS.length} tracks, from the game loop and game math through programming patterns, physics, graphics, AI and networking to design, procedural generation and pixel art. ${exTotal} Zig and C++ drills you compile yourself, ${simTotal} interactive simulations, ${bugTotal} bug hunts and a pixel editor. Examples lean on Godot, Zig and C++; the ideas apply to any engine.</p>` : `<p class="lead">${TRACKS.length} tracks with ${exTotal} runnable coding challenges (Python and SQL), ${bugTotal} bug hunts and ${simTotal} interactive simulations, plus flashcards and mock interviews. From system design and Kafka to AWS, Terraform and a dedicated open-banking track for Neonomics. Every lesson works as text, as practice, or both.</p>`}
       <div class="cta">
         <a class="btn primary" href="#/lesson/${(nx ? nx.l : TRACKS[0].lessons[0]).id}">${ic('play', 16)} ${nx && (nx.resume || nx.started) ? 'Continue learning' : 'Start learning'}</a>
-        <a class="btn" href="#/plan">${ic('target', 16)} Today's plan</a>
+        ${GAME ? '' : `<a class="btn" href="#/plan">${ic('target', 16)} Today's plan</a>`}
         <a class="btn" href="#/review">${ic('cards', 16)} ${due} cards due</a>
       </div></div>
       <div class="hero-r" aria-hidden="true"><div class="pv brk">
@@ -235,8 +241,8 @@ function viewHome() {
     <div class="sec-h"><h2>Toolkit</h2></div>
     <div class="tools">
       <a class="tool" href="#/review"><span class="si">${ic('cards', 22)}</span><div><b>Flashcards</b><span>${CARDS.length} cards · spaced repetition</span></div></a>
-      <a class="tool" href="#/mock"><span class="si">${ic('mic', 22)}</span><div><b>Mock interview</b><span>${MOCK.length} questions · timer · rubric</span></div></a>
-      ${window.FEEDBACK && FEEDBACK.enabled() ? `<a class="tool" href="#/mock/ai"><span class="si">${ic('chat', 22)}</span><div><b>AI interviewer</b><span>follow-ups, then graded</span></div></a>` : ''}
+      ${GAME ? '' : `<a class="tool" href="#/mock"><span class="si">${ic('mic', 22)}</span><div><b>Mock interview</b><span>${MOCK.length} questions · timer · rubric</span></div></a>`}
+      ${window.FEEDBACK && FEEDBACK.enabled() && !GAME ? `<a class="tool" href="#/mock/ai"><span class="si">${ic('chat', 22)}</span><div><b>AI interviewer</b><span>follow-ups, then graded</span></div></a>` : ''}
       <a class="tool" href="#/resources"><span class="si">${ic('link', 22)}</span><div><b>Free resources</b><span>${RES.length} hand-picked links</span></div></a>
       <button type="button" class="tool" id="swMode"><span class="si">${ic(GAME ? 'home' : 'gdpixel', 22)}</span><div><b>${GAME ? 'Back to interview prep' : 'Game dev section'}</b><span>${GAME ? 'switch sections' : 'theory, pixel art, Zig and C++ drills'}</span></div></button>
     </div>`;

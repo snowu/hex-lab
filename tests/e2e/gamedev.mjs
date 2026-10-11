@@ -10,22 +10,28 @@ export default async function ({ url, browser, ok, section }) {
   ok(s.mode === 'interview' && !s.game, 'default is the interview section with no game dev tracks');
   ok(await page.locator('#swMode').count() === 1 && (await page.locator('#modeBtn').count()) === 1, 'home has a game dev tile and the header has the switch');
   await page.locator('#modeBtn').click(); await page.waitForTimeout(700);
-  s = await page.evaluate(() => ({ mode: window.MODE, tracks: TRACKS.map((t) => t.id), cards: CARDS.every((c) => c.domain === 'gamedev') && CARDS.length > 40, mock: MOCK.every((m) => m.domain === 'gamedev') && MOCK.length >= 10, res: RESOURCES.every((r) => r.domain === 'gamedev') && RESOURCES.length >= 20, theme: document.documentElement.dataset.mode, title: document.title, brand: document.querySelector('.brand-t').textContent }));
-  ok(s.mode === 'gamedev' && s.tracks.join() === 'gdloop,gdmath,gddesign,gdcraft,gdpixel', 'the switch shows only the five game dev tracks ' + s.tracks.join());
-  ok(s.cards && s.mock && s.res, 'cards, mock questions and links are filtered too');
+  s = await page.evaluate(() => ({ mode: window.MODE, tracks: TRACKS.map((t) => t.id), cards: CARDS.every((c) => c.domain === 'gamedev') && CARDS.length > 40, mock: MOCK.length === 0, res: RESOURCES.every((r) => r.domain === 'gamedev') && RESOURCES.length >= 20, theme: document.documentElement.dataset.mode, title: document.title, brand: document.querySelector('.brand-t').textContent }));
+  ok(s.mode === 'gamedev' && s.tracks.join() === 'gdloop,gdmath,gdpatterns,gdphysics,gddesign,gdgfx,gdai,gdnet,gdcraft,gdprod,gdpixel', 'the switch shows only the eleven game dev tracks ' + s.tracks.join());
+  ok(s.cards && s.mock && s.res, 'cards and links are filtered, and there are no mock interview questions in this section');
   ok(s.theme === 'gamedev' && s.brand.startsWith('gamedev') && s.title === 'Game Dev Lab', 'branding and theme attribute change');
   const accent = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim());
   ok(accent === '#b98cff', 'dark theme uses the violet accent (' + accent + ')');
   const nav = await page.evaluate(() => [...document.querySelectorAll('.top nav a')].map((a) => a.textContent.trim()));
-  ok(nav.join(' ') === 'learn plan cards mock links', 'nav drops design, katas and stories: ' + nav.join(' '));
-  await page.go(url, '#/katas', 300); ok(await page.evaluate(() => location.hash) === '#/', 'interview-only pages redirect home in this section');
+  ok(nav.join(' ') === 'learn cards links', 'nav is only learn, cards and links (no plan, mock, design, katas or stories): ' + nav.join(' '));
+  for (const r of ['#/katas', '#/mock', '#/plan', '#/design', '#/stories']) { await page.go(url, r, 250); if (await page.evaluate(() => location.hash) !== '#/') ok(false, r + ' should redirect home'); }
+  ok(true, 'interview-only pages (katas, mock, plan, design, stories) redirect home in this section');
+  const tiles = await page.locator('.tools').innerText(); ok(!/Mock interview|AI interviewer/i.test(tiles) && !/Today's plan/.test(await page.locator('.cta').innerText()), 'the home page has no mock interview, AI interviewer or plan entries');
   const h1 = await page.locator('h1').first().innerText();
   ok(/Learn to make games/.test(h1), 'game dev hero copy: ' + h1.replace(/\n/g, ' '));
   ok(/Zig and C\+\+ drills/.test(await page.locator('.lead').first().innerText()), 'the hero counts drills');
 
+  await page.go(url, '#/', 300);
+  const blank = await page.evaluate(() => [...document.querySelectorAll('.tcard .ticon')].filter((e) => !e.querySelector('svg') || e.querySelector('svg').innerHTML.trim().length < 10).length);
+  ok(blank === 0, 'every track card on the home page has an icon (' + blank + ' blank)');
+
   section('every route and lesson renders');
   const ids = await page.evaluate(() => ({ tracks: TRACKS.map((t) => t.id), lessons: TRACKS.flatMap((t) => t.lessons.map((l) => l.id)) }));
-  const routes = ['#/', '#/plan', '#/review', '#/mock', '#/resources', ...ids.tracks.map((i) => '#/track/' + i), ...ids.lessons.map((i) => '#/lesson/' + i)];
+  const routes = ['#/', '#/review', '#/resources', ...ids.tracks.map((i) => '#/track/' + i), ...ids.lessons.map((i) => '#/lesson/' + i)];
   const thin = [];
   for (const r of routes) { await page.go(url, r, 150); if ((await page.evaluate(() => document.querySelector('#app').innerText.length)) < 100) thin.push(r); }
   ok(thin.length === 0, `${routes.length} routes render` + (thin.length ? ' (thin: ' + thin.join(', ') + ')' : ''));
@@ -40,7 +46,7 @@ export default async function ({ url, browser, ok, section }) {
 
   section('simulations');
   const sims = await page.evaluate(() => TRACKS.flatMap((t) => t.lessons.flatMap((l) => l.sections.filter((x) => x.type === 'sim').map((x) => ({ l: l.id, id: x.id })))));
-  ok(sims.length === 9, 'nine game simulations: ' + sims.map((x) => x.id).join(' '));
+  ok(sims.length === 16, 'sixteen game simulations: ' + sims.map((x) => x.id).join(' '));
   for (const sm of sims) {
     await page.go(url, '#/lesson/' + sm.l, 250);
     const info = await page.evaluate((id) => { const box = [...document.querySelectorAll('.simroot')].find((r) => r.closest('.sec') && r.innerHTML.length > 50); return { n: document.querySelectorAll('.simroot').length, html: box ? box.innerHTML.length : 0, canvas: !!document.querySelector('.simroot canvas') }; }, sm.id);
@@ -63,6 +69,21 @@ export default async function ({ url, browser, ok, section }) {
   for (let i = 0; i < 4; i++) await page.locator('#step').first().click();
   const caveAfter = await page.locator('#stat').first().innerText();
   ok(caveBefore !== caveAfter && /4 smoothing steps/.test(caveAfter), 'cave smoothing steps run: ' + caveAfter.slice(0, 60));
+
+  await page.go(url, '#/lesson/phy-integration', 350);
+  const worst = await page.locator('#note').first().innerText();
+  ok(/explicit \d+%/.test(worst) && /semi-implicit [\d.]+%/.test(worst), 'the integrator sim reports energy errors: ' + worst.slice(0, 80));
+  await page.go(url, '#/lesson/phy-queries', 350);
+  const rayInfo = await page.locator('#out').first().innerText(); ok(/cells/.test(rayInfo), 'the raycast sim reports the DDA result: ' + rayInfo.slice(0, 70));
+  await page.go(url, '#/lesson/pat-observer', 350);
+  await page.locator('#burst').first().click(); await page.waitForTimeout(250);
+  ok(/produced \d+/.test(await page.locator('#note').first().innerText()), 'the event queue sim shows its counters');
+  await page.go(url, '#/lesson/gfx-transforms', 350);
+  await page.locator('#sx').first().fill('2.2'); await page.locator('#sx').first().dispatchEvent('input'); await page.locator('#a2').first().fill('70'); await page.locator('#a2').first().dispatchEvent('input'); await page.waitForTimeout(100);
+  ok(/shear/.test(await page.locator('#note').first().innerText()), 'a non-uniform parent scale with a rotated child is reported as shear');
+  await page.go(url, '#/lesson/gd-noise', 350);
+  const n0 = await page.locator('canvas').first().evaluate((c) => c.toDataURL()); await page.locator('#oct').first().fill('1'); await page.locator('#oct').first().dispatchEvent('input'); await page.waitForTimeout(100);
+  ok(n0 !== await page.locator('canvas').first().evaluate((c) => c.toDataURL()), 'changing octaves changes the noise image');
 
   section('pixel editor');
   await page.evaluate(() => localStorage.removeItem('sil:pxart'));
@@ -121,7 +142,7 @@ export default async function ({ url, browser, ok, section }) {
   section('mobile layout');
   await page.setViewportSize({ width: 390, height: 800 });
   const wide = [];
-  for (const r of ['#/', '#/track/gdpixel', '#/lesson/px-basics', '#/lesson/px-color', '#/lesson/px-shading', '#/lesson/px-anim', '#/lesson/gd-loop', '#/lesson/gd-collision', '#/lesson/gd-smoothing', '#/lesson/gd-juice', '#/lesson/gd-procgen', '#/lesson/gd-zig', '#/lesson/gd-cpp']) {
+  for (const r of ['#/', '#/track/gdpixel', '#/track/gdpatterns', '#/lesson/px-basics', '#/lesson/px-color', '#/lesson/px-shading', '#/lesson/px-anim', '#/lesson/gd-loop', '#/lesson/gd-collision', '#/lesson/gd-smoothing', '#/lesson/gd-juice', '#/lesson/gd-procgen', '#/lesson/gd-noise', '#/lesson/gd-zig', '#/lesson/gd-cpp', '#/lesson/pat-observer', '#/lesson/pat-spatial', '#/lesson/phy-integration', '#/lesson/phy-queries', '#/lesson/gfx-transforms', '#/lesson/ai-perception', '#/lesson/net-prediction', '#/lesson/net-lockstep', '#/lesson/prod-testing']) {
     await page.go(url, r, 350);
     const w = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, vw: innerWidth }));
     if (w.sw > w.vw + 1) wide.push(r + ' ' + w.sw);
