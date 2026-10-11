@@ -437,7 +437,7 @@ function rCode(el, s, l, idx, sync, hue, disposers) {
     ta.addEventListener('input', () => store.set(dk, ta.value)); get = () => ta.value; set = (v) => { ta.value = v; store.set(dk, v); };
   }
   const out = $('.out', el), runBtn = $('.run', el);
-  if (window.FEEDBACK) FEEDBACK.mount($('.fbk-slot', el), { kind: isSql ? 'sql' : 'code', prompt: strip(s.prompt), getAnswer: () => get() });
+  if (window.FEEDBACK) FEEDBACK.mount($('.fbk-slot', el), { kind: isSql ? 'sql' : 'code', prompt: s.feedbackPrompt || strip(s.prompt) || s.title, getAnswer: () => get() });
   async function run() {
     runBtn.disabled = true; out.innerHTML = PY.isReady ? '<div class="sumbar"><b>Running…</b></div>' : LOADING;
     const r = isSql

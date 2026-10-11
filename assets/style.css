@@ -781,3 +781,4 @@ input[type=checkbox],input[type=radio],input[type=range]{accent-color:var(--acce
 /* thin, dark scrollbars everywhere (the default chunky ones looked out of place and appeared on decorated cards) */
 *{scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
 ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:var(--line2)}::-webkit-scrollbar-track{background:transparent}
+.kd-body blockquote{margin:10px 0;padding:8px 12px;border-left:3px solid var(--amber);background:var(--panel2);color:var(--ink)}

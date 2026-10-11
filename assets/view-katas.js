@@ -27,6 +27,8 @@
   }
   function md(src) {
     /* reference-style links: "[text][label]" / "[text][]" with "[label]: https://…" definitions elsewhere in the text */
+    /* Exercism's own callout syntax: ~~~~exercism/caution ... ~~~~ (also note, important, advanced) */
+    src = String(src).replace(/~~~~exercism\/(\w+)\s+([\s\S]*?)\s*~~~~/g, (_, kind, body) => `\n> **${kind[0].toUpperCase() + kind.slice(1)}:** ${body.replace(/\s*\n\s*/g, ' ')}\n`);
     const refs = {};
     src = String(src).replace(/^\[([^\]]+)\]:\s*(https?:\/\/\S+)\s*$/gm, (_, l, u) => { refs[l.toLowerCase()] = u; return ''; })
       .replace(/\[([^\]\n]+)\]\[([^\]\n]*)\]/g, (m, text, label) => { const u = refs[(label || text).toLowerCase()]; return u ? `[${text}](${u})` : m; });
@@ -108,6 +110,7 @@
     const sec = {
       type: 'code', id: lid(slug), title: 'Your solution', level: band(k.difficulty), minutes: Math.min(45, 8 + k.difficulty * 4),
       prompt: '', /* the instructions live in the left pane */
+      feedbackPrompt: `Code kata "${k.name}": ${k.blurb}\n${k.instructions.replace(/\s+/g, ' ').slice(0, 1500)}`,
       starter: k.stub, solution: k.example, tests: `#!unittest:${k.module}\n${k.tests}`,
       hint: k.hints ? md(k.hints) : 'Run the tests first and read the first failure. Make that one pass, then the next.',
       notes: k.source ? `Source: ${esc(k.source)}${k.source_url ? ` (<a href="${esc(k.source_url)}" target="_blank" rel="noopener">link</a>)` : ''}` : '',

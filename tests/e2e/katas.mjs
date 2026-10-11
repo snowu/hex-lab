@@ -56,5 +56,18 @@ export default async function ({ url, browser, ok, section }) {
   await page.go(url, '#/kata/ledger', 1200);
   ok((await page.locator('.kata-desc').innerText()).includes('Refactoring kata'), 'a refactoring kata says so');
   ok(page.errors.length === 0, 'no page errors ' + page.errors.slice(0, 2).join(' | '));
+
+  section('callouts and AI feedback on a kata');
+  const fp = await newPage(browser);
+  const sent = [];
+  await fp.route('**/assets/feedback-config.js', (r) => r.fulfill({ contentType: 'text/javascript', body: "window.FEEDBACK_CONFIG={url:'https://fake-feedback.example'}" }));
+  await fp.route('https://fake-feedback.example/feedback', (r) => { sent.push(JSON.parse(r.request().postData())); return r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ verdict: 'partial', strengths: [], issues: ['x'], next_step: 'y' }) }); });
+  await fp.goto(url + '#/kata/binary-search'); await fp.waitForTimeout(1500);
+  const txt = await fp.locator('.kd-body').innerText();
+  ok(!txt.includes('~~~~') && !txt.includes('exercism/caution'), 'Exercism callout markup is not shown raw');
+  ok((await fp.locator('.kd-body blockquote').first().innerText()).startsWith('Caution:'), 'it becomes a labelled callout');
+  await fp.locator('.fbk-slot button').click(); await fp.waitForSelector('.fbk-verdict');
+  ok(sent.length === 1 && sent[0].prompt.includes('Binary Search') && sent[0].prompt.length > 20 && sent[0].prompt.length <= 2000, 'AI feedback on a kata sends a real prompt within the limit (' + (sent[0] && sent[0].prompt.length) + ' chars)');
+  await fp.context().close();
   await page.context().close();
 }

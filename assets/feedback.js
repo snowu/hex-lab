@@ -44,6 +44,7 @@
   const resetUsage = () => { try { localStorage.removeItem(UKEY); } catch { /* ignore */ } window.dispatchEvent(new Event('lab-usage')); };
 
   async function ask(kind, prompt, answer) {
+    prompt = String(prompt || '').trim().slice(0, 1900) || 'Interview practice question'; /* the Worker caps the question at 2000 characters */
     let res;
     try {
       res = await fetch(cfg() + '/feedback', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind, prompt, answer }), signal: AbortSignal.timeout(60000) });
