@@ -23,10 +23,10 @@ import { createRequire as _cr } from 'node:module';
 const LessonTime = _cr(import.meta.url)('../assets/lesson-time.js');
 LessonTime.apply(TRACKS);
 for (const t of TRACKS) for (const l of t.lessons) if (!(Number.isInteger(l.minutes) && l.minutes >= 5 && l.minutes <= 120)) { console.error('✗ lesson time out of range: ' + l.id + ' = ' + l.minutes); process.exitCode = 1; }
-const simIds = new Set([...fs.readFileSync(path.join(root, 'assets/sims.js'), 'utf8').matchAll(/SIMS\.(\w+)\s*=/g)].map((m) => m[1]));
+const simIds = new Set(['sims.js', 'sims-game.js'].flatMap((f) => [...fs.readFileSync(path.join(root, 'assets', f), 'utf8').matchAll(/SIMS\.(\w+)\s*=/g)].map((m) => m[1])));
 const pids = new Set();
 const cases = []; // python cases to run
-let bad = 0, exercises = 0, quizzes = 0, bugs = 0, predicts = 0, sims = 0;
+let bad = 0, drills = 0, exercises = 0, quizzes = 0, bugs = 0, predicts = 0, sims = 0;
 const fail = (m) => { bad++; console.error('✗', m); };
 const ids = new Set();
 
@@ -52,6 +52,13 @@ for (const t of TRACKS) for (const l of t.lessons) {
       if (!(s.answer >= 0 && s.answer < s.options.length)) fail(where + ' predict answer out of range');
       cases.push({ id: 'predict:' + where, kind: 'predict', section: s, code: s.code, tests: '', allow_empty: true });
       predicts++;
+    }
+    if (s.type === 'drill') {
+      drills++;
+      if (s.ref) fail(where + ' unresolved drill ref ' + s.ref);
+      if (!s.pid) fail(where + ' drill needs a pid');
+      for (const f of ['title', 'prompt', 'hint', 'notes']) if (!s[f]) fail(`${where} drill missing "${f}"`);
+      for (const lang of ['zig', 'cpp']) for (const f of ['starter', 'tests', 'solution']) if (!s[lang]?.[f]) fail(`${where} drill missing ${lang}.${f}`);
     }
     if (s.type === 'sim') {
       if (!s.pid) fail(where + ' sim section needs a pid');
@@ -118,6 +125,6 @@ MOCK.forEach((m, i) => {
   for (const id of m.lessons || []) if (!ids.has(id)) fail('mock ' + i + ' links to unknown lesson ' + id);
 });
 RESOURCES.forEach((r, i) => { if (!/^https:\/\//.test(r.url) || !r.title || !r.cat || !r.note) fail('resource ' + i + ' malformed'); });
-console.log(`${TRACKS.length} tracks, ${ids.size} lessons, ${exercises} python exercises, ${bugs} bug hunts, ${predicts} predicts, ${sims} sims, ${DESIGNS.length} design reps, ${ESTIMATES.length} estimation types, ${quizzes} quizzes, ${CARDS.length} cards, ${MOCK.length} mock questions, ${RESOURCES.length} resources`);
+console.log(`${TRACKS.length} tracks, ${ids.size} lessons, ${exercises} python exercises, ${bugs} bug hunts, ${predicts} predicts, ${sims} sims, ${drills} Zig/C++ drills, ${DESIGNS.length} design reps, ${ESTIMATES.length} estimation types, ${quizzes} quizzes, ${CARDS.length} cards, ${MOCK.length} mock questions, ${RESOURCES.length} resources`);
 if (bad) { console.error(bad + ' problem(s)'); process.exit(1); }
 console.log('All content valid ✓');

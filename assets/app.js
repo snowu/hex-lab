@@ -10,6 +10,7 @@ const store = {
 };
 const app = $('#app');
 try { if (!localStorage.getItem('sil:pyMigrated')) { Object.keys(localStorage).filter((k) => k.startsWith('sil:draft:')).forEach((k) => localStorage.removeItem(k)); localStorage.setItem('sil:pyMigrated', 'true'); } } catch {}
+const GAME = window.MODE === 'gamedev', SITE = GAME ? 'Game Dev Lab' : 'Senior Interview Lab';
 const TRACKS = LessonTime.apply(window.TRACKS), CARDS = window.CARDS || [], MOCK = window.MOCK || [], RES = window.RESOURCES || [];
 
 /* ---------- icons ---------- */
@@ -54,9 +55,14 @@ const P = {
   home: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',
   bug: '<rect x="8" y="6" width="8" height="14"/><path d="M19 7l-3 2M5 7l3 2M19 19l-3-2M5 19l3-2M20 13h-4M4 13h4M12 20V10M9 6a3 3 0 0 1 6 0"/>',
   sim: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+  gdloop: '<path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/>',
+  gdmath: '<line x1="3" y1="21" x2="21" y2="3"/><polyline points="14 3 21 3 21 10"/><line x1="3" y1="3" x2="3" y2="21"/><line x1="3" y1="21" x2="21" y2="21"/>',
+  gddesign: '<rect x="2" y="7" width="20" height="12"/><path d="M7 11v4M5 13h4M16 12h.01M18 14h.01"/>',
+  gdcraft: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+  gdpixel: '<rect x="3" y="3" width="6" height="6"/><rect x="15" y="3" width="6" height="6"/><rect x="9" y="9" width="6" height="6"/><rect x="3" y="15" width="6" height="6"/><rect x="15" y="15" width="6" height="6"/>',
 };
 const ic = (n, s = 18, sw = 1.8) => `<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">${P[n] || ''}</svg>`;
-const HUE = { playbook: 255, coding: 190, patterns: 165, design: 150, data: 200, fullstack: 100, reliability: 28, ai: 320, openbanking: 44, cloud: 215 };
+const HUE = { playbook: 255, coding: 190, patterns: 165, design: 150, data: 200, fullstack: 100, reliability: 28, ai: 320, openbanking: 44, cloud: 215, gdloop: 140, gdmath: 195, gddesign: 280, gdcraft: 35, gdpixel: 330 };
 const hueOf = (id) => HUE[id] ?? ([...String(id)].reduce((a, c) => a + c.charCodeAt(0), 0) % 360);
 const trackOf = (lessonId) => TRACKS.find((t) => t.lessons.some((l) => l.id === lessonId));
 const ring = (pct, size = 46) => `<span class="pct ${size >= 48 ? 'lg' : ''}" style="--p:${pct}"><b>${pct}%</b><i></i></span>`;
@@ -66,7 +72,7 @@ let progress = store.get('progress', {});
 let xp = store.get('xp', 0);
 let days = store.get('days', []);
 const dstr = (d) => d.toISOString().slice(0, 10);
-const KP = { quiz: 'q', code: 'c', bug: 'b', predict: 'p' };
+const KP = { quiz: 'q', code: 'c', bug: 'b', predict: 'p', drill: 'd' };
 function keysOf(l) {
   if (l._keys) return l._keys;
   let n = 0; /* legacy sections keep index-based keys so saved progress/drafts survive; added sections use their pid */
@@ -117,7 +123,7 @@ function confetti(x, y, hue = 255) {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const c = $('#fx'), g = c.getContext('2d'), dpr = devicePixelRatio || 1;
   c.width = innerWidth * dpr; c.height = innerHeight * dpr; g.scale(dpr, dpr);
-  const cols = ['#39ff7a', '#00e5a0', '#ffb000', '#00e5ff', '#d4f5e0', '#7dffb2'];
+  const cols = window.MODE === 'gamedev' ? ['#b98cff', '#e08cff', '#ffb000', '#7dd3ff', '#e6dcf7', '#d2b6ff'] : ['#39ff7a', '#00e5a0', '#ffb000', '#00e5ff', '#d4f5e0', '#7dffb2'];
   const ps = Array.from({ length: 90 }, () => ({ x, y, vx: (Math.random() - .5) * 11, vy: -Math.random() * 11 - 3, s: 4 + Math.random() * 5, r: Math.random() * 6, vr: (Math.random() - .5) * .4, c: cols[Math.floor(Math.random() * cols.length)] }));
   let t0 = performance.now();
   (function frame(t) {
@@ -170,25 +176,30 @@ function nextLesson() {
   return null;
 }
 function viewHome() {
-  document.title = 'Senior Interview Lab';
+  document.title = SITE;
   const total = TRACKS.reduce((a, t) => a + t.lessons.length, 0);
   const done = TRACKS.reduce((a, t) => a + t.lessons.filter((l) => lessonPct(l) === 100).length, 0);
   const due = dueCards().length, nx = nextLesson(), s = streak();
   const cnt = (type) => TRACKS.reduce((a, t) => a + t.lessons.reduce((b, l) => b + l.sections.filter((x) => x.type === type).length, 0), 0);
-  const exTotal = cnt('code'), bugTotal = cnt('bug'), simTotal = cnt('sim');
+  const exTotal = cnt('code') + cnt('drill'), bugTotal = cnt('bug'), simTotal = cnt('sim');
   app.innerHTML = `
     <section class="hero"><div class="hero-l">
-      <span class="eyebrow"><span class="p">$</span> ./senior-prep <b>--mode=ai-era</b></span>
-      <h1>Practice like it's the <span class="grad">real interview.</span><span class="cur"></span></h1>
-      <p class="lead">${TRACKS.length} tracks with ${exTotal} runnable coding challenges (Python and SQL), ${bugTotal} bug hunts and ${simTotal} interactive simulations, plus flashcards and mock interviews. From system design and Kafka to AWS, Terraform and a dedicated open-banking track for Neonomics. Every lesson works as text, as practice, or both.</p>
+      ${GAME ? `<span class="eyebrow"><span class="p">$</span> ./gamedev <b>--mode=build-things</b></span>
+      <h1>Learn to make games, <span class="grad">one pixel at a time.</span><span class="cur"></span></h1>` : `<span class="eyebrow"><span class="p">$</span> ./senior-prep <b>--mode=ai-era</b></span>
+      <h1>Practice like it's the <span class="grad">real interview.</span><span class="cur"></span></h1>`}
+      ${GAME ? `<p class="lead">${TRACKS.length} tracks on game loops, game math, design theory, craft and pixel art, with ${exTotal} Zig and C++ drills, ${bugTotal} bug hunts and ${simTotal} interactive simulations you can poke at, plus flashcards and a pixel editor. Examples lean on Godot and GDScript, the ideas apply to any engine.</p>` : `<p class="lead">${TRACKS.length} tracks with ${exTotal} runnable coding challenges (Python and SQL), ${bugTotal} bug hunts and ${simTotal} interactive simulations, plus flashcards and mock interviews. From system design and Kafka to AWS, Terraform and a dedicated open-banking track for Neonomics. Every lesson works as text, as practice, or both.</p>`}
       <div class="cta">
         <a class="btn primary" href="#/lesson/${(nx ? nx.l : TRACKS[0].lessons[0]).id}">${ic('play', 16)} ${nx && (nx.resume || nx.started) ? 'Continue learning' : 'Start learning'}</a>
         <a class="btn" href="#/plan">${ic('target', 16)} Today's plan</a>
         <a class="btn" href="#/review">${ic('cards', 16)} ${due} cards due</a>
       </div></div>
       <div class="hero-r" aria-hidden="true"><div class="pv brk">
-        <div class="pv-tab"><span class="tl3"><i></i><i></i><i></i></span><span class="file">rateLimiter.js</span></div>
-        <pre class="pv-code"><span class="k">class</span> <span class="f">RateLimiter</span> {
+        <div class="pv-tab"><span class="tl3"><i></i><i></i><i></i></span><span class="file">${GAME ? 'player.gd' : 'rateLimiter.js'}</span></div>
+        ${GAME ? `<pre class="pv-code"><span class="k">func</span> <span class="f">_physics_process</span>(delta):
+  velocity.y += <span class="n">GRAVITY</span> * delta
+  <span class="k">if</span> <span class="f">jump_buffered</span>() <span class="k">and</span> <span class="f">coyote</span>():
+    velocity.y = <span class="n">-JUMP</span>
+  <span class="f">move_and_slide</span>()</pre>` : `<pre class="pv-code"><span class="k">class</span> <span class="f">RateLimiter</span> {
   <span class="f">tryAcquire</span>(n = <span class="n">1</span>) {
     <span class="k">this</span>._refill();
     <span class="k">if</span> (<span class="k">this</span>.tokens &gt;= n) {
@@ -197,11 +208,11 @@ function viewHome() {
     }
     <span class="k">return false</span>;
   }
-}</pre>
+}</pre>`}
         <div class="pv-t"><div class="pv-s"><b>6/6 passing</b><span class="segs"><i class="p"></i><i class="p"></i><i class="p"></i><i class="p"></i><i class="p"></i><i class="p"></i></span></div>
-          <div class="res pass"><span class="ric">${ic('check', 14, 2.6)}</span><span class="nm">starts full</span></div>
-          <div class="res pass"><span class="ric">${ic('check', 14, 2.6)}</span><span class="nm">refills over time</span></div>
-          <div class="res pass"><span class="ric">${ic('check', 14, 2.6)}</span><span class="nm">never exceeds capacity</span></div></div>
+          <div class="res pass"><span class="ric">${ic('check', 14, 2.6)}</span><span class="nm">${GAME ? 'jump buffered before landing' : 'starts full'}</span></div>
+          <div class="res pass"><span class="ric">${ic('check', 14, 2.6)}</span><span class="nm">${GAME ? 'coyote time after a ledge' : 'refills over time'}</span></div>
+          <div class="res pass"><span class="ric">${ic('check', 14, 2.6)}</span><span class="nm">${GAME ? 'no double jump' : 'never exceeds capacity'}</span></div></div>
         <span class="pv-xp">${ic('bolt', 14)} +50 XP</span>
       </div></div>
     </section>
@@ -219,7 +230,7 @@ function viewHome() {
         <div class="row"><span class="ticon">${ic(t.id, 24)}</span>${ring(trackPct(t), 44, 4)}</div>
         <div class="bd"><h3>${esc(t.title)}</h3>
         <p>${esc(t.blurb)}</p></div>
-        <div class="meta">${t.hot ? '<span class="chip hot">Neonomics focus</span>' : ''}<span class="chip">${t.lessons.length} lessons</span><span class="chip">${ic('clock', 12)} ${trackMin(t)} min</span></div>
+        <div class="meta">${t.hot && !GAME ? '<span class="chip hot">Neonomics focus</span>' : ''}<span class="chip">${t.lessons.length} lessons</span><span class="chip">${ic('clock', 12)} ${trackMin(t)} min</span></div>
       </a>`).join('')}</div>
     <div class="sec-h"><h2>Toolkit</h2></div>
     <div class="tools">
@@ -227,14 +238,16 @@ function viewHome() {
       <a class="tool" href="#/mock"><span class="si">${ic('mic', 22)}</span><div><b>Mock interview</b><span>${MOCK.length} questions · timer · rubric</span></div></a>
       ${window.FEEDBACK && FEEDBACK.enabled() ? `<a class="tool" href="#/mock/ai"><span class="si">${ic('chat', 22)}</span><div><b>AI interviewer</b><span>follow-ups, then graded</span></div></a>` : ''}
       <a class="tool" href="#/resources"><span class="si">${ic('link', 22)}</span><div><b>Free resources</b><span>${RES.length} hand-picked links</span></div></a>
+      <button type="button" class="tool" id="swMode"><span class="si">${ic(GAME ? 'home' : 'gdpixel', 22)}</span><div><b>${GAME ? 'Back to interview prep' : 'Game dev section'}</b><span>${GAME ? 'switch sections' : 'theory, pixel art, Zig and C++ drills'}</span></div></button>
     </div>`;
   const wk = $('#weak'); if (wk) wk.onclick = () => store.set('mockkind', mockSummary().weakest.kind);
+  const sw = $('#swMode'); if (sw) sw.onclick = () => window.switchMode && window.switchMode();
 }
 
 /* ---------- track ---------- */
 function viewTrack(id) {
   const t = TRACKS.find((x) => x.id === id); if (!t) return viewHome();
-  document.title = t.title + ' · Senior Interview Lab';
+  document.title = t.title + ' · ' + SITE;
   const h = hueOf(t.id);
   app.innerHTML = `
     <div class="crumbs"><a href="#/">${ic('home', 14)} Tracks</a> ${ic('arrow', 12)} <span>${esc(t.title)}</span></div>
@@ -248,7 +261,7 @@ function viewTrack(id) {
 /* ---------- lesson ---------- */
 function secMeta(s, i) {
   if (s.type === 'quiz') { const q = strip(s.q); return { t: q.length > 44 ? q.slice(0, 44) + '…' : q, act: true }; }
-  if (s.type === 'code' || s.type === 'bug' || s.type === 'predict') return { t: s.title, act: true };
+  if (s.type === 'code' || s.type === 'bug' || s.type === 'predict' || s.type === 'drill') return { t: s.title, act: true };
   if (s.type === 'sim') return { t: s.title };
   if (s.type === 'steps') return { t: 'Walkthrough' };
   if (s.type === 'reveal') return { t: s.title.replace(/^[^\p{L}\p{N}“"(]+/u, '') };
@@ -259,10 +272,10 @@ function secMeta(s, i) {
 function viewLesson(id) {
   const f = findLesson(id); if (!f) return viewHome();
   const { t, l, i } = f, h = hueOf(t.id);
-  document.title = l.title + ' · Senior Interview Lab';
+  document.title = l.title + ' · ' + SITE;
   store.set('last', l.id);
   const ct = (...ty) => l.sections.filter((x) => ty.includes(x.type)).length;
-  const nCode = ct('code', 'bug'), nQuiz = ct('quiz', 'predict'), nSim = ct('sim');
+  const nCode = ct('code', 'bug', 'drill'), nQuiz = ct('quiz', 'predict'), nSim = ct('sim');
   const mode = store.get('lmode', 'all'), READ = ['text', 'reveal'];
   const cls = (x) => (READ.includes(x.type) ? 'read' : x.type === 'steps' ? 'both' : 'prac');
   VIM.eds = [];
@@ -293,7 +306,7 @@ function viewLesson(id) {
   const disposers = [], redraws = [];
   l.sections.forEach((s, k) => {
     const el = document.createElement('section'); el.className = 'sec ' + cls(s); el.id = 's' + k; body.appendChild(el);
-    const r = ({ text: rText, quiz: rQuiz, reveal: rReveal, steps: rSteps, code: rCode, bug: rBug, predict: rPredict, sim: rSim }[s.type] || rText)(el, s, l, k, sync, h, disposers);
+    const r = ({ text: rText, quiz: rQuiz, reveal: rReveal, steps: rSteps, code: rCode, drill: rDrill, bug: rBug, predict: rPredict, sim: rSim }[s.type] || rText)(el, s, l, k, sync, h, disposers);
     if (typeof r === 'function' && s.type === 'steps') redraws.push(r);
   });
   $$('.seg button').forEach((b) => (b.onclick = () => {
@@ -497,6 +510,41 @@ function rCode(el, s, l, idx, sync, hue, disposers) {
   $('.reset', el).onclick = () => { if (confirm('Reset to starter code?')) { set(s.starter); out.innerHTML = ''; } };
 }
 
+
+/* ---------- local drill (Zig / C++) ---------- */
+/* These languages cannot be compiled in the browser, so the lab hands you the file (starter + tests), you run it with the compiler on your own machine,
+   then you tick it off. You can paste your solution for AI feedback. Progress is self-reported. */
+function rDrill(el, s, l, idx, sync) {
+  const key = keysOf(l)[idx], solved = () => !!(progress[l.id] || {})[key];
+  const LANGS = { zig: { name: 'Zig', ext: 'zig', cmd: (id) => `zig test ${id}.zig`, repo: (id) => `zig test drills/zig/${id}.zig` }, cpp: { name: 'C++', ext: 'cpp', cmd: (id) => `g++ -std=c++20 -Wall -o ${id} ${id}.cpp && ./${id}`, repo: (id) => `g++ -std=c++20 -Wall -o /tmp/${id} drills/cpp/${id}.cpp && /tmp/${id}` } };
+  let lang = store.get('drilllang', 'zig'); if (!s[lang]) lang = 'zig';
+  el.innerHTML = `${label('terminal', 'Drill')}<div class="ex tc brk has-ask">${askBtn(`I am working on the ${s.title} drill. I will paste my code. Give me a hint first, not the full solution, unless I ask for it.`, 'Ask AI')}
+    <div class="ex-head"><div class="ex-title">${esc(s.title)}</div><span class="chip">${esc(s.level || '')} · ${s.minutes || 20} min</span><span class="chip st ${solved() ? 'good' : ''}">${solved() ? ic('check', 12, 3) + ' Passed' : 'Not yet'}</span></div>
+    <div class="ex-prompt">${s.prompt}</div>
+    <div class="ex-actions" style="padding-bottom:0"><span class="dseg" role="tablist" aria-label="Language">${Object.keys(LANGS).filter((k) => s[k]).map((k) => `<button type="button" data-lang="${k}">${LANGS[k].name}</button>`).join('')}</span></div>
+    <div class="dr-body"></div></div>`;
+  const body = $('.dr-body', el), file = (which) => window.drillFile(s.id, s, lang, which);
+  const stripped = (t) => t.replace(/\s+$/, '');
+  function paint() {
+    const L = LANGS[lang];
+    $$('[data-lang]', el).forEach((b) => b.classList.toggle('on', b.dataset.lang === lang));
+    body.innerHTML = `<p class="muted" style="margin:10px 0 6px">Save this as <code>${s.id}.${L.ext}</code>, edit the part above the tests marker, and run <code>${esc(L.cmd(s.id))}</code>. The same files are in the repo under <code>drills/${lang}/</code> (<code>${esc(L.repo(s.id))}</code>).</p>
+      <pre class="dr-code"><code>${esc(stripped(s[lang].starter))}</code></pre>
+      <div class="ex-actions"><button class="btn dcopy">${ic('link', 15)} Copy file</button><button class="btn ddl">${ic('arrow', 15)} Download</button><button class="btn hint">${ic('bulb', 15)} Hint</button><button class="btn dsol">${ic('eye', 15)} Solution</button><span class="sp"></span><button class="btn primary dpass" ${solved() ? 'disabled' : ''}>${ic('check', 15)} ${solved() ? 'Marked passed' : 'My tests pass'}</button></div>
+      <div class="callout tip dhint" hidden>${esc(s.hint)}</div>
+      <details class="dtests"><summary>Show the tests</summary><pre><code>${esc(stripped(s[lang].tests))}</code></pre></details>
+      <div class="dsolbox" hidden><pre><code>${esc(stripped(s[lang].solution))}</code></pre>${s.notes ? `<div class="callout">${esc(s.notes)}</div>` : ''}</div>
+      <details class="dfb"><summary>Get AI feedback on your solution</summary><textarea class="inp dpaste" rows="8" spellcheck="false" placeholder="Paste your ${L.name} solution here…"></textarea><div class="dfbk"></div></details>`;
+    $('.dcopy', body).onclick = async () => { try { await navigator.clipboard.writeText(file()); toast('File copied'); } catch { toast('Copy failed: select the code by hand'); } };
+    $('.ddl', body).onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([file()], { type: 'text/plain' })); a.download = `${s.id}.${L.ext}`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
+    $('.hint', body).onclick = () => { const h = $('.dhint', body); h.hidden = !h.hidden; };
+    $('.dsol', body).onclick = () => { const b = $('.dsolbox', body); b.hidden = !b.hidden; };
+    $('.dpass', body).onclick = () => { if (mark(l.id, key, 40, 'Drill passed')) { sync(); paint(); const c = $('.st', el); c.className = 'chip st good'; c.innerHTML = ic('check', 12, 3) + ' Passed'; } };
+    if (window.FEEDBACK) FEEDBACK.mount($('.dfbk', body), { kind: 'code', prompt: `${L.name} drill "${s.title}": ${strip(s.prompt)}`, getAnswer: () => $('.dpaste', body).value });
+  }
+  $$('[data-lang]', el).forEach((b) => (b.onclick = () => { lang = b.dataset.lang; store.set('drilllang', lang); paint(); }));
+  paint();
+}
 
 /* ---------- simulation ---------- */
 function rSim(el, s, l, idx, sync, hue, disposers) {

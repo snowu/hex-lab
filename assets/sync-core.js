@@ -15,7 +15,7 @@
   const PREFIX = 'sil:';
   const META_KEY = 'sil:sync';
   /* Per-device preferences and sync bookkeeping are not progress. */
-  const EXCLUDE = new Set(['sil:theme', 'sil:vim', 'sil:sync', 'sil:device', 'sil:pyMigrated']);
+  const EXCLUDE = new Set(['sil:theme', 'sil:vim', 'sil:sync', 'sil:device', 'sil:pyMigrated', 'sil:mode']);
   const FORMAT = 1;
 
   function cyrb53(str, seed) {

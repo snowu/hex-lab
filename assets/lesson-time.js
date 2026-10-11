@@ -23,8 +23,8 @@
   function estimate(lesson) {
     let w = 0, practice = 0;
     for (const s of lesson.sections || []) {
-      w += prose(s, s.type === 'code' ? new Set(['prompt']) : null); /* a challenge's budget already covers reading its prompt */
-      if (s.type === 'code') practice += s.minutes || 20;
+      w += prose(s, s.type === 'code' || s.type === 'drill' ? new Set(['prompt']) : null); /* a challenge's budget already covers reading its prompt */
+      if (s.type === 'code' || s.type === 'drill') practice += s.minutes || 20;
       else practice += PRACTICE[s.type] || 0;
     }
     const read = w / WPM;
