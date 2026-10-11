@@ -59,7 +59,7 @@ func _process(delta):
                  { line: 9, why: '<code>velocity.y += gravity</code> adds a fixed amount every <i>frame</i>, so gravity is three times stronger at 180 fps than at 60. Use <code>gravity * delta</code> (with gravity in px/s²).' },
                  { line: 10, why: '<code>get_node</code> with an absolute path every frame walks the scene tree each time. Cache it once (<code>@onready</code>) or better, have the UI listen to a signal when health changes.' }],
           ok: [8, 11], hint: 'One mistake is about which callback this is in, one is about time, one is about doing the same lookup 60 times a second.' },
-        { type: 'reveal', title: 'Interview-style question: “How would you make a game run the same on every machine?”', html: `<ul><li>Separate <b>simulation</b> (fixed step, deterministic) from <b>rendering</b> (as fast as possible, interpolated).</li><li>Never use frame count as time. Use <code>dt</code> or the fixed step.</li><li>Cap catch-up steps (spiral of death) and decide what to drop: time, not state.</li><li>Seed all gameplay randomness, keep it out of rendering (see the procgen lesson).</li><li>Floating point is deterministic on one machine and compiler but can differ across platforms. For lockstep multiplayer use fixed-point or integers.</li></ul>` },
+        { type: 'reveal', title: 'Think it through: how would you make a game run the same on every machine?', html: `<ul><li>Separate <b>simulation</b> (fixed step, deterministic) from <b>rendering</b> (as fast as possible, interpolated).</li><li>Never use frame count as time. Use <code>dt</code> or the fixed step.</li><li>Cap catch-up steps (spiral of death) and decide what to drop: time, not state.</li><li>Seed all gameplay randomness, keep it out of rendering (see the procgen lesson).</li><li>Floating point is deterministic on one machine and compiler but can differ across platforms. For lockstep multiplayer use fixed-point or integers.</li></ul>` },
       ],
     },
     {
@@ -74,7 +74,7 @@ func _process(delta):
 <h3>Forgive the player</h3>
 <p>Humans press buttons a few frames early or late and a game that checks the exact frame feels broken. Cheap, invisible tricks fix that:</p>
 <ul><li><b>Coyote time</b>: keep allowing the jump for ~100 ms after leaving a ledge.</li><li><b>Jump buffering</b>: remember a jump pressed ~100 ms before landing and fire it on touchdown.</li><li><b>Input buffering</b> in action games: queue the next attack during the current animation.</li><li><b>Corner correction</b>: nudge the player around a block's corner instead of bonking the head.</li></ul>
-<p>Implement the first two in the drill: it is a classic interview-size problem and the code is small.</p>` },
+<p>Implement the first two in the drill: it is a small problem and the code is short.</p>` },
         { pid: 'drill-jumper', type: 'drill', ref: 'jumper' },
         { type: 'text', html: `
 <h3>State machines</h3>

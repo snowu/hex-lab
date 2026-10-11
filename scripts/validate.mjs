@@ -23,12 +23,34 @@ import { createRequire as _cr } from 'node:module';
 const LessonTime = _cr(import.meta.url)('../assets/lesson-time.js');
 LessonTime.apply(TRACKS);
 for (const t of TRACKS) for (const l of t.lessons) if (!(Number.isInteger(l.minutes) && l.minutes >= 5 && l.minutes <= 120)) { console.error('✗ lesson time out of range: ' + l.id + ' = ' + l.minutes); process.exitCode = 1; }
+/* Every track needs an icon in assets/app.js (a missing one renders as an empty box on the home page). */
+{
+  const appSrc = fs.readFileSync(path.join(root, 'assets/app.js'), 'utf8'), pBlock = appSrc.slice(appSrc.indexOf('const P = {'), appSrc.indexOf('const ic = '));
+  const icons = new Set([...pBlock.matchAll(/^\s{2}(\w+):\s*'</gm)].map((m) => m[1]));
+  for (const t of TRACKS) if (!icons.has(t.id)) { console.error('✗ track "' + t.id + '" has no icon in assets/app.js (P)'); process.exitCode = 1; }
+}
 const simIds = new Set(['sims.js', 'sims-game.js'].flatMap((f) => [...fs.readFileSync(path.join(root, 'assets', f), 'utf8').matchAll(/SIMS\.(\w+)\s*=/g)].map((m) => m[1])));
 const pids = new Set();
 const cases = []; // python cases to run
 let bad = 0, drills = 0, exercises = 0, quizzes = 0, bugs = 0, predicts = 0, sims = 0;
 const fail = (m) => { bad++; console.error('✗', m); };
 const ids = new Set();
+
+/* HTML in lesson prose must be balanced: an unclosed <b> or <li> restyles everything after it. */
+function htmlBalance(html) {
+  const VOID = new Set(['br', 'hr', 'img', 'input', 'meta', 'link']), stack = [];
+  const body = String(html).replace(/<!--[\s\S]*?-->/g, '').replace(/<(pre|code)\b([^>]*)>([\s\S]*?)<\/\1>/g, (m, tag, attrs) => `<${tag}${attrs}></${tag}>`); // contents of code are text
+  for (const m of body.matchAll(/<(\/?)([a-zA-Z][a-zA-Z0-9]*)\b[^>]*?(\/?)>/g)) {
+    const [, close, name, self] = m, tag = name.toLowerCase();
+    if (VOID.has(tag) || self) continue;
+    if (!close) stack.push(tag);
+    else { const top = stack.pop(); if (top !== tag) return `</${tag}> closes <${top || 'nothing'}>`; }
+  }
+  return stack.length ? `unclosed <${stack[stack.length - 1]}>` : null;
+}
+for (const t of TRACKS) for (const l of t.lessons) l.sections.forEach((x, i) => {
+  for (const f of ['html', 'intro', 'prompt', 'explain']) if (typeof x[f] === 'string') { const e = htmlBalance(x[f]); if (e) { bad++; console.error(`✗ ${l.id}#${i} ${f}: ${e}`); } }
+});
 
 for (const t of TRACKS) for (const l of t.lessons) {
   if (ids.has(l.id)) fail('duplicate lesson id ' + l.id); ids.add(l.id);

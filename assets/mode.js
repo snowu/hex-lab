@@ -1,6 +1,6 @@
-/* Content mode: the lab has two sections that share all the machinery (lessons, progress, cards, mock, links).
+/* Content mode: the lab has two sections that share all the machinery (lessons, progress, cards, links).
    'interview' is the original; 'gamedev' is game dev theory, practice, techniques and pixel art.
-   Items tagged domain:'gamedev' (tracks, cards, mock questions, resources) are kept only in game mode, and everything else only in interview mode.
+   Items tagged domain:'gamedev' (tracks, cards, resources; mock questions only exist in the interview section) are kept only in game mode, and everything else only in interview mode.
    Runs synchronously before app.js, so the app just sees one set of content. Switching reloads the page. */
 (function () {
   'use strict';
@@ -19,9 +19,11 @@
     $('.brand-t').innerHTML = 'gamedev<span class="u">_</span>lab';
     const lr = document.querySelector('.logo rect'); if (lr) lr.setAttribute('fill', '#b98cff');
     const fav = document.querySelector('link[rel=icon]'); if (fav) fav.href = fav.href.replace('%2339ff7a', '%23b98cff');
+    const ft = document.querySelector('.foot span'); if (ft) ft.textContent = 'Progress is stored only in your browser. Content is original, with links to free third-party material. Code is checked by compiling it.';
+    const cq = document.getElementById('cq'); if (cq) cq.placeholder = 'Search lessons, flashcards, links…';
     $('.brand').setAttribute('aria-label', 'Game Dev Lab home');
-    for (const k of ['design', 'katas', 'stories']) { const a = document.querySelector(`.top nav a[href="#/${k}"]`); if (a) a.remove(); }
-    const guard = () => { if (/^#\/(design|katas|stories)/.test(location.hash)) location.hash = '#/'; };
+    for (const k of ['design', 'katas', 'stories', 'plan', 'mock']) { const a = document.querySelector(`.top nav a[href="#/${k}"]`); if (a) a.remove(); }
+    const guard = () => { if (/^#\/(design|katas|stories|plan|mock)/.test(location.hash)) location.hash = '#/'; };
     addEventListener('hashchange', guard); guard();
   }
   const b = document.createElement('button');

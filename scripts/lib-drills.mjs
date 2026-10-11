@@ -10,7 +10,8 @@ export const EXT = { zig: 'zig', cpp: 'cpp' };
 export function loadDrills() {
   const ctx = vm.createContext({});
   ctx.window = ctx;
-  vm.runInContext(fs.readFileSync(path.join(root, 'content/drills-game.js'), 'utf8'), ctx, { filename: 'content/drills-game.js' });
+  const files = fs.readdirSync(path.join(root, 'content')).filter((f) => /^drills-.*\.js$/.test(f)).sort(); // drills-game.js first: it creates window.DRILLS
+  for (const f of files) vm.runInContext(fs.readFileSync(path.join(root, 'content', f), 'utf8'), ctx, { filename: 'content/' + f });
   return ctx.DRILLS;
 }
 
