@@ -18,6 +18,11 @@ for (const m of html.matchAll(/<script src="(content\/[^"]+)"/g)) {
 }
 const { TRACKS, CARDS = [], MOCK = [], RESOURCES = [] } = vm.runInContext('({TRACKS, CARDS: window.CARDS||[], MOCK: window.MOCK||[], RESOURCES: window.RESOURCES||[]})', ctx);
 
+/* Lesson time: computed from the content (assets/lesson-time.js), never hand-written. Every lesson must land in a sane range. */
+import { createRequire as _cr } from 'node:module';
+const LessonTime = _cr(import.meta.url)('../assets/lesson-time.js');
+LessonTime.apply(TRACKS);
+for (const t of TRACKS) for (const l of t.lessons) if (!(Number.isInteger(l.minutes) && l.minutes >= 5 && l.minutes <= 120)) { console.error('✗ lesson time out of range: ' + l.id + ' = ' + l.minutes); process.exitCode = 1; }
 const simIds = new Set([...fs.readFileSync(path.join(root, 'assets/sims.js'), 'utf8').matchAll(/SIMS\.(\w+)\s*=/g)].map((m) => m[1]));
 const pids = new Set();
 const cases = []; // python cases to run

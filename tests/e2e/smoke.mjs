@@ -13,6 +13,14 @@ export default async function ({ url, browser, ok }) {
   ok(nav.length === 8 && nav.includes('katas'), 'main navigation has 8 entries: ' + nav.join(' '));
 
 
+
+  /* lesson times are computed from the content, not hand-written */
+  const lt = await page.evaluate(() => { const L = TRACKS.flatMap((t) => t.lessons); const withCode = L.find((l) => l.sections.some((s) => s.type === 'code')); return { all: L.every((l) => Number.isInteger(l.minutes) && l.minutes >= 5 && l.timeParts && l.authoredMinutes != null), codeLesson: withCode.minutes, budget: withCode.sections.filter((s) => s.type === 'code').reduce((n, s) => n + (s.minutes || 20), 0), hours: document.body.innerText.match(/(\d+) hours/) };
+  });
+  ok(lt.all && lt.codeLesson >= lt.budget, `every lesson has a computed time, and a lesson with challenges is at least their time budgets (${lt.codeLesson} >= ${lt.budget})`);
+  await page.go(url, '#/lesson/' + await page.evaluate(() => TRACKS[0].lessons[0].id), 500);
+  ok((await page.locator('.metas .chip').first().getAttribute('title')).includes('min of reading'), 'the time chip explains how it is made up');
+
   /* the interview-date picker must survive typing a year (it used to re-render on every digit and lose focus) */
   await page.go(url, '#/plan', 600);
   const goal = page.locator('#goal');

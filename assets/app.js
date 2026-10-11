@@ -10,7 +10,7 @@ const store = {
 };
 const app = $('#app');
 try { if (!localStorage.getItem('sil:pyMigrated')) { Object.keys(localStorage).filter((k) => k.startsWith('sil:draft:')).forEach((k) => localStorage.removeItem(k)); localStorage.setItem('sil:pyMigrated', 'true'); } } catch {}
-const TRACKS = window.TRACKS, CARDS = window.CARDS || [], MOCK = window.MOCK || [], RES = window.RESOURCES || [];
+const TRACKS = LessonTime.apply(window.TRACKS), CARDS = window.CARDS || [], MOCK = window.MOCK || [], RES = window.RESOURCES || [];
 
 /* ---------- icons ---------- */
 /* Corner "Ask AI" button for any card: give the card the class `has-ask` and put ${askBtn(prompt)} first inside it. Clicking opens the
@@ -276,7 +276,7 @@ function viewLesson(id) {
       <article>
         <div class="crumbs"><a href="#/">${ic('home', 14)}</a> ${ic('arrow', 12)} <a href="#/track/${t.id}">${esc(t.title)}</a> ${ic('arrow', 12)} <span>Lesson ${i + 1}</span></div>
         <header class="lhead has-ask">${askBtn(`I am reading the lesson "${l.title}". Summarise the key ideas in 5 bullets, then tell me the 3 things interviewers most often probe on this topic and the classic mistakes.`, 'Ask AI about this lesson')}<span class="chip tc" style="--h:${h}">${ic(t.id, 13)} ${esc(t.title)}</span><h1>${esc(l.title)}</h1><p class="sum">${esc(l.summary || '')}</p>
-          <div class="metas"><span class="chip">${ic('clock', 12)} ${l.minutes} min</span>${nQuiz ? `<span class="chip">${ic('target', 12)} ${nQuiz} quick check${nQuiz === 1 ? '' : 's'}</span>` : ''}${nCode ? `<span class="chip">${ic('terminal', 12)} ${nCode} challenge${nCode === 1 ? '' : 's'}</span>` : ''}${nSim ? `<span class="chip">${ic('sim', 12)} ${nSim} simulation${nSim === 1 ? '' : 's'}</span>` : ''}</div>
+          <div class="metas"><span class="chip" title="${l.timeParts ? `about ${l.timeParts.read} min of reading + ${l.timeParts.practice} min of practice` : ''}">${ic('clock', 12)} ${l.minutes} min</span>${nQuiz ? `<span class="chip">${ic('target', 12)} ${nQuiz} quick check${nQuiz === 1 ? '' : 's'}</span>` : ''}${nCode ? `<span class="chip">${ic('terminal', 12)} ${nCode} challenge${nCode === 1 ? '' : 's'}</span>` : ''}${nSim ? `<span class="chip">${ic('sim', 12)} ${nSim} simulation${nSim === 1 ? '' : 's'}</span>` : ''}</div>
           <div class="seg" role="group" aria-label="Lesson view"><button data-m="all" class="${mode === 'all' ? 'on' : ''}">text + practice</button><button data-m="read" class="${mode === 'read' ? 'on' : ''}">read</button><button data-m="practice" class="${mode === 'practice' ? 'on' : ''}">practice</button></div></header>
         <div class="lbody" id="body"></div>
         <div class="endcard tc brk" style="--h:${h}">${nxt ? `<div class="tx"><div class="k">Up next</div><div class="tt">${esc(nxt.title)}</div></div><a class="btn primary" href="#/lesson/${nxt.id}">Next lesson ${ic('arrow', 16)}</a>` : `<div class="tx"><div class="k">Track end</div><div class="tt">That's the last lesson in ${esc(t.title)}.</div></div><a class="btn primary" href="#/">Pick another track ${ic('arrow', 16)}</a>`}
