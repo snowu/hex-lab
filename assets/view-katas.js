@@ -116,13 +116,13 @@
     app.classList.add('kata-wide'); disposers.push(() => app.classList.remove('kata-wide'));
     app.innerHTML = `<div class="crumbs"><a href="#/katas">${ic('home', 14)} Katas</a> ${ic('arrow', 12)} <span>${esc(k.name)}</span></div>
       <div class="kata-split">
-        <section class="kata-desc tc brk">
+        <section class="kata-desc tc brk"><div class="kd-scroll">
           <span class="chip tc" style="--h:${hue}">difficulty ${k.difficulty}/10 · ${band(k.difficulty)}</span><h1>${esc(k.name)}</h1><p class="sum">${esc(k.blurb)}</p>
           ${k.refactor ? '<div class="callout tip"><b>Refactoring kata.</b> The starter already passes the tests. Make the code cleaner without breaking them.</div>' : ''}
           <div class="kd-body ex-prompt">${md(k.instructions)}</div>
           <p class="muted kcredit">Exercise by ${esc((k.authors || []).join(', ') || 'Exercism contributors')}${(k.contributors || []).length ? ` and ${k.contributors.length} contributor${k.contributors.length > 1 ? 's' : ''}` : ''}, from <a href="https://github.com/${esc(DATA.source)}/tree/${esc(DATA.ref)}/exercises/practice/${esc(slug)}" target="_blank" rel="noopener">Exercism</a> (MIT licence).</p>
           <div class="dbar kpn">${prev ? `<a class="btn ghost" href="#/kata/${prev.slug}">${ic('arrowL', 14)} ${esc(prev.name)}</a>` : '<span></span>'}<span class="sp"></span>${nxt ? `<a class="btn" href="#/kata/${nxt.slug}">${esc(nxt.name)} ${ic('arrow', 14)}</a>` : ''}</div>
-        </section>
+        </div></section>
         <div class="kata-work">
           <div id="kcode"></div>
           <details class="kother tc brk has-ask">${askBtn(`Code kata "${k.name}": ${k.blurb}\n\nGive me the approach to solve this well (not the code), the edge cases to test, and how you would explain the solution in an interview.`, 'Ask AI about the approach')}<summary>${ic('terminal', 16)} Practise it in another language</summary>

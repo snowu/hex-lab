@@ -721,14 +721,15 @@ body{--chat-w:min(100vw,clamp(440px,34vw,640px))}body.chat-wide{--chat-w:min(100
 /* ---- kata page: description left, code right (stacked on narrow screens) ---- */
 main.kata-wide{max-width:1640px}
 .kata-split{display:grid;grid-template-columns:minmax(340px,5fr) 7fr;gap:18px;align-items:start;margin-top:10px}
-.kata-desc{position:sticky;top:70px;max-height:calc(100vh - 90px);overflow:auto;padding:16px 20px}
+.kata-desc{position:sticky;top:70px;padding:16px 20px}
+.kd-scroll{max-height:calc(100vh - 130px);overflow-y:auto;overflow-x:hidden;padding-right:6px}
 .kata-desc h1{margin:8px 0 4px;font-size:1.7rem}.kata-desc .sum{margin:0 0 10px}
 .kata-desc .kd-body{padding:0}
 .kata-work{min-width:0}
 .kata-work .CodeMirror{height:clamp(340px,56vh,720px)}
 .kata-work .kother{margin-top:16px}.kother>summary{cursor:pointer;font-weight:600;padding-right:56px}
 .ex-prompt:empty{display:none}
-@media(max-width:1000px){.kata-split{grid-template-columns:1fr}.kata-desc{position:static;max-height:none}}
+@media(max-width:1000px){.kata-split{grid-template-columns:1fr}.kata-desc{position:static}.kd-scroll{max-height:none;overflow:visible}}
 
 /* ---- header fit: the nav grew (katas) and gained a chat button, so give it room and compact it on mid-size screens ---- */
 .top-in{max-width:1400px}
@@ -776,3 +777,7 @@ main.kata-wide{max-width:1640px}
 
 input[type=checkbox],input[type=radio],input[type=range]{accent-color:var(--accent)}
 @media (pointer:coarse){.CodeMirror textarea,.CodeMirror-code+textarea,textarea.inp,textarea{font-size:16px!important}}
+
+/* thin, dark scrollbars everywhere (the default chunky ones looked out of place and appeared on decorated cards) */
+*{scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:var(--line2)}::-webkit-scrollbar-track{background:transparent}

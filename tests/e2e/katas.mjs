@@ -50,6 +50,9 @@ export default async function ({ url, browser, ok, section }) {
   ok((await page.locator('#klink').getAttribute('href')) === 'https://exercism.org/tracks/go/exercises/two-fer', 'links to the exercise on exercism.org');
   await page.go(url, '#/kata/bob', 1000);
   ok(await page.locator('.kd-body a[href*="collinsdictionary"]').count() === 1 && !(await page.locator('.kd-body').innerText()).includes('[lackadaisical]'), 'reference-style links in instructions become real links');
+  await page.go(url, '#/kata/armstrong-numbers', 1200);
+  const sb = await page.evaluate(() => { const card = document.querySelector('.kata-desc'), inner = document.querySelector('.kd-scroll'); return { cardY: card.scrollHeight > card.clientHeight, cardX: card.scrollWidth > card.clientWidth, innerY: inner.scrollHeight > inner.clientHeight + 1, innerX: inner.scrollWidth > inner.clientWidth + 1, ov: getComputedStyle(card).overflow }; });
+  ok(sb.ov === 'visible' && !sb.innerY && !sb.innerX, 'a short kata description shows no scrollbars (the card itself never scrolls; its inner pane only when needed) ' + JSON.stringify(sb));
   await page.go(url, '#/kata/ledger', 1200);
   ok((await page.locator('.kata-desc').innerText()).includes('Refactoring kata'), 'a refactoring kata says so');
   ok(page.errors.length === 0, 'no page errors ' + page.errors.slice(0, 2).join(' | '));
