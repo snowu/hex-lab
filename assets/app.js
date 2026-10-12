@@ -246,6 +246,7 @@ function viewHome() {
     <div class="sec-h"><h2>Toolkit</h2></div>
     <div class="tools">
       <a class="tool" href="#/plan"><span class="si">${ic('target', 22)}</span><div><b>${GAME ? 'Learning plan' : 'Daily plan'}</b><span>diagnostic · progress · sync · backup</span></div></a>
+      <a class="tool" href="#/skills"><span class="si">${ic('route', 22)}</span><div><b>Skills</b><span>mastery per track · weakest first</span></div></a>
       <a class="tool" href="#/katas"><span class="si">${ic('terminal', 22)}</span><div><b>Code katas</b><span>practice · tests · spaced reviews</span></div></a>
       <a class="tool" href="#/design"><span class="si">${ic('design', 22)}</span><div><b>Design lab</b><span>${GAME ? 'game architecture · references · self review' : 'design reps · estimation'}</span></div></a>
       ${GAME ? `<a class="tool" href="#/play"><span class="si">${ic('play', 22)}</span><div><b>Build &amp; play</b><span>mechanics · debugging · interactive workbenches</span></div></a><a class="tool" href="#/projects"><span class="si">${ic('terminal', 22)}</span><div><b>Build-along games</b><span>Pong · Breakout · platformer · arena</span></div></a><a class="tool" href="#/game-katas"><span class="si">${ic('terminal', 22)}</span><div><b>Game katas</b><span>write mechanics · run tests · review</span></div></a><a class="tool" href="#/notebook"><span class="si">${ic('book', 22)}</span><div><b>Project notebook</b><span>experiments · screenshots · outcomes</span></div></a><a class="tool" href="#/forge"><span class="si">${ic('gdpixel', 22)}</span><div><b>Pixel Forge</b><span>open spritewright · make art for your game</span></div></a>` : ''}
@@ -1049,7 +1050,7 @@ $('#wipe').onclick = async () => {
 };
 
 /* ---------- extension API for the separate view files (design lab, plan, stories, ...) ---------- */
-window.LAB = { addCard, removeCard, cardBtn, rCode, mark, askBtn, shuffleOpts, $, $$, esc, strip, store, ic, app, addXp, logAct, actToday, toast, confetti, hueOf, fmtClock, label, TRACKS, CARDS, MOCK, RES, findLesson, lessonPct, trackPct, itemsOf, keysOf, dueCards, mockSummary, streak, level, routes, setCleanup: (f) => { cleanup = f; }, getProgress: () => progress, getXp: () => xp, cardStateOf: () => cardState, runPython, runSql, pyStart, PY, LOADING, renderXp, HUE, trackHue };
+window.LAB = { addCard, removeCard, cardBtn, rCode, mark, askBtn, shuffleOpts, $, $$, esc, strip, store, ic, app, addXp, logAct, actToday, toast, confetti, hueOf, fmtClock, label, ring, TRACKS, CARDS, MOCK, RES, findLesson, lessonPct, trackPct, itemsOf, keysOf, dueCards, mockSummary, streak, level, routes, setCleanup: (f) => { cleanup = f; }, getProgress: () => progress, getXp: () => xp, cardStateOf: () => cardState, runPython, runSql, pyStart, PY, LOADING, renderXp, HUE, trackHue };
 (window.LAB_VIEWS || []).forEach((init) => init(window.LAB));
 
 renderXp();

@@ -22,6 +22,7 @@ Pure static site (no build step), hosted on GitHub Pages.
 - **Reset all progress** from the footer
 - **78 flashcards** with Leitner spaced repetition
 - **End-of-lesson retrieval checks**: every lesson ends with two recall questions answered from memory; completing them schedules spaced reviews (2, 5, 14, 30, 60 days) that surface in the daily plan and the lesson header
+- **Skills map**: per-track mastery from learning, practice and recall, weakest first, each with the next action that moves it (the plan page shows the single readiness bar)
 - **Mock interview**: random question, timer, rubric
 - **43 curated free resources** and full-text search (press `/`)
 - Progress and drafts stay in your browser's localStorage
