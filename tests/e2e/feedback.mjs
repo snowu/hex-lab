@@ -52,6 +52,7 @@ export default async function ({ url, browser, ok, section }) {
   await page.locator('#chatBtn').click();
   await page.waitForFunction(() => document.querySelector('#chatSt').dataset.ok === '1');
   ok((await page.locator('#chatSt').innerText()).includes('fake-model'), 'the panel shows the connection test result (model name)');
+  ok(await page.evaluate(() => { const ys = new Set([...document.querySelectorAll('.top nav a')].map((a) => Math.round(a.getBoundingClientRect().top))); return ys.size === 1; }), 'with the chat open the header nav stays on one row');
   await page.locator('#chatIn').fill('why is my code slow?'); await page.keyboard.press('Enter');
   await page.waitForSelector('.chat-msg.assistant:not(.wait)');
   const first = chatReqs[0];
