@@ -15,7 +15,7 @@
 
   /* ---------------- list ---------------- */
   function viewDesign() {
-    document.title = 'Design lab · ' + (window.MODE === 'gamedev' ? 'Game Dev Lab' : 'Hex');
+    document.title = 'Design lab · Hex Lab';
     const tabs = [['reps', 'Design reps'], ['est', 'Estimation trainer'], ['nums', 'Numbers to know']];
     app.innerHTML = `<div class="page-h"><h1>Design lab</h1><p>${window.MODE === 'gamedev' ? 'Practise game architecture: sketch a small system, compare approaches, then record what you learned. The clock is optional.' : 'Design under pressure is a skill you train with reps: a clock, a blank page, then a comparison against a reference. Each rep takes 30-40 minutes. Do one or two a week.'}</p></div>
       <div class="filters">${tabs.map(([k, n]) => `<button class="fchip ${tab === k ? 'on' : ''}" data-t="${k}">${n}</button>`).join('')}</div><div id="dbody"></div>`;

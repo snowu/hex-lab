@@ -1,8 +1,8 @@
 {
   "id": "hex-lab",
-  "name": "Hex",
+  "name": "Hex Lab",
   "short_name": "Hex",
-  "description": "Hex: senior engineering interview prep and game-dev learning. Timed coding, design reps, katas, flashcards and mock interviews.",
+  "description": "Hex Lab: senior engineering interview prep and game-dev learning. Timed coding, design reps, katas, flashcards and mock interviews.",
   "start_url": "./index.html#/",
   "scope": "./",
   "display": "standalone",

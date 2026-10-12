@@ -11,7 +11,7 @@
       ](),
   ]);
   function layout(title, description, controls) {
-    document.title = title + " · Game Dev Lab";
+    document.title = title + " · Hex Lab";
     app.innerHTML = `<div class="crumbs"><a href="#/play">Build &amp; play</a> / ${title}</div><div class="page-h"><h1>${title}</h1><p>${description}</p></div><div class="gl-layout"><section class="tc gl-stage"><canvas id="toolcanvas" width="640" height="384" aria-label="${title} visualization"></canvas><output id="toolstats" aria-live="polite"></output></section><aside class="tc gl-controls">${controls}<h2>Record your experiment</h2><label class="lbl">Prediction<textarea class="inp" id="tpredict" rows="2"></textarea></label><label class="lbl">Observation / next attempt<textarea class="inp" id="tobserve" rows="3"></textarea></label><button class="btn" id="tsave">Save to notebook</button><output id="tsaved"></output></aside></div>`;
     return $("#toolcanvas");
   }

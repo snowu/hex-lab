@@ -14,14 +14,14 @@
   const $ = (s) => document.querySelector(s);
   if (game) {
     document.documentElement.dataset.mode = 'gamedev';
-    document.title = 'Game Dev Lab';
+    document.title = 'Hex Lab';
     const tc = document.querySelector('meta[name=theme-color]'); if (tc) tc.content = '#07040d';
-    $('.brand-t').innerHTML = 'gamedev<span class="u">_</span>lab';
+    $('.brand-t').innerHTML = 'hex<span class="u">_</span>lab';
     const lr = document.querySelector('.logo rect'); if (lr) lr.setAttribute('fill', '#b98cff');
     const fav = document.querySelector('link[rel=icon]'); if (fav) fav.href = fav.href.replace('%2339ff7a', '%23b98cff');
     const ft = document.querySelector('.foot span'); if (ft) ft.textContent = 'Progress is stored only in your browser. Content is original, with links to free third-party material. Code is checked by compiling it.';
     const cq = document.getElementById('cq'); if (cq) cq.placeholder = 'Search lessons, flashcards, links…';
-    $('.brand').setAttribute('aria-label', 'Game Dev Lab home');
+    $('.brand').setAttribute('aria-label', 'Hex Lab home');
     for (const k of ['stories', 'mock']) { const a = document.querySelector(`.top nav a[href="#/${k}"]`); if (a) a.remove(); }
     const forge = document.createElement('a'); forge.href = '#/forge'; forge.textContent = 'forge'; forge.dataset.nav = 'forge'; $('.top nav').append(forge);
     const play = document.createElement('a'); play.href = '#/play'; play.textContent = 'play'; play.dataset.nav = 'play'; $('.top nav').append(play);

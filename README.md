@@ -1,7 +1,7 @@
-# ⬡ Hex
+# ⬡ Hex Lab
 
 Interview prep and game-dev learning in one static site: **senior engineering interviews in the AI era** (with a dedicated **Neonomics / open banking** track)
-plus a full **Game Dev Lab** (theory, pixel art, Zig and C++ drills).
+plus a full game-dev section (theory, pixel art, Zig and C++ drills).
 Pure static site (no build step), hosted on GitHub Pages.
 
 ## What's inside
@@ -136,11 +136,11 @@ A second section on the same site, for **learning game development** (it is not 
 
 ## Dev Lab learning tools
 
-Game Dev Lab includes a learning plan with 15/30/60-minute sessions, game-specific diagnostics and self ratings, learning progress, activity history, backup, cloud sync and AI usage. Its assessment and session settings are separate from interview prep. Katas and their spaced reviews are available in both sections.
+The game-dev section includes a learning plan with 15/30/60-minute sessions, game-specific diagnostics and self ratings, learning progress, activity history, backup, cloud sync and AI usage. Its assessment and session settings are separate from interview prep. Katas and their spaced reviews are available in both sections.
 
 The Design lab has three game architecture exercises: a platformer controller, a sprite/save pipeline and a wave arena. Game estimation practice covers frame budgets, texture memory and collision pairs. Each design exercise supports saved drafts, optional timing, hints, reference comparisons, rubric self review and a learning note. Pixel Forge is available from the header and home toolkit: open spritewright, try the teaching editor, or follow the pixel-art workflow and asset-pipeline exercise.
 
-## Build & play (Game Dev Lab)
+## Build & play (game-dev section)
 
 Open **play** in the game-dev navigation or use the home toolkit. All workspaces run on the static site:
 
@@ -152,7 +152,7 @@ Open **play** in the game-dev navigation or use the home toolkit. All workspaces
 - **AI workbench:** edit a small state machine's thresholds or a priority behaviour tree's condition/action branches. Drag the target and change health while inspecting active decisions.
 - **Shader playground:** edit real GLSL fragment shaders, adjust uniforms, pause time and see compiler errors while the previous working effect keeps rendering. WebGL is required for rendering; unsupported devices can still edit and save source.
 - **Performance playground:** measure collision time and candidate pairs for naive all-pairs and a spatial grid. Compare the same snapshot, change object count/cell size, and inspect clustered worst cases and recent timing samples. Measurements depend on the device.
-- **Game katas:** eight original mechanics exercises and three repair exercises in C, Zig and C++, with a visible language selector, syntax highlighting for editable code, tests and references, separate drafts, downloadable single-file starters/tests, references and spaced reviews. Compile and run locally, then record that your tests pass. Zig targets 0.17.0. All 139 Exercism exercises also have C, Zig and C++ starters, tests and references, downloadable as complete project ZIPs. Game Dev Lab routes use this native catalog; Interview Lab retains its Python catalog. Continue working cards, an In progress filter and a home resume link remember visited exercises and recover existing drafts; each exercise retains its own language and editable file, and opening an exercise does not record a pass.
+- **Game katas:** eight original mechanics exercises and three repair exercises in C, Zig and C++, with a visible language selector, syntax highlighting for editable code, tests and references, separate drafts, downloadable single-file starters/tests, references and spaced reviews. Compile and run locally, then record that your tests pass. Zig targets 0.17.0. All 139 Exercism exercises also have C, Zig and C++ starters, tests and references, downloadable as complete project ZIPs. The game-dev section's routes use this native catalog; the interview section retains its Python catalog. Continue working cards, an In progress filter and a home resume link remember visited exercises and recover existing drafts; each exercise retains its own language and editable file, and opening an exercise does not record a pass.
 - **Build-along games:** Pong → Breakout → a platformer room → a wave arena, each with three playable checkpoints, linked code exercises, tuning and learning notes. A checkpoint requires its playable target, a solved linked kata and a note. Export a standalone, editable HTML game that runs locally without a server or external dependencies; the runtime source is available in the workspace.
 - **Project notebook:** saved experiments, screenshots, predictions, observations, decisions, bugs and next attempts; restore workbench settings, review demonstrated outcomes, or export the notebook. Up to 40 entries, subject to browser storage capacity. Normal progress backup and cloud sync include the notebook, project checkpoints, art and game-kata reviews.
 

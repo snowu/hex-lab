@@ -566,7 +566,7 @@ window.GameProjectRuntime = function (canvas, kind, options = {}) {
     [/^#\/project\/(pong|breakout|platformer|arena)$/, view],
   );
   function list() {
-    document.title = "Build-along games · Game Dev Lab";
+    document.title = "Build-along games · Hex Lab";
     const all = store.get("gd:projects", {});
     app.innerHTML = `<div class="page-h"><h1>Build-along games</h1><p>Work through playable checkpoints in this order. Solve the linked code kata, reach the playable target, keep a learning note, then export a standalone version.</p></div><p><a class="btn" href="#/native-projects">Build a game powered by your C, Zig or C++ code →</a></p><div class="dgrid">${projects.map((p, i) => `<a class="dcard tc" href="#/project/${p.id}"><span class="chip">${i + 1} · ${Object.keys(all[p.id]?.completed || {}).length}/3 checkpoints</span><h2>${p.title}</h2><p>${p.description}</p></a>`).join("")}</div>`;
   }
@@ -750,7 +750,7 @@ window.GameProjectRuntime = function (canvas, kind, options = {}) {
           config = JSON.stringify(saved.options).replace(/</g, "\\u003c");
         const source = `${core}\nconst game = (${GameProjectRuntime.toString()})(document.querySelector('canvas'), ${JSON.stringify(id)}, ${config}); document.querySelector('#restart').onclick=()=>game.restart(); let paused=false; document.querySelector('#pause').onclick=()=>{paused=!paused;game.pause(paused)}; document.querySelectorAll('[data-key]').forEach(b=>{b.onpointerdown=e=>{e.preventDefault();b.setPointerCapture(e.pointerId);game.hold(b.dataset.key,true)};b.onpointerup=b.onpointercancel=()=>game.hold(b.dataset.key,false)});`;
         GameDownload(
-          `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${project.title}</title><style>body{background:#100d1a;color:#eee;font:16px system-ui;max-width:800px;margin:auto;padding:16px}canvas{width:100%;image-rendering:pixelated;touch-action:none}button{padding:14px;margin:4px}p{line-height:1.5}</style><h1>${project.title}</h1><p>Arrow keys / WASD to move; Space to jump or shoot. Click the game first. Built with Game Dev Lab.</p><canvas width="640" height="384" tabindex="0"></canvas><div><button data-key="ArrowLeft">Left</button><button data-key="ArrowRight">Right</button><button data-key="ArrowUp">Up</button><button data-key="ArrowDown">Down</button><button data-key=" ">Jump / shoot</button><button id="restart">Restart</button><button id="pause">Pause</button></div><script>${source.replace(/<\/script/gi, "<\\/script")}<\/script></html>`,
+          `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${project.title}</title><style>body{background:#100d1a;color:#eee;font:16px system-ui;max-width:800px;margin:auto;padding:16px}canvas{width:100%;image-rendering:pixelated;touch-action:none}button{padding:14px;margin:4px}p{line-height:1.5}</style><h1>${project.title}</h1><p>Arrow keys / WASD to move; Space to jump or shoot. Click the game first. Built with Hex Lab.</p><canvas width="640" height="384" tabindex="0"></canvas><div><button data-key="ArrowLeft">Left</button><button data-key="ArrowRight">Right</button><button data-key="ArrowUp">Up</button><button data-key="ArrowDown">Down</button><button data-key=" ">Jump / shoot</button><button id="restart">Restart</button><button id="pause">Pause</button></div><script>${source.replace(/<\/script/gi, "<\\/script")}<\/script></html>`,
           `${id}-game.html`,
           "text/html",
         );
