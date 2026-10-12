@@ -75,7 +75,13 @@ export default async function ({ url, browser, ok, section }) {
   await page.go(url, '#/plan', 300);
   const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('#bexp').click()]);
   const text = await (await import('node:fs/promises')).readFile(await dl.path(), 'utf8');
-  ok(JSON.parse(text).app === 'senior-interview-lab', 'progress export produces a valid file');
+  ok(JSON.parse(text).app === 'hex-lab', 'progress export produces a valid file');
+  const fsp = await import('node:fs/promises'), osp = await import('node:os'), pathm = await import('node:path');
+  const legacy = pathm.join(osp.tmpdir(), 'hex-legacy-export.json');
+  await fsp.writeFile(legacy, JSON.stringify({ app: 'senior-interview-lab', version: 1, exported: new Date().toISOString(), data: { 'sil:xp': '42' } }));
+  page.once('dialog', (d) => d.accept());
+  await Promise.all([page.waitForNavigation({ waitUntil: 'domcontentloaded' }), page.locator('#bimp').setInputFiles(legacy)]);
+  ok(await page.evaluate(() => { try { return localStorage.getItem('sil:xp'); } catch { return null; } }) === '42', 'exports tagged with the old app name still import');
   ok(page.errors.length === 0, 'no uncaught errors ' + JSON.stringify(page.errors.slice(0, 2)));
   await ctx.close();
 }

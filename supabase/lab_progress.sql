@@ -1,4 +1,4 @@
--- Senior Interview Lab: cloud progress sync.
+-- Hex: cloud progress sync.
 --
 -- Paste into the Supabase SQL editor of the project configured in assets/cloud-config.js.
 -- Idempotent: safe to re-run, and re-running never touches stored progress. It adds one table and

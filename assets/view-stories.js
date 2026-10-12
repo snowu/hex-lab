@@ -39,7 +39,7 @@
   }
 
   function viewStories() {
-    document.title = 'Story bank · Senior Interview Lab';
+    document.title = 'Story bank · Hex';
     if (mode.v === 'edit') return drawEdit();
     if (mode.v === 'practice') return drawPractice();
     const arr = stories(), filter = mode.filter || '';
