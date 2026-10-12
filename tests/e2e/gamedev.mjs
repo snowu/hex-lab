@@ -43,7 +43,7 @@ export default async function ({ url, browser, ok, section }) {
   await page.locator('#dsave').click();
   ok(await page.evaluate(() => JSON.parse(localStorage.getItem('sil:designhist')).some((x) => x.id === 'gd-platformer')), 'untimed learning rep saves');
   await page.go(url, '#/katas');
-  ok(await page.locator('#klist .krow').count() > 0, 'katas accessible in game mode');
+  ok(await page.locator('a[href^="#/game-kata/"]').count() === 150, 'katas accessible in game mode');
   await page.go(url, '#/forge');
   ok(await page.locator('a[href="https://snowu.github.io/spritewright/"]').count() === 1, 'Pixel Forge editor directly available');
   await page.locator('#artrepo').fill('snowu/test-game');

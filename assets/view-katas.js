@@ -29,7 +29,7 @@
   const shaky = (slug) => { const all = srAll(); all[slug] = { box: 0, due: Date.now() + DAY, last: Date.now(), n: (all[slug] && all[slug].n) || 1 }; store.set(SR_KEY, all); };
   const srLine = (slug) => { const r = srAll()[slug]; return !r ? '' : r.due <= Date.now() ? 'Due for review now: solve it again from scratch to move it up.' : `Next review ${inDays(r.due - Date.now())}.`; };
   window.KATA_SR = { due: dueKatas, isDue, recordPass };
-  H.routes.push([/^#\/katas$/, () => viewKatas()], [/^#\/kata\/([\w-]+)$/, (slug) => viewKata(slug)]);
+  H.routes.push([/^#\/katas$/, () => window.MODE === 'gamedev' ? (location.hash = '#/game-katas') : viewKatas()], [/^#\/kata\/([\w-]+)$/, (slug) => window.MODE === 'gamedev' ? (location.hash = '#/game-kata/exercism-' + slug) : viewKata(slug)]);
 
   /* ---------- small, safe markdown for the exercise instructions ---------- */
   function inline(text) {

@@ -10,13 +10,14 @@ import { loadDrills, fileFor, EXT } from './lib-drills.mjs';
 const require_ = process.argv.includes('--require');
 const only = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const DRILLS = loadDrills();
+const CC = process.env.CC || 'cc';
 const ZIG = process.env.ZIG || 'zig', CXX = process.env.CXX || 'g++';
 const have = (cmd, arg) => { const r = spawnSync(cmd, [arg], { encoding: 'utf8' }); return !r.error && r.status === 0; };
-const tools = { zig: have(ZIG, 'version'), cpp: have(CXX, '--version') };
+const tools = { c: have(CC, '--version'), zig: have(ZIG, 'version'), cpp: have(CXX, '--version') };
 let bad = 0, ran = 0;
 const fail = (m) => { bad++; console.error('✗', m); };
 
-for (const [lang, ok] of Object.entries(tools)) if (!ok) { (require_ ? fail : console.warn)(`${lang === 'zig' ? ZIG : CXX} not found, skipping ${lang} drills`); }
+for (const [lang, ok] of Object.entries(tools)) if (!ok) { (require_ ? fail : console.warn)(`${lang === 'zig' ? ZIG : lang === 'c' ? CC : CXX} not found, skipping ${lang} drills`); }
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'drills-'));
 const run = (lang, id, which) => {
@@ -25,12 +26,12 @@ const run = (lang, id, which) => {
   fs.writeFileSync(file, fileFor(id, DRILLS[id], lang, which));
   if (lang === 'zig') return spawnSync(ZIG, ['test', file, '--cache-dir', path.join(tmp, 'zcache'), '--global-cache-dir', path.join(tmp, 'zglobal')], { encoding: 'utf8', cwd: dir, timeout: 180000 });
   const exe = path.join(dir, id);
-  const c = spawnSync(CXX, ['-std=c++20', '-Wall', '-Wextra', '-Wno-unused-parameter', '-O1', '-fsanitize=address,undefined', '-o', exe, file], { encoding: 'utf8', timeout: 180000 });
+  const c = spawnSync(lang === 'c' ? CC : CXX, [lang === 'c' ? '-std=c17' : '-std=c++20', '-Wall', '-Wextra', '-Wno-unused-parameter', '-O1', '-fsanitize=address,undefined', '-o', exe, file, '-lm'], { encoding: 'utf8', timeout: 180000 });
   if (c.status !== 0) return { compileError: true, status: c.status, stdout: c.stdout, stderr: c.stderr };
   const r = spawnSync(exe, [], { encoding: 'utf8', timeout: 20000 });
   return { ...r, compiled: true };
 };
-const compileFailed = (lang, r) => (lang === 'cpp' ? r.compileError : /\.zig:\d+:\d+: error:/.test(r.stderr || ''));
+const compileFailed = (lang, r) => (lang !== 'zig' ? r.compileError : /\.zig:\d+:\d+: error:/.test(r.stderr || ''));
 
 for (const [id, d] of Object.entries(DRILLS)) {
   if (only.length && !only.includes(id)) continue;

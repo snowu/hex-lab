@@ -59,7 +59,7 @@
         "Compare collision strategies and inspect actual frame costs.",
       ],
     ];
-    app.innerHTML = `<div class="page-h"><h1>Build &amp; play</h1><p>Predict what will happen, change one thing, play it, and save what you learned.</p></div><div class="dgrid">${tools.map(([id, title, text]) => `<a class="dcard tc" href="#/play/${id}"><h2>${title}</h2><p>${text}</p></a>`).join("")}<a class="dcard tc" href="#/projects"><h2>Build-along games</h2><p>Pong → Breakout → platformer room → wave arena. Play checkpoints and export your game.</p></a><a class="dcard tc" href="#/game-katas"><h2>Game katas</h2><p>Write small mechanics and run real tests in an isolated worker.</p></a><a class="dcard tc" href="#/notebook"><h2>Project notebook</h2><p>Experiments, screenshots, bugs, decisions and your next attempt.</p></a></div>`;
+    app.innerHTML = `<div class="page-h"><h1>Build &amp; play</h1><p>Predict what will happen, change one thing, play it, and save what you learned.</p></div><div class="dgrid">${tools.map(([id, title, text]) => `<a class="dcard tc" href="#/play/${id}"><h2>${title}</h2><p>${text}</p></a>`).join("")}<a class="dcard tc" href="#/projects"><h2>Build-along games</h2><p>Pong → Breakout → platformer room → wave arena. Play checkpoints and export your game.</p></a><a class="dcard tc" href="#/game-katas"><h2>Game katas</h2><p>Practice C, Zig and C++ with native starters, tests and reference solutions.</p></a><a class="dcard tc" href="#/notebook"><h2>Project notebook</h2><p>Experiments, screenshots, bugs, decisions and your next attempt.</p></a></div>`;
   }
   function playground(kind) {
     document.title = `${kind} lab · Game Dev Lab`;
@@ -388,6 +388,7 @@
       paused = !paused;
       accumulator = 0;
       $("#gpause").textContent = paused ? "Resume" : "Pause";
+      draw();
     };
     $("#gstep").onclick = () => {
       paused = true;
