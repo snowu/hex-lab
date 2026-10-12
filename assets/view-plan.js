@@ -40,6 +40,8 @@
     if (due) tasks.push({ icon: 'cards', title: `Review ${cardsTarget} flashcards`, detail: `${due} due. Say each answer out loud before flipping.`, href: '#/review', done: (act.cards || 0) >= cardsTarget, min: Math.ceil(cardsTarget / 3) });
     const kd = [...(window.GAME_KATA_SR && GAME ? GAME_KATA_SR.due() : []), ...(!GAME && window.KATA_SR ? KATA_SR.due() : [])];
     if (kd.length) tasks.push({ icon: 'terminal', title: `Kata review: ${kd[0].name}`, detail: `${kd.length} kata${kd.length === 1 ? '' : 's'} due for spaced review. Solve it again from scratch, no peeking.`, href: kd[0].href || '#/kata/' + kd[0].slug, done: (act.kata || 0) >= 1, min: 15 });
+    const ld = window.LESSON_SR ? LESSON_SR.due() : [];
+    if (ld.length) tasks.push({ icon: 'target', title: `Lesson review: ${ld[0].title}`, detail: `${ld.length} lesson${ld.length === 1 ? '' : 's'} due for recall. Answer the end-of-lesson checks from memory.`, href: ld[0].href, done: (act.review || 0) >= 1, min: 10 });
     if (GAME) {
       const projects = store.get('gd:projects', {});
       const nextProject = ['pong', 'breakout', 'platformer', 'arena'].find((id) => Object.keys(projects[id]?.completed || {}).length < 3);

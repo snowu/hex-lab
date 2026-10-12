@@ -5,6 +5,14 @@ TRACKS.push({
     {
       id: 'scalability', title: 'Scalability fundamentals', minutes: 15,
       summary: 'Find the bottleneck, scale statelessly, shed load, and do the maths.',
+      checks: [
+        { q: 'A batch job is 10% serial. The team plans to buy 100× more nodes to get 100× faster. What should you tell them?',
+          options: ['More nodes always give linear speed-up, so approve it', 'The serial fraction caps the gain: Amdahl’s law limits this job to about 10× no matter how many nodes you add', 'Serial code runs faster on more nodes automatically', 'Latency no longer matters once you have enough nodes'],
+          answer: 1, explain: 'Amdahl’s law: the serial fraction bounds maximum speed-up. Attack the serial part before scaling out.' },
+        { q: 'Your service fans out to 20 backends. Averages look fine but p99 is terrible and the pool keeps exhausting. What is the right diagnosis and fix?',
+          options: ['Tail latency: with wide fan-out some backend is usually slow, so add timeouts with hedged requests and keep utilisation near 60-70% with headroom', 'Buy a bigger load balancer and keep utilisation at 100%', 'Average latency is the only metric that matters, so ignore p99', 'Remove all timeouts so slow backends eventually answer'],
+          answer: 0, explain: 'Tail latency dominates fan-out calls and queueing explodes near full utilisation. Timeouts, hedging, and headroom absorb it.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>The scaling playbook (in the order you should reach for it)</h3>
@@ -38,6 +46,14 @@ TRACKS.push({
     {
       id: 'kafka', title: 'Kafka: partitions, groups, delivery guarantees', minutes: 25,
       summary: 'What you must be able to explain, plus partitioner and assignment code.',
+      checks: [
+        { q: 'One malformed event crashes your consumer on every retry and its partition has stalled for an hour. What is the correct handling?',
+          options: ['Block the partition forever until someone manually deletes the topic', 'Retry with backoff topics and then park the event on a dead-letter topic so the partition can progress', 'Silently skip the event with no record', 'Stop all consumers in every group until the producer is fixed'],
+          answer: 1, explain: 'Poison messages must never block a partition forever nor vanish silently. Bounded retries plus a dead-letter topic preserve progress and evidence.' },
+        { q: 'Acknowledged payment events must survive the loss of one broker. Which configuration buys that, and at what price?',
+          options: ['A single replica with no acknowledgements, which is fastest and safest', 'Compacted topics alone, which replicate automatically with no cost', 'More consumer groups, which duplicate the data for safety', 'Replication factor 3 with min.insync.replicas=2 and producer acks=all: acknowledged writes survive a broker loss but pay extra latency'],
+          answer: 3, explain: 'Durability comes from synchronously replicated writes. The acks=all plus in-sync-replicas quorum trades latency for surviving broker loss.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Mental model</h3>
@@ -79,6 +95,14 @@ TRACKS.push({
     {
       id: 'aws', title: 'AWS building blocks for senior engineers', minutes: 25,
       summary: 'Compute, data, messaging, networking, security and how to choose.',
+      checks: [
+        { q: 'A policy grants Allow on a bucket but another attached policy has an explicit Deny on the same action. Can the call proceed?',
+          options: ['Yes, Allow always overrides Deny', 'Yes, the most recently created policy wins', 'No: an explicit Deny wins, and without any Allow the default is an implicit deny', 'Only on Tuesdays when audit logging is enabled'],
+          answer: 2, explain: 'IAM evaluation logic: explicit Deny wins, otherwise an Allow is required, otherwise access is implicitly denied.' },
+        { q: 'The team wants multi-region active/active for an internal dashboard with a 24-hour RTO. What is the senior response?',
+          options: ['Match cost to the RTO/RPO: a single region across 2-3 AZs with backups is enough, since multi-region jumps in cost and failover complexity', 'Multi-region active/active is always worth it regardless of RTO', 'Skip backups once you have two AZs', 'Regions and AZs are the same thing, so one AZ is enough'],
+          answer: 0, explain: 'Choose backup-and-restore through active/active by RTO/RPO. Multi-region is for strict recovery or regulatory needs, not a default.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>You are not expected to know every service. You are expected to <b>pick appropriately, explain the trade-off, and design for failure</b>.</p>
@@ -122,6 +146,14 @@ TRACKS.push({
     {
       id: 'terraform', title: 'Terraform & infrastructure as code', minutes: 22,
       summary: 'State, plan/apply, modules, drift, safety. Implement plan diffing and dependency order.',
+      checks: [
+        { q: 'Two engineers run apply at the same time and the state file corrupts. Which setup prevents this class of failure?',
+          options: ['Committing the state file to git so merges resolve conflicts', 'Keeping state on each laptop so nobody shares it', 'Emailing the state file around before each apply', 'A remote encrypted versioned backend with locking, restricted access, and state never committed to version control'],
+          answer: 3, explain: 'State maps config to real resources and can hold secrets. A locked remote backend serialises applies and protects the file.' },
+        { q: 'You must rename an SQS queue resource in config without destroying the live queue. What is the safe path?',
+          options: ['Delete the state file so Terraform forgets the old resource', 'Use a moved block (or import for adopted resources) so the rename is recorded, and guard stateful resources with prevent_destroy', 'Rename by hand in the console and ignore the next plan', 'Apply with -target on everything except the queue'],
+          answer: 1, explain: 'Refactoring tools record the rename instead of destroy-and-create. Lifecycle guards back up plan review for stateful resources.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p><b>Terraform</b> (or the open-source fork <b>OpenTofu</b>) is <b>declarative</b>: you describe the desired infrastructure, it compares that with the recorded <b>state</b> and the real world, and produces a <b>plan</b> of creates, updates and destroys. It builds a <b>dependency graph</b> from references between resources and applies independent resources in parallel.</p>

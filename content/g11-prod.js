@@ -6,6 +6,14 @@ TRACKS.push({
     {
       id: 'prod-debug', title: 'Debugging and profiling games', minutes: 30,
       summary: 'Make the invisible visible: debug drawing, in-game tools, time control, reproducible bugs and finding the real bottleneck.',
+      checks: [
+        { q: 'A jump feels wrong by a single frame and you cannot see why at full speed. Which built-in tool helps most?',
+          options: ['A bigger monitor', 'Time control: pause and single-step one frame at a time through the jump to inspect timers', 'More log levels', 'A faster computer'],
+          answer: 1, explain: 'Stepping frame by frame exposes off-by-one timing that real-time observation hides.' },
+        { q: 'Health sometimes goes negative deep in combat and the visible glitch appears ten seconds later. What is the durable fix?',
+          options: ['Clamp it to zero where it is displayed', 'Print it every frame', 'Lower the damage everywhere', 'Assert the invariant where damage is applied so the corruption crashes loudly at its cause'],
+          answer: 3, explain: 'A crash at the point of corruption beats weird behaviour later; never hide the cause with a clamp.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Games are hard to debug</h3>
@@ -49,6 +57,14 @@ TRACKS.push({
     {
       id: 'prod-testing', title: 'Testing a game', minutes: 35,
       summary: 'What is worth automating in a game, how to keep logic testable, golden replays, bots and fuzzing.',
+      checks: [
+        { q: 'You must guarantee that trading items between players never creates or destroys total wealth. Which technique fits best?',
+          options: ['Property and invariant tests: generate many random trades and assert conservation always holds', 'A screenshot test', 'A smoke test of level loading', 'A manual playtest only'],
+          answer: 0, explain: 'Invariants over generated cases find the edge case nobody thought to write by hand.' },
+        { q: 'A UI screenshot test passes on your GPU but fails on others over tiny pixel differences. How do you keep its value?',
+          options: ['Delete all visual tests', 'Test every frame', 'Compare with a tolerance on one reference machine instead of demanding pixel-exact matches everywhere', 'Require all players to use your GPU'],
+          answer: 2, explain: 'Screenshot tests are brittle across hardware, so tolerance plus a single reference keeps the signal without the noise.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>"You cannot test games" is half true</h3>
@@ -133,6 +149,14 @@ test "golden value: if you change game rules on purpose, regenerate this number 
     {
       id: 'prod-repo', title: 'Repositories, assets and pipelines', minutes: 30,
       summary: 'Version control for code and art, build automation, asset checks, and how artists can contribute without breaking things.',
+      checks: [
+        { q: 'In a Godot repo, which files do you ignore and which do you commit: the .godot/ cache folder and the .import files next to assets?',
+          options: ['Commit both', 'Ignore both', 'Commit the cache and ignore the imports', 'Ignore the generated .godot/ cache but commit the .import files that hold import settings'],
+          answer: 3, explain: 'Generated local caches stay out while the small settings files that reproduce the import stay in.' },
+        { q: 'Nobody remembers to rebuild atlases and localisation tables, so hand-edited derived files drift from sources. What fixes it?',
+          options: ['More README pages', 'Generate derived files with scripts that run both locally and in CI, so nobody edits them by hand', 'Stop using atlases', 'Commit bigger binaries'],
+          answer: 1, explain: 'Automation makes the source the single truth and regeneration the only path to derived files.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Games are code plus big binary files</h3>
@@ -166,6 +190,14 @@ test "golden value: if you change game rules on purpose, regenerate this number 
     {
       id: 'prod-release', title: 'Shipping and operating a game', minutes: 35,
       summary: 'Build targets, stores, saves across versions, telemetry and crash reports, community, and what to do after launch.',
+      checks: [
+        { q: 'After an update, web players keep running the old cached build and report already-fixed bugs. What prevents that?',
+          options: ['More features', 'A bigger download', 'Cache busting plus an in-game update-available notice so players reload the new build', 'Deleting their saves'],
+          answer: 2, explain: 'Web caches hold onto old files; versioned URLs and an explicit notice move players forward.' },
+        { q: 'You want to ship a free asset you found online in a commercial game. What must you check first?',
+          options: ['That free means commercial use, attribution, and modification rights all allow your use, and record it in a credits file', 'That the file size is small', 'That it looks good', 'That nobody else uses it'],
+          answer: 0, explain: 'Free covers many different licenses; keep a credits file and verify each asset allows your exact use.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Shipping is a feature</h3>

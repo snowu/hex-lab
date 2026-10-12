@@ -6,6 +6,14 @@ TRACKS.push({
     {
       id: 'gd-core-loop', title: 'Core loop, verbs and pillars', minutes: 20,
       summary: 'How to describe what a game actually is, so you can tell whether a feature belongs.',
+      checks: [
+        { q: 'A cool feature idea arrives that fights one of your three design pillars. What do the pillars tell you to do?',
+          options: ['Prototype it anyway, since cool features always earn their place', 'Cut it: pillars exist to say no, however cool the feature is', 'Add it as an option so nobody is disappointed', 'Rewrite the pillars around the feature'],
+          answer: 1, explain: 'Pillars are the cheapest scope tool: a feature that fights them gets cut rather than diluting the game.' },
+        { q: 'Playtesters call your game boring but cannot say why. In MDA terms, where do you look for the cause?',
+          options: ['At the aesthetics report first, then trace down into the dynamics and mechanics below it', 'At the marketing, since boredom is a trailer problem', 'At the graphics settings, since feel is resolution', 'Nowhere: aesthetics reports carry no design information'],
+          answer: 0, explain: 'Players experience aesthetics downward while designers build mechanics upward, so boredom is traced from the feeling to the rules.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>The core loop</h3>
@@ -30,6 +38,14 @@ TRACKS.push({
     {
       id: 'gd-flow', title: 'Flow, difficulty and teaching without text', minutes: 25,
       summary: 'Keeping players between bored and overwhelmed, and the level-design pattern behind the best tutorials.',
+      checks: [
+        { q: 'Your difficulty curve is a steady straight ramp and players burn out halfway. Which shape fits the lesson, and why?',
+          options: ['A sawtooth with rest beats: tension, release, then slightly higher tension', 'A steeper straight ramp, so skilled players stay engaged', 'A flat line, so nobody ever fails', 'Random spikes, so every session surprises'],
+          answer: 0, explain: 'Challenge must grow with skill along the flow channel, with recovery beats between peaks instead of a monotone climb.' },
+        { q: 'Players call a new boss unfair. The attacks are dodgeable but come with no wind-up, and dying sends them back ten minutes. What is the readability fix?',
+          options: ['Halve the boss damage so the unfairness matters less', 'Telegraph attacks before they land, keep danger cues consistent, and make retries fast with a nearby checkpoint', 'Hide the boss tells to raise the challenge', 'Add a lore popup explaining the boss motives'],
+          answer: 1, explain: 'Unfair almost always means unread: telegraph before punishing and make failure fast to understand and recover from.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>The flow channel</h3>
@@ -51,6 +67,14 @@ TRACKS.push({
     {
       id: 'gd-juice', title: 'Game feel and juice', minutes: 25,
       summary: 'Why two games with identical rules can feel completely different, and the small tools that make an action satisfying.',
+      checks: [
+        { q: 'Two prototypes share identical rules but one feels dead and the other feels great. Which layer differs, in Swink terms?',
+          options: ['The rules layer: identical rules cannot feel different', 'Real-time control, simulated space and polish: responsiveness, weight and feedback sell the same rules', 'The business model behind each prototype', 'The programming language used'],
+          answer: 1, explain: 'Game feel comes from immediate control, a world with weight, and redundant polish feedback, not from the rules alone.' },
+        { q: 'A designer wires damage numbers and particles into the same code that decides whether a hit lands. What rule does this break?',
+          options: ['Juice must live in a separate layer so effects never change gameplay results', 'Every hit needs screen shake to feel fair', 'Hit stop should pause rendering instead of logic', 'Particles must be simulated on the GPU'],
+          answer: 0, explain: 'Effects sell the action but must not move hitboxes or decide outcomes; hit stop pausing logic is fine, effects altering results are not.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Game feel</h3>
@@ -72,6 +96,14 @@ TRACKS.push({
     {
       id: 'gd-economy', title: 'Progression, economies and randomness', minutes: 30,
       summary: 'Sinks and faucets, exponential cost curves, why random rewards work, and pity timers.',
+      checks: [
+        { q: 'The next upgrade price follows cost = base times growth to the level, with growth around 1.1, while income grows roughly linearly. Why that shape?',
+          options: ['So the time between upgrades keeps growing and forces meaningful choices or a reset', 'So every upgrade arrives faster than the last', 'So income and cost stay exactly equal forever', 'So the first upgrade is the hardest to earn'],
+          answer: 0, explain: 'Exponential costs against slower income growth stretch the wait between purchases, which is what keeps choices meaningful.' },
+        { q: 'Playtesters love finding random loot layouts but hate missing attacks to a hit-chance roll. Which distinction explains the reaction?',
+          options: ['Loot is graphics randomness while hit chance is audio randomness', 'Input randomness (what you are dealt) creates variety; output randomness (whether your action works) feels unfair', 'Players prefer any randomness hidden in menus', 'Loot uses seeds while combat cannot be seeded'],
+          answer: 1, explain: 'Variety before the decision delights; randomness that vetoes the decision after it frustrates.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Progression types</h3>
@@ -94,6 +126,14 @@ TRACKS.push({
     {
       id: 'gd-scope', title: 'Scope, prototyping and playtesting', minutes: 20,
       summary: 'How small games actually get finished: prototypes that answer questions, vertical slices, and watching people play.',
+      checks: [
+        { q: 'You are unsure whether grapple movement is readable. What is the cheapest prototype that answers it?',
+          options: ['One grey-box room with the grapple and a target, built to test only that question', 'A full vertical slice with final art and sound', 'A survey asking players if they like grapples', 'Three extra movement systems for comparison'],
+          answer: 0, explain: 'A prototype is an experiment, not a small game: build the cheapest thing that answers the question and keep the learning.' },
+        { q: 'Observers keep explaining the controls during playtests and players then do fine. What should change about the test?',
+          options: ['Explain louder so every tester hears', 'Stay silent and watch where they hesitate or repeat mistakes, then ask what they were trying to do', 'Only test with players who already know the game', 'Skip testing until the tutorial text is final'],
+          answer: 1, explain: 'Watching silently reveals where the design is unclear; explaining hides exactly the problems testing must find.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Prototype to answer a question</h3>

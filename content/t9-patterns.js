@@ -6,6 +6,14 @@ TRACKS.splice(2, 0, {
     {
       id: 'pat-intro', title: 'How to run a coding round', minutes: 10,
       summary: 'A repeatable routine for the first five minutes, and for the last five.',
+      checks: [
+        { q: 'A candidate understands the problem and jumps straight to writing the optimal solution. Which routine step did they skip, and why does it matter?',
+          options: ['Stating the brute force and its complexity, which names the bottleneck the optimal solution must beat', 'Writing extra examples, which only matters for easy problems', 'Checking the recursion limit, which only matters in Python', 'Adding type hints, which the interviewer cannot evaluate'],
+          answer: 0, explain: 'Saying the brute force and its cost first frames the trade-off and earns credit even if the optimal stalls.' },
+        { q: 'The prompt says “minimise the largest load on any server”. Which pattern should you name in the first two minutes?',
+          options: ['Sliding window over the servers', 'A heap of end times', 'Binary search on the answer with a feasible(x) check', 'Trie lookup by prefix'],
+          answer: 2, explain: 'Minimise-the-maximum signals monotonic feasibility: if x works, larger x works, so binary-search x.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>Most candidates do not fail on the algorithm. They fail on <b>process under pressure</b>. Use the same routine every time, so it becomes automatic:</p>
@@ -44,6 +52,14 @@ TRACKS.splice(2, 0, {
     {
       id: 'pat-window', title: 'Sliding window & two pointers', minutes: 30,
       summary: 'Expand right, shrink left, keep an invariant. O(n) instead of O(n²).',
+      checks: [
+        { q: 'You need the longest substring with at most K distinct characters. When do you shrink the window?',
+          options: ['Expand right and shrink only while the window holds more than K distinct characters, recording the best while valid', 'Shrink after every single expansion regardless of validity', 'Reset left to zero whenever the window breaks and rescan from the start', 'Sort the input first and then take the first K characters'],
+          answer: 0, explain: 'For longest-valid problems shrink only to restore the invariant; each pointer still moves forward once, giving O(n).' },
+        { q: 'A teammate sees a while loop nested inside a for loop in a sliding-window solution and worries it is O(n²). What is the correct response?',
+          options: ['It must be rewritten with sorting to become linear', 'It is only linear for fixed-size windows', 'Each pointer moves forward at most n times, so total work is O(n) despite the nesting', 'Nesting is fine because Python loops are free'],
+          answer: 2, explain: 'Both pointers only advance, so the inner loop performs at most n shrinks across the whole run.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>When the question asks about a <b>contiguous range</b>, avoid recomputing from scratch for every start. Maintain a window <code>[left, right]</code> and a summary of what is inside (a sum, a set, a count dictionary).</p>
@@ -62,6 +78,14 @@ for right, x in enumerate(items):
     {
       id: 'pat-intervals', title: 'Intervals & scheduling', minutes: 30,
       summary: 'Sort by start, sweep, and use a heap of end times.',
+      checks: [
+        { q: 'A booking system uses half-open intervals [a, b). Do [1, 2) and [2, 3) overlap?',
+          options: ['Yes, because they share the endpoint 2', 'No: half-open intervals that only touch do not overlap, which is why booking systems prefer them', 'Yes, unless the input was sorted first', 'No, because sorting removes the overlap'],
+          answer: 1, explain: 'Decide closed versus half-open up front: with [a, b) touching means free, with [a, b] it means conflict.' },
+        { q: 'You must compute the minimum number of meeting rooms for a set of meetings. Which approach fits?',
+          options: ['Compare every pair of meetings with nested loops', 'Keep meetings unsorted and scan for a free room each time', 'Binary-search the room count without sorting by start', 'Sort by start, push end times into a min-heap, and reuse a room when the smallest end time is free'],
+          answer: 3, explain: 'Sorted starts plus a heap of end times counts overlaps in O(n log n) without pairwise comparison.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>Interval problems become easy once the input is <b>sorted by start time</b>. Decide up front whether intervals are closed <code>[a, b]</code> or half-open <code>[a, b)</code>, because that decides whether touching intervals overlap. Booking systems normally use half-open.</p>
@@ -73,6 +97,14 @@ for right, x in enumerate(items):
     {
       id: 'pat-graphs', title: 'Graphs: BFS, DFS & shortest paths', minutes: 35,
       summary: 'Implicit graphs on grids, and Dijkstra with a heap.',
+      checks: [
+        { q: 'You need the cheapest payment route where every hop has a non-negative fee. Which tool fits?',
+          options: ['BFS with a queue, which always finds the cheapest path', 'DFS, taking the first path found', 'Dijkstra with a min-heap, because edge weights are non-negative', 'Topological sort, because weights imply an order'],
+          answer: 2, explain: 'BFS is for uniform cost; with non-negative weights Dijkstra with a heap gives the cheapest path.' },
+        { q: 'A teammate writes recursive DFS for a 100000-cell grid. What should you warn about?',
+          options: ['Use an explicit stack or deque instead of recursion, since the default limit near 1000 frames crashes on deep grids', 'Keep recursion but add more base cases to avoid the limit', 'Switch to Dijkstra for plain reachability', 'Sort the grid cells first to reduce recursion depth'],
+          answer: 0, explain: 'Deep recursive DFS overflows the call stack; an explicit stack visits the same nodes without that limit.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>Many problems are graphs in disguise: grids (cells are nodes), dependencies, payment routes, service call chains. Pick the traversal by the question:</p>
@@ -94,6 +126,14 @@ for right, x in enumerate(items):
     {
       id: 'pat-heap-search', title: 'Heaps & binary search on the answer', minutes: 35,
       summary: 'k-way merging, and turning “minimise the maximum” into a search.',
+      checks: [
+        { q: 'You must keep the k largest values from a stream without storing everything sorted. What is the standard approach?',
+          options: ['Sort the whole stream after every new element', 'Keep a max-heap of all elements and scan it each time', 'Store everything and sort once at the very end', 'Keep a min-heap of size k with the best seen so far, evicting the smallest on each new arrival'],
+          answer: 3, explain: 'A size-k heap holds the k largest with O(log k) per element instead of sorting the whole stream.' },
+        { q: 'Your binary search for the minimum feasible capacity never terminates. What did you most likely get wrong?',
+          options: ['The search bounds or the lo/hi and mid update, which must preserve progress over a monotonic feasibility check', 'The heap size, which must equal the input size', 'The trie depth, which limits how far the search can go', 'The recursion limit, which stops binary search early'],
+          answer: 0, explain: 'Binary search on the answer needs explicit bounds and an update that always shrinks the range over feasible(x).' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Heaps</h3>
@@ -107,6 +147,14 @@ for right, x in enumerate(items):
     {
       id: 'pat-dp', title: 'Dynamic programming', minutes: 40,
       summary: 'State, recurrence, base case, order. Then optimise the memory.',
+      checks: [
+        { q: 'You spot overlapping subproblems and decide on DP. What is the first thing to state out loud?',
+          options: ['The language you will code in', 'What dp[i] means in one sentence, before any recurrence', 'The test framework you prefer', 'The order of your import statements'],
+          answer: 1, explain: 'Naming the state first forces the recurrence, base cases, and fill order to follow from it.' },
+        { q: 'A teammate proposes a greedy “always take the largest coin” for coin change. Using coins [1, 3, 4] and amount 6, what is the correct response?',
+          options: ['Greedy with the largest coin first is optimal for every coin system', 'DP only works bottom-up and never with recursion', 'A locally best choice can be wrong later, so test on a tricky case like coins 1, 3, 4 for 6 and use DP', 'Base cases are optional once the recurrence is written'],
+          answer: 2, explain: 'Greedy picks 4+1+1 (3 coins) while 3+3 uses 2, so overlapping subproblems need the DP recurrence, not a local rule.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>DP is “recursion with memory”. When a problem asks for a best/min/max/count of something built from smaller versions of itself, use this recipe aloud:</p>
@@ -125,6 +173,14 @@ for right, x in enumerate(items):
     {
       id: 'pat-structures', title: 'Tries & union-find', minutes: 35,
       summary: 'Two data structures that turn awkward problems into short code.',
+      checks: [
+        { q: 'You need autocomplete and prefix counts over a million words with fast per-keystroke lookup. Which structure fits?',
+          options: ['A hash set scanned fully on every keystroke', 'A trie where each edge is a character, giving lookup cost by word length regardless of word count', 'A heap holding every word sorted by length', 'Binary search on the answer value'],
+          answer: 1, explain: 'A trie shares prefixes so lookup and prefix queries cost O(word length), independent of how many words are stored.' },
+        { q: 'Edges stream in and you need cycle detection in an undirected graph, Kruskal-style. Why does union-find fit?',
+          options: ['It merges groups with union and reports a cycle when an edge joins two nodes already in the same set, in near-constant time with path compression', 'It sorts the edges automatically as they arrive', 'It finds shortest paths between all pairs at once', 'It stores prefixes for autocomplete'],
+          answer: 0, explain: 'Union-find tracks connectivity incrementally: each union is effectively O(1) and a same-set edge proves a cycle.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Trie</h3>

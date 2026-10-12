@@ -6,6 +6,14 @@ TRACKS.push({
     {
       id: 'gd-loop', title: 'The game loop and delta time', minutes: 25,
       summary: 'Why a game is a loop, what a frame budget is, and why frame-rate dependent code is the first bug everyone ships.',
+      checks: [
+        { q: 'Your game targets 60 fps. How much time does one frame have, and what happens if input, update and render exceed it?',
+          options: ['About 16.6 ms; the game misses its frame budget and the player sees stutter', 'About 100 ms; extra work just queues silently', 'About 1 ms; the GPU skips the frame for free', 'There is no budget; the engine stretches time to fit'],
+          answer: 0, explain: 'At 60 Hz each frame has 16.6 ms for everything. Missing it visibly stutters, so the whole track is about spending that budget wisely.' },
+        { q: 'After a 200 ms hitch your fixed-step loop wants to run twelve catch-up physics steps at once. What should it do?',
+          options: ['Run all twelve steps so no time is lost', 'Cap the steps per frame and throw the excess time away', 'Pause rendering until the simulation catches up', 'Double the step size to catch up in fewer steps'],
+          answer: 1, explain: 'Uncapped catch-up is the spiral of death: catching up takes longer than a frame, so the next frame falls further behind.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>A game is one loop that runs until you quit. Each trip around it is a <b>frame</b>:</p>
@@ -65,6 +73,14 @@ func _process(delta):
     {
       id: 'gd-input-fsm', title: 'Input, buffering and state machines', minutes: 25,
       summary: 'How games read input, why they forgive players, and how to stop booleans multiplying into bugs.',
+      checks: [
+        { q: 'Holding left to run versus tapping jump to leap: which input model fits each, and why?',
+          options: ['Poll the held state for running, use a press event or just-pressed check for the jump', 'Use press events for both, since polling misses fast taps', 'Poll every frame for both, since events are unreliable', 'Read raw key codes for both to avoid the action layer'],
+          answer: 0, explain: 'Polling suits continuous held input; one-shot actions need the press itself, so events or just-pressed checks fit the jump.' },
+        { q: 'A player script tracks is_jumping, is_dashing, is_hurt and is_dead as separate booleans, and testers find impossible states like hurt plus dashing plus dead. What is the structural fix?',
+          options: ['Add more booleans to cover the missing combinations', 'Reset all booleans every frame before reading input', 'Replace the flags with one state machine state plus listed transitions, so impossible combinations cannot be represented', 'Move the booleans into separate scripts'],
+          answer: 2, explain: 'One state at a time with explicit transitions removes the combinatorial bug surface that piles of flags create.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Input is a sampled signal</h3>
@@ -100,7 +116,15 @@ func _physics_process(delta):
     },
     {
       id: 'gd-entities', title: 'Entities, components and scenes', minutes: 25,
-      summary: 'Inheritance versus composition, Godot\'s node tree, and the data-oriented ECS idea behind sparse sets.',
+      summary: 'Inheritance versus composition, Godot\u2019s node tree, and the data-oriented ECS idea behind sparse sets.',
+      checks: [
+        { q: 'You have FlyingEnemy and WalkingEnemy, and now need a walking enemy that shoots plus a flying one that does not. The hierarchy is turning into diamonds and copy-paste. What is the idiomatic fix?',
+          options: ['Add a ShootingFlyingEnemy subclass and duplicate the shooting code into the walker', 'Compose enemies from small parts (Mover, Shooter, Health, Collider) instead of extending the hierarchy', 'Put all behaviour in the base Enemy class with flags', 'Freeze the design so no new combinations are needed'],
+          answer: 1, explain: 'Composition replaces the brittle hierarchy with combinable parts, so new mixes need no new branches.' },
+        { q: 'A child Health node currently calls get_node up into the HUD to set the bar directly, and it breaks whenever the UI is rearranged. What is the idiomatic Godot fix?',
+          options: ['Cache the absolute path in an onready var so the lookup is faster', 'Move the HUD reference into a global singleton', 'Have Health emit a signal such as health_changed and let the UI connect to it', 'Have the UI poll Health every frame instead'],
+          answer: 2, explain: 'Call down, signal up: children announce events with signals and never reach for their parents, keeping both reusable.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>The inheritance trap</h3>
@@ -121,6 +145,14 @@ func _physics_process(delta):
     {
       id: 'gd-perf', title: 'Performance, memory and the frame budget', minutes: 30,
       summary: 'Profile first, then kill per-frame allocations, pool objects and stop doing O(n²) neighbour checks.',
+      checks: [
+        { q: 'Bullets are spawned and freed dozens of times per second and the profiler shows allocator pressure plus GC hitches. What is the standard fix?',
+          options: ['Allocate bigger bullet objects so fewer are needed', 'Preallocate a pool of bullets once and hand slots out and back, dropping or recycling the oldest when full', 'Run the garbage collector more often', 'Spawn bullets on a background thread'],
+          answer: 1, explain: 'A pool removes per-frame allocation from the hot loop; dropping a bullet on overflow beats a hitch.' },
+        { q: 'Every enemy builds a label string and checks every other enemy each frame. Which two changes address the root causes?',
+          options: ['Build the label once at spawn and bucket enemies into a spatial grid so each queries only neighbours', 'Check only every other frame and halve the label length', 'Sort the enemy list and use shorter strings', 'Switch the labels to a faster font and skip dead enemies sometimes'],
+          answer: 0, explain: 'Hoist per-frame allocation out of the loop and replace the O(n-squared) all-pairs check with a spatial query.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Rule zero: measure</h3>

@@ -6,6 +6,14 @@ TRACKS.splice(4, 0, {
     {
       id: 'db-ledger-model', title: 'Modelling money in a relational database', minutes: 25,
       summary: 'Accounts, transactions, entries: invariants as constraints.',
+      checks: [
+        { q: 'A payment webhook may be retried by the provider. How do you guarantee it cannot post twice?',
+          options: ['Deduplicate in application code by querying first, without any database constraint', 'Store an idempotency key with a UNIQUE constraint so a retried request fails to insert twice', 'Delete old transactions periodically so retries find nothing', 'Compare amounts as FLOAT to detect near-duplicate posts'],
+          answer: 1, explain: 'Only a UNIQUE constraint enforced inside the transaction makes retries safe under concurrency; application checks race.' },
+        { q: 'The team wants fast balance reads and proposes a balance column updated by the app. What is the safe rule?',
+          options: ['Derive the balance as SUM of entries, and if a cached balance column exists update it in the same transaction and reconcile against the sum', 'Update the balance column whenever convenient and ignore the entries', 'Store local times alongside balances for readability', 'Allow NULL balances to mean zero'],
+          answer: 0, explain: 'The entries sum is the truth; a cached balance is only safe when written atomically with its entries and reconciled regularly.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>For money you want a database that enforces rules for you: <b>ACID transactions</b>, <b>constraints</b> and <b>joins</b>. The classic model is a <b>double-entry ledger</b>:</p>
@@ -38,6 +46,14 @@ entries       (id, transaction_id → transactions, account_id → accounts, amo
     {
       id: 'db-sql-fluency', title: 'SQL fluency: joins, windows, anti-joins', minutes: 40,
       summary: 'The queries senior interviews actually ask, and the NULL traps.',
+      checks: [
+        { q: 'You need the latest order per customer with ROW_NUMBER() OVER (PARTITION BY customer ORDER BY created DESC). Where can you filter to rank 1?',
+          options: ['In the same WHERE clause as the window function', 'Only in an outer query or CTE, because WHERE runs before window functions', 'In the HAVING clause of the same query level', 'By adding DISTINCT to the window definition'],
+          answer: 1, explain: 'Logical order runs window functions after WHERE and GROUP BY, so filter on their results one layer out.' },
+        { q: 'A query must keep only groups whose COUNT(*) exceeds 10, but the draft puts COUNT(*) > 10 in WHERE. What is the fix and why?',
+          options: ['Use HAVING for the aggregate condition, because WHERE cannot see aggregates', 'Move the condition to ORDER BY', 'Build a trie over the grouped column', 'Add an index and keep the condition in WHERE'],
+          answer: 0, explain: 'WHERE filters rows before grouping while HAVING filters groups after aggregation.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Mental model</h3>
@@ -81,6 +97,14 @@ print(db.execute("SELECT x FROM t WHERE x <> 1").fetchall())`,
     {
       id: 'db-indexes', title: 'Indexes and query plans', minutes: 35,
       summary: 'Composite order, covering and partial indexes, and reading EXPLAIN.',
+      checks: [
+        { q: 'A query with WHERE date(created_at) = ... ignores the index on created_at and scans. What is the proper fix?',
+          options: ['Add a second index on the same column with a different name', 'Rewrite the predicate as a range on created_at or add an expression index, because a function on the column prevents index use', 'Force an index-only scan with a comment hint', 'Partition by a hash of the query text'],
+          answer: 1, explain: 'Wrapping the column in a function hides its order from the planner; index the expression or leave the column bare.' },
+        { q: 'EXPLAIN (ANALYZE, BUFFERS) estimates 10 rows but actually reads 2 million with a slow Seq Scan. What should you suspect first?',
+          options: ['That the plan cache is corrupt and the database must be restarted', 'That sequential scans are always wrong and must be forced off', 'That statistics are stale, so run ANALYZE and compare again, because large estimate gaps mean the planner chose from bad inputs', 'That the client needs more connections'],
+          answer: 2, explain: 'A huge estimated-versus-actual gap points at bad statistics; the planner can only pick well when ANALYZE is fresh.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>An index is a sorted copy of some columns (usually a <b>B-tree</b>) that lets the database jump to rows instead of scanning the table. It speeds reads and <b>slows writes</b>, costs disk and memory, and only helps if the planner can use it.</p>
@@ -111,6 +135,14 @@ print(db.execute("SELECT x FROM t WHERE x <> 1").fetchall())`,
     {
       id: 'db-transactions', title: 'Transactions, isolation and locking', minutes: 40,
       summary: 'Anomalies, isolation levels in Postgres, and the right tool for each race.',
+      checks: [
+        { q: 'Two concurrent withdrawals both read balance 100, then both write back 100 minus their amount. What prevents this lost update at Read committed?',
+          options: ['Raising the level to serializable with no code change', 'Retrying with a longer sleep between attempts', 'One atomic UPDATE that decrements only when funds suffice and checking its row count, or locking the row with SELECT FOR UPDATE', 'Calling the payment API inside the transaction to serialize callers'],
+          answer: 2, explain: 'Read-modify-write from a stale read overwrites; either lock the row or make the check part of the write itself.' },
+        { q: 'Two doctors each read the rota, see the other is on call, and both go off call, breaking the coverage rule on different rows. Why does Repeatable read not stop this?',
+          options: ['Because write skew spans different rows with no write-write conflict, so only Serializable plus retry, locking the rows read, or a constraint stops it', 'Because MVCC is disabled at Repeatable read', 'Because the transactions were too short to conflict', 'Because the rota table is missing an index'],
+          answer: 0, explain: 'Snapshot isolation catches concurrent writes to the same row, but write skew writes different rows that jointly break an invariant.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p><b>ACID</b> in one line each: <b>A</b>tomic (all or nothing), <b>C</b>onsistent (constraints hold), <b>I</b>solated (concurrent transactions do not see each other's mess), <b>D</b>urable (committed means safe after a crash). Postgres uses <b>MVCC</b>: each transaction works on a snapshot, so readers do not block writers and writers do not block readers.</p>
@@ -156,6 +188,14 @@ print(db.execute("SELECT x FROM t WHERE x <> 1").fetchall())`,
     {
       id: 'db-prod', title: 'Postgres in production', minutes: 35,
       summary: 'Pooling, replicas, migrations without downtime, pagination, N+1.',
+      checks: [
+        { q: 'Page 5000 of a payments list uses LIMIT 20 OFFSET 100000 and gets slower while rows repeat between pages. What is the fix?',
+          options: ['Increase LIMIT to fetch more rows per page', 'Add planner hints for OFFSET', 'Cache OFFSET pages in the application', 'Use keyset pagination on (created_at, id) with a matching index, passing the last seen position as the cursor'],
+          answer: 3, explain: 'OFFSET reads and discards earlier rows and shifts under inserts; a keyset seeks directly to the cursor and stays stable.' },
+        { q: 'A list endpoint runs one query for 20 payments, then one merchant query per row. What is the fix?',
+          options: ['Join merchants in the main query or fetch all needed merchants with one WHERE id = ANY query', 'Raise the connection pool size', 'Paginate with a larger OFFSET', 'Build a trie over merchant names'],
+          answer: 0, explain: 'One query per row means 20 round trips per page; a join or a single batched lookup removes the N+1.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Connections</h3>

@@ -5,6 +5,14 @@ TRACKS.push({
     {
       id: 'senior-signals', title: 'What “senior” means in an interview', minutes: 8,
       summary: 'Scope, ambiguity, trade-offs, ownership, multiplying others.',
+      checks: [
+        { q: 'You can only ask one question before a vague design prompt, then you must proceed. What shows you can drive under ambiguity?',
+          options: ['Wait for the interviewer to volunteer the missing requirements', 'State your assumptions out loud, pick sensible defaults, and move on', 'Pick the most familiar architecture so you cannot go wrong', 'Solve the smallest slice you are sure about and stop there'],
+          answer: 1, explain: 'The ambiguity signal is stating assumptions and committing to defaults instead of waiting to be told.' },
+        { q: '“We used Kafka because it is the industry standard.” What is missing from this answer?',
+          options: ['The version number of Kafka that was used', 'The trade-off: what the choice costs and what it buys, plus when you would revisit it', 'A comparison with every alternative message broker', 'An apology for not using a newer system'],
+          answer: 1, explain: 'Senior answers name the cost of the choice and the revisit condition. “Industry standard” is not a reason.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>Mid-level engineers are evaluated on <b>whether they can solve the problem</b>. Senior engineers are evaluated on <b>whether they pick the right problem, solve it in a way the team can live with, and leave others better off</b>. Interviewers listen for five signals:</p>
@@ -27,6 +35,14 @@ TRACKS.push({
     {
       id: 'behavioral', title: 'Behavioral answers that land', minutes: 8,
       summary: 'STAR+ with impact and reflection.',
+      checks: [
+        { q: 'What does the “+” add to a STAR answer?',
+          options: ['A second result in case the first one is weak', 'Reflection: what you learned or changed afterwards', 'Praise for the teammates who helped you', 'A question back to the interviewer'],
+          answer: 1, explain: 'The + is the learning loop: what you changed in a system or habit, not just how you felt.' },
+        { q: 'Your draft answer ends with “and it got much faster.” What is the single most important fix?',
+          options: ['Make it shorter so it fits in one minute', 'Add a number: the before/after measurement and the business effect', 'Add more technical detail about the implementation', 'Name the framework version you used'],
+          answer: 1, explain: 'Results need numbers (p99 4.2s → 900ms, ~3% of carts). “Much faster” is not a result.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>Use <b>STAR+</b>: <b>S</b>ituation (1 sentence), <b>T</b>ask (what <i>you</i> owned), <b>A</b>ction (the bulk, in “I” not “we”), <b>R</b>esult (with a number), <b>+</b> Reflection (what you learned or changed).</p>
@@ -48,6 +64,14 @@ Strong: "Checkout p99 was 4.2s and we were losing ~3% of carts. I profiled it, f
     {
       id: 'ai-era-interviews', title: 'Interviewing in the AI era', minutes: 10,
       summary: 'What changed, how to use AI honestly, and how to show judgment.',
+      checks: [
+        { q: 'Why are interviews shifting toward design discussions and review-the-diff rounds?',
+          options: ['Because whiteboard coding is too expensive to run', 'Because code generation is cheap, so judgment and verification are what is scarce', 'Because AI cannot write any code at all', 'Because candidates asked for easier formats'],
+          answer: 1, explain: 'When generation is free, interviews probe what is still scarce: judgment, verification, system thinking.' },
+        { q: 'Before you prompt an assistant in an AI-allowed round, what must you do first?',
+          options: ['State your approach and the edge cases you will check', 'Clear the chat history so the model starts fresh', 'Ask the interviewer which model to use', 'Write the full solution by hand as a backup'],
+          answer: 0, explain: 'Think first, then prompt. Narrating the approach and edge cases up front is part of what is evaluated.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>Code generation is cheap now, so interviews are shifting toward what is still scarce: <b>judgment, verification, system thinking, and communication</b>. Expect any of:</p>

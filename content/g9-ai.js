@@ -6,6 +6,14 @@ TRACKS.push({
     {
       id: 'ai-bt', title: 'From state machines to behaviour trees', minutes: 35,
       summary: 'Why hand-wired state machines stop scaling, and how a tree of small reusable nodes decides what to do every tick.',
+      checks: [
+        { q: 'An enemy should attack only when it can see the player AND is in range. Which node composes those two conditions?',
+          options: ['A decorator', 'A parallel node', 'A sequence: it runs children in order and stops at the first non-success', 'The blackboard'],
+          answer: 2, explain: 'Sequence is a logical AND over children, so all three steps (see, in range, shoot) must succeed.' },
+        { q: 'A sight sensor spots the player and a movement action needs that position on later ticks. Where should the position live?',
+          options: ['On a shared blackboard: sensors write facts like the target and last known position, conditions and actions read them', 'Inside the patrol action only', 'In the renderer', 'In a local variable of the sensor'],
+          answer: 0, explain: 'The blackboard decouples nodes: writers and readers share facts without depending on each other.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Game AI is not machine learning</h3>
@@ -47,6 +55,14 @@ TRACKS.push({
     {
       id: 'ai-planning', title: 'Utility AI and planners', minutes: 40,
       summary: 'Choosing by scores, and planning a sequence of actions toward a goal: two alternatives to hand-written priorities.',
+      checks: [
+        { q: 'A utility action combines three considerations by multiplication, and one consideration scores 0. What happens to the action?',
+          options: ['It gets an average score', 'It gets a bonus', 'It is skipped for one tick', 'It scores 0 no matter how good the others are: any 0 vetoes the product'],
+          answer: 3, explain: 'Multiplication makes each consideration a veto, which is why averaging with compensation is sometimes preferred.' },
+        { q: 'A GOAP agent with an unloaded weapon plans four steps, but when it starts already loaded the plan has two. Why?',
+          options: ['The planner picks randomly', 'The planner searches from the current world state, so an already-satisfied precondition shortens the plan', 'The designer deleted steps', 'The goal changed'],
+          answer: 1, explain: 'Plans emerge from the start state plus action preconditions and effects, so they adapt to what already holds.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Utility AI: choose by scoring</h3>
@@ -153,6 +169,14 @@ test "the planner finds the cheapest sequence and adapts to the starting state" 
     {
       id: 'ai-perception', title: 'Perception and steering', minutes: 35,
       summary: 'What an agent knows (sight, sound, memory) and how it moves (seek, arrive, avoid, flock): the other half of believable AI.',
+      checks: [
+        { q: 'A guard checks an expensive wall raycast against every distant entity before testing distance or facing. What is wrong?',
+          options: ['Raycasts should replace all other checks', 'Guards should have x-ray vision', 'Sight checks should run cheapest first (distance, then field of view, then the raycast) and be staggered across frames', 'Perception should read the player position directly'],
+          answer: 2, explain: 'Ordering cheapest-first plus staggering keeps perception cheap; the raycast is the last resort, not the first.' },
+        { q: 'An enemy using plain seek keeps missing a fast strafing target because it chases where the target was. What fixes the aim?',
+          options: ['Pursue the predicted position (position plus velocity times time to reach) instead of the current one', 'Seek faster', 'Wander instead', 'Add more separation'],
+          answer: 0, explain: 'Pursuit leads the target while seek chases history; prediction is what hits movers.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Do not let the AI cheat by default</h3>
@@ -246,6 +270,14 @@ test "arrive stops at the target, plain seek overshoots and circles back" {
     {
       id: 'ai-pathing', title: 'Pathfinding in depth', minutes: 40,
       summary: 'A* properly: open and closed sets, heuristics, grids vs navmeshes, smoothing, hierarchies and budgeting path requests.',
+      checks: [
+        { q: 'Someone proposes doubling the Euclidean heuristic to make A* faster on a navmesh. What is the risk?',
+          options: ['It will run slower', 'It may overestimate the remaining cost, breaking admissibility, so the path is no longer guaranteed shortest', 'It changes the movement cost', 'It disables the closed set'],
+          answer: 1, explain: 'An admissible heuristic never overestimates; weighting above 1 trades optimality for speed by design.' },
+        { q: 'Wide agents keep clipping corners through walls on grid paths that look fine for small ones. What was missed?',
+          options: ['The heuristic is wrong', 'The tick rate is too low', 'Jump point search was not used', 'Obstacle inflation by the agent radius: paths must be planned for the body size, not a point'],
+          answer: 3, explain: 'Inflating obstacles (or baking radius into the navmesh) keeps wide bodies off corners they cannot fit around.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>A* in one paragraph</h3>
@@ -349,6 +381,14 @@ test "A* finds the same shortest length as exhaustive search, expanding few node
     {
       id: 'ai-fun', title: 'AI that is fun: fairness, directors and testing', minutes: 30,
       summary: 'Believable beats smart: telegraphing, attack tokens, directors and dynamic difficulty, cheating, and how to test AI.',
+      checks: [
+        { q: 'A boss has a devastating one-shot strike with no wind-up, sound, or pause. Players call it unfair. What principle was violated?',
+          options: ['Telegraph before acting: stronger attacks need longer, readable warnings so the fight feels like a conversation', 'Attack tokens were missing', 'The director intensity was too low', 'The checksum was not logged'],
+          answer: 0, explain: 'Readability is what makes a fight fair; the costlier the attack, the longer its telegraph must be.' },
+        { q: 'Players are crushed with no breather: intensity stays high and no quiet moment ever comes. What should the director do?',
+          options: ['Spawn more enemies immediately', 'Raise enemy damage', 'Spend the low-intensity budget: delay spawns, drop recovery items, and grant a calm window before the next peak', 'Remove the telegraphs'],
+          answer: 2, explain: 'The director paces intensity in build-peak-relax cycles so each run varies and players recover.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>The goal is fun, not intelligence</h3>

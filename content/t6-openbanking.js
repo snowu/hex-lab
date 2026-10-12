@@ -5,6 +5,14 @@ TRACKS.push({
     {
       id: 'ob-landscape', title: 'The open banking landscape', minutes: 12,
       summary: 'PSD2, the players, and the end-to-end account-data flow.',
+      checks: [
+        { q: 'A merchant wants “pay by bank” at checkout: move money out of the shopper’s account. Which role covers that, and how does an aggregator help?',
+          options: ['CBPII, which moves money directly', 'ASPSP, which is the shopper themselves', 'PISP, which initiates payments; the aggregator holds the licence and exposes one API over many banks', 'SCA, which is a licence type for moving money'],
+          answer: 2, explain: 'Starting a payment from the user account is the PISP role. An aggregator carries the licence once so customers integrate a single API.' },
+        { q: 'Two banks report “pending” transactions with different meanings, and paginate differently. Your aggregator dashboard must combine them. What is the correct approach?',
+          options: ['Normalise into one canonical model (keeping the raw payload for debugging) and document what booked versus pending means per bank', 'Pick one bank’s definition and silently apply it to all banks', 'Show whichever bank responds first and drop the other', 'Store the amounts as floats and merge the pages by timestamp alone'],
+          answer: 0, explain: 'Banks differ in formats, pagination, and field semantics. Normalise above an adapter layer but keep the original payload.' },
+      ],
       sections: [
         { type: 'text', html: `
 <div class="callout warn"><b>Source note:</b> this track combines general PSD2 knowledge with details from Neonomics’ <a href="https://docs.neonomics.io" target="_blank" rel="noopener">public developer docs</a> (UAPI v3.x at the time of writing). It is <b>not</b> insider knowledge of their internals. Read their docs yourself before the interview; being able to discuss their actual API is a strong signal.</div>
@@ -38,6 +46,14 @@ TRACKS.push({
     {
       id: 'ob-security', title: 'Consent, SCA & security model', minutes: 15,
       summary: 'SCA flavours, eIDAS certificates, signing, consent lifetime, GDPR.',
+      checks: [
+        { q: 'A signed payment request passes through two proxies before reaching the bank. Why is the QSeal signature still verifiable while the TLS session is not?',
+          options: ['TLS sessions are stored in the database and expire', 'QSeal certificates are self-signed so proxies skip them', 'Signatures are slower and therefore more secure than encryption', 'The signature proves that exact message was unaltered by the key holder end to end, while mTLS only secures each channel hop and identifies the party'],
+          answer: 3, explain: 'mTLS secures the channel and authenticates the party; a QSealC signature gives message-level integrity and non-repudiation through intermediaries.' },
+        { q: 'Your nightly job refreshes every consented account once an hour with no user present, and logs full IBANs for debugging. What are the two violations?',
+          options: ['The job runs at night instead of during business hours, and logs are too verbose', 'Hourly unattended refreshes exceed the roughly 4-requests-per-24h limit, and full IBANs in plain logs breach data minimisation', 'OAuth tokens expire too fast, and IBANs should be uppercase', 'QWAC and QSealC are swapped, and the job needs more CPU'],
+          answer: 1, explain: 'Unattended AIS access is quota-limited, so cache, batch, and design a reconnect UX; financial data is GDPR personal data, so minimise logging.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>SCA flows</h3>
@@ -67,6 +83,14 @@ TRACKS.push({
     {
       id: 'ob-payments-money', title: 'Payments & money handling', minutes: 25,
       summary: 'Minor units, IBAN validation, fair splitting, and the payment status lifecycle.',
+      checks: [
+        { q: 'A teammate stores a 19.99 EUR charge as the float 19.99 with no currency field. What is wrong and what is the fix?',
+          options: ['Store integer minor units (1999) plus the ISO 4217 currency, define one rounding rule, and never mix currencies', 'Floats are fine as long as you round on display', 'Store the amount as a string with the currency symbol attached', 'Multiply by 100 only for Japanese yen'],
+          answer: 0, explain: 'Floats cannot represent most decimals exactly and drop the currency. Minor units plus ISO code plus a single rounding rule is the money rule.' },
+        { q: 'A duplicate webhook replays a settled transfer and your handler inserts a second ledger row for it. What is the correct ledger discipline?',
+          options: ['Delete the older row so only the newest remains', 'Update the old row in place with the new status', 'Keep the ledger append-only: deduplicate with idempotency keys and fix mistakes with reversing entries, never edits or deletes', 'Ignore all webhooks after the first one'],
+          answer: 2, explain: 'Ledger entries are append-only and payment creation uses idempotency keys, so replays are deduped and corrections are traceable reversals.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>Neonomics’ docs list payment types such as <b>domestic</b>, <b>SEPA credit</b>, scheduled variants, and <b>batch</b> transfers. After the user completes SCA the payment must be <b>completed promptly</b> because bank authorisations expire fast, and status is polled (or pushed) by payment id.</p>
@@ -92,6 +116,14 @@ TRACKS.push({
     {
       id: 'ob-aggregator-eng', title: 'Engineering a multi-bank aggregator', minutes: 22,
       summary: 'Heterogeneity, normalisation, throttling, outages and reconciliation.',
+      checks: [
+        { q: 'A bank adds a new fee field your adapter does not map yet, and support needs it to debug a complaint today. What design choice saves you?',
+          options: ['Dropping unmapped fields keeps the model clean, so wait for the next schema release', 'Rewriting the adapter per complaint is fastest', 'Keeping the raw bank payload alongside the canonical model, so unmapped fields stay available for debugging and later mapping', 'Asking the bank to remove the new field'],
+          answer: 2, explain: 'Normalise into a canonical model but retain the original payload. Heterogeneous banks change faster than your mappings.' },
+        { q: 'A bank is down during the morning dashboard rush. What is the right degraded behaviour?',
+          options: ['Fail the whole dashboard for all banks so the outage is visible', 'Retry the bank in a tight loop until it recovers', 'Invent a plausible balance from last week’s average', 'Serve clearly flagged cached data with its as-of timestamp, then reconcile against the bank when it recovers'],
+          answer: 3, explain: 'Data freshness is a product feature: degrade to labelled cached data with as-of timestamps, and assume drift that reconciliation must detect.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>The core engineering problem: <b>thousands of banks, one reliable API</b>. Each bank differs in formats, auth quirks, rate limits, uptime, field semantics and release schedule. Patterns that matter:</p>
@@ -116,6 +148,14 @@ TRACKS.push({
     {
       id: 'ob-interview-prep', title: 'Preparing for the Neonomics interview', minutes: 10,
       summary: 'Research checklist, questions to ask, and how to map your experience.',
+      checks: [
+        { q: 'You have one evening before the interview. Which preparation gives the strongest signal?',
+          options: ['Reading the aggregator API docs on consent, SCA, and errors, then drawing the flow from memory and trying a sandbox redirect', 'Memorising the founding year and office locations only', 'Re-reading your own CV with no reference to their API or strategy', 'Learning a new frontend framework overnight'],
+          answer: 0, explain: 'Discussing their actual API flow from memory, plus sandbox experience, shows role-relevant preparation beyond generic company facts.' },
+        { q: 'You once owned an integration over many flaky third-party partners. How should you pitch that story here?',
+          options: ['As a story about writing the most lines of code in a sprint', 'As a story about tabs versus spaces in code review', 'As a story about office relocation logistics', 'As evidence for aggregator themes: per-partner isolation, contract tests and probes, idempotent effects, and reconciliation'],
+          answer: 3, explain: 'Map each past story to their likely themes: unreliable banks, money correctness, security, heterogeneous modelling, and async status handling.' },
+      ],
       sections: [
         { type: 'text', html: `<p>Neonomics is an Oslo-based open banking company (founded 2017) with a licensed payment institution, an aggregator API covering many European banks, and a pay-by-bank product (<b>Nello Pay</b>). It has been growing via partnerships and acquisitions. Check their latest news; details change.</p>` },
         { type: 'reveal', title: '✅ Research checklist (do these before the interview)', html: `<ol>

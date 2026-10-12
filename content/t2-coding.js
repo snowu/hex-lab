@@ -5,6 +5,14 @@ TRACKS.push({
     {
       id: 'maps-complexity', title: 'Hash maps & complexity talk', minutes: 15,
       summary: 'Most practical problems are a hash map plus a clear invariant.',
+      checks: [
+        { q: 'A reviewer flags this loop over 100k users as too slow: "for u in users: if u in banned_list: ...". What is the problem and the fix?',
+          options: ['Sorting is missing; sort both lists first', 'String comparison is slow; hash the usernames manually', 'Membership on a list is O(n), making the loop quadratic; build a set of banned ids first for O(1) lookups', 'The loop variable name is too short; rename it'],
+          answer: 2, explain: 'The lesson warns x in some_list is O(n), the most common accidental quadratic. A set turns the lookup into O(1) average.' },
+        { q: 'You want to group events by a composite key of (user_id, day). Which key choice works in a dict, and why?',
+          options: ['A tuple (user_id, day), because tuples are hashable', 'A list [user_id, day], because lists preserve order', 'A dict {user: user_id, day: day}, because it is self-describing', 'A set {user_id, day}, because sets are fastest'],
+          answer: 0, explain: 'Dict and set keys must be hashable: tuples are, lists/dicts/sets are not. Say the complexity trade out loud: O(n) time for O(n) space.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>Always say the complexity out loud and what you trade for it. The 80% pattern: <b>replace a nested loop with a dict or set lookup</b> → O(n²) becomes O(n) time at O(n) space.</p>
@@ -30,6 +38,14 @@ for x in xs:
     {
       id: 'stateful-classes', title: 'Design-a-class problems', minutes: 20,
       summary: 'LRU cache and rate limiter: clean APIs, injectable clocks, invariants.',
+      checks: [
+        { q: 'Your rate limiter calls time.time() directly, and tests must sleep for real seconds. What is the senior fix?',
+          options: ['Inject the clock (default time.time) so tests can pass a fake clock and advance time deterministically', 'Make the limit higher so tests never hit it', 'Catch all exceptions so sleeps never fail', 'Store timestamps as strings for readability'],
+          answer: 0, explain: 'Injecting dependencies like a clock keeps the public surface tiny and the invariant testable; define edge behavior up front instead of sleeping in tests.' },
+        { q: 'In your LRU cache, get(k) returns the value but hit rates are mysteriously low. What invariant did you break?',
+          options: ['Keys must be sorted before every access', 'The cache must be cleared on every read to stay fresh', 'A get must mark the key most-recently-used (move_to_end) so eviction drops the truly least-used entry', 'Capacity should grow by one on every get'],
+          answer: 2, explain: 'The LRU invariant is maintained across operations: every get and put refreshes recency, and eviction removes the least-recently-used entry in O(1).' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>These problems test whether you can maintain <b>invariants</b> across operations. Senior moves: inject dependencies (a clock!) so the code is testable, define behavior at edges up front, and keep the public surface tiny.</p>
@@ -41,6 +57,14 @@ for x in xs:
     {
       id: 'async-patterns', title: 'Async patterns: pools, retries, timeouts', minutes: 20,
       summary: 'Concurrency control and resilience with asyncio.',
+      checks: [
+        { q: 'You run asyncio.gather over 10,000 URL fetches and the downstream service falls over. What is the fix?',
+          options: ['Add more retries so failed ones eventually succeed', 'Remove the timeout so slow requests can finish', 'Bound concurrency with a semaphore or worker pool so only N requests are in flight at once', 'Switch to threads because asyncio cannot do I/O'],
+          answer: 2, explain: 'Unbounded gather starts 10,000 requests at once. Bounded concurrency is the control that protects both your pool and the downstream service.' },
+        { q: 'Your retry helper re-sends a "charge card" POST instantly on every failure, with no jitter. What two traps did you hit?',
+          options: ['None; fast retries always improve success rates', 'Retrying a non-idempotent call can double-charge, and retrying without jitter causes a thundering herd', 'Backoff is illegal for payment APIs', 'Timeouts should be removed during retries'],
+          answer: 1, explain: 'The lesson warns retrying non-idempotent calls can double-charge and retrying without jitter makes a thundering herd. Use backoff plus jitter and make the operation safe to repeat.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>Real services spend their lives waiting on other services. Three utilities show up constantly: <b>bounded concurrency</b>, <b>retry with backoff + jitter</b>, and <b>timeouts</b>. Be able to write each from scratch.</p>

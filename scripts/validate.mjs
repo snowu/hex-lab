@@ -32,7 +32,7 @@ for (const t of TRACKS) for (const l of t.lessons) if (!(Number.isInteger(l.minu
 const simIds = new Set(['sims.js', 'sims-game.js'].flatMap((f) => [...fs.readFileSync(path.join(root, 'assets', f), 'utf8').matchAll(/SIMS\.(\w+)\s*=/g)].map((m) => m[1])));
 const pids = new Set();
 const cases = []; // python cases to run
-let bad = 0, drills = 0, exercises = 0, quizzes = 0, bugs = 0, predicts = 0, sims = 0;
+let bad = 0, drills = 0, exercises = 0, quizzes = 0, checks = 0, bugs = 0, predicts = 0, sims = 0;
 const fail = (m) => { bad++; console.error('✗', m); };
 const ids = new Set();
 
@@ -55,6 +55,16 @@ for (const t of TRACKS) for (const l of t.lessons) l.sections.forEach((x, i) => 
 for (const t of TRACKS) for (const l of t.lessons) {
   if (ids.has(l.id)) fail('duplicate lesson id ' + l.id); ids.add(l.id);
   if (!/^[\w-]+$/.test(l.id)) fail('bad lesson id ' + l.id);
+  if (!Array.isArray(l.checks) || l.checks.length < 2) fail(l.id + ' needs at least 2 end-of-lesson checks');
+  else for (const [i, c] of l.checks.entries()) {
+    const where = `${l.id} check ${i}`;
+    if (!c.q || !c.explain) fail(where + ' needs q and explain');
+    if (!Array.isArray(c.options) || c.options.length !== 4) fail(where + ' needs exactly 4 options');
+    else if (new Set(c.options).size !== 4) fail(where + ' has duplicate options');
+    if (!(c.answer >= 0 && c.answer < 4)) fail(where + ' answer out of range');
+    for (const f of ['q', 'explain']) if (typeof c[f] === 'string') { const e = htmlBalance(c[f]); if (e) { bad++; console.error(`✗ ${where} ${f}: ${e}`); } }
+    checks++;
+  }
   for (const [i, s] of l.sections.entries()) {
     const where = `${l.id}#${i}`;
     if (s.type === 'quiz') {
@@ -155,6 +165,6 @@ MOCK.forEach((m, i) => {
   for (const id of m.lessons || []) if (!ids.has(id)) fail('mock ' + i + ' links to unknown lesson ' + id);
 });
 RESOURCES.forEach((r, i) => { if (!/^https:\/\//.test(r.url) || !r.title || !r.cat || !r.note) fail('resource ' + i + ' malformed'); });
-console.log(`${TRACKS.length} tracks, ${ids.size} lessons, ${exercises} python exercises, ${bugs} bug hunts, ${predicts} predicts, ${sims} sims, ${drills} C/Zig/C++ drills, ${DESIGNS.length} design reps, ${ESTIMATES.length} estimation types, ${quizzes} quizzes, ${CARDS.length} cards, ${MOCK.length} mock questions, ${RESOURCES.length} resources`);
+console.log(`${TRACKS.length} tracks, ${ids.size} lessons, ${exercises} python exercises, ${bugs} bug hunts, ${predicts} predicts, ${sims} sims, ${drills} C/Zig/C++ drills, ${DESIGNS.length} design reps, ${ESTIMATES.length} estimation types, ${quizzes} quizzes, ${checks} lesson checks, ${CARDS.length} cards, ${MOCK.length} mock questions, ${RESOURCES.length} resources`);
 if (bad) { console.error(bad + ' problem(s)'); process.exit(1); }
 console.log('All content valid ✓');

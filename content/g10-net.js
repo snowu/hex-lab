@@ -6,6 +6,14 @@ TRACKS.push({
     {
       id: 'net-models', title: 'The network and your game', minutes: 35,
       summary: 'Latency, jitter and loss; client-server versus peer-to-peer; what to send and how small you can make it.',
+      checks: [
+        { q: 'Two players are 10,000 km apart on fibre and see at least ~50 ms one-way delay before any router adds more. What follows?',
+          options: ['Use TCP to remove the delay', 'You cannot code below the physics of light in fibre: the techniques must hide latency, not eliminate it', 'Increase the tick rate to remove it', 'Send larger packets'],
+          answer: 1, explain: 'Distance sets a floor on latency, so networking is about hiding delay and tolerating loss.' },
+        { q: 'A server sends every entity to every player at full rate, and bandwidth explodes as entities grow. What is the highest-payoff cut?',
+          options: ['Compress the chat text', 'Raise the snapshot rate', 'Add more entities', 'Interest management: send only nearby or visible entities, at lower rates for far ones, plus deltas'],
+          answer: 3, explain: 'Not sending irrelevant state beats shrinking it; deltas and quantisation cut what remains.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>What the network really is</h3>
@@ -86,6 +94,14 @@ test "values outside the range are clamped, never wrapped" {
     {
       id: 'net-prediction', title: 'Prediction, interpolation and lag compensation', minutes: 40,
       summary: 'How a game feels instant at 100 ms: predict yourself, show others in the past, and let the server rewind time for fairness.',
+      checks: [
+        { q: 'With prediction on, the client is corrected almost every snapshot even when nothing special happens. What is the likely bug?',
+          options: ['Prediction drift: the client movement code differs from the server, so sharing the code and stepping with the same fixed dt is required', 'The interpolation delay is too large', 'The tick rate is too high', 'Lag compensation is missing'],
+          answer: 0, explain: 'Frequent corrections signal divergence between the two simulations, not normal network noise.' },
+        { q: 'Corrections of one pixel visibly snap the character every snapshot. How should small versus large errors be handled?',
+          options: ['Snap on every difference', 'Ignore the server', 'Correct small errors by blending and reserve snapping for large ones, using a tolerance', 'Extrapolate for a full second'],
+          answer: 2, explain: 'A tolerance with blend-for-small and snap-for-large hides noise without letting real divergence linger.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>The problem</h3>
@@ -125,6 +141,14 @@ test "values outside the range are clamped, never wrapped" {
     {
       id: 'net-lockstep', title: 'Deterministic lockstep and rollback', minutes: 35,
       summary: 'Send only inputs and make every machine compute the same world: how RTS games and fighting games work, and what determinism demands.',
+      checks: [
+        { q: 'In a 4-player lockstep RTS, one player on a slow link stalls and the whole match freezes for everyone. Why?',
+          options: ['The renderer is too slow', 'The simulation advances to a tick only when every input for that tick has arrived, so the slowest connection sets the pace', 'The checksum failed', 'The map is too large'],
+          answer: 1, explain: 'Lockstep trades bandwidth for synchrony: no machine may run ahead of the slowest input.' },
+        { q: 'The same float simulation runs on a phone and a PC and the two games desync. What is the safe fix the lesson names?',
+          options: ['Tick faster', 'Use larger floats', 'Send state instead of inputs always', 'Use fixed-point integers for the simulation, or identical binaries and strict flags on identical architectures'],
+          answer: 3, explain: 'Floating-point results can differ across CPUs and compilers, so deterministic games avoid relying on them.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>The idea</h3>
@@ -227,6 +251,14 @@ test "rolling back and replaying gives exactly the state of a game that had the 
     {
       id: 'net-security', title: 'Cheating, trust and hostile input', minutes: 30,
       summary: 'The client is in the player\'s hands: validate everything on the server, leak nothing you do not need to, and treat every packet as an attack.',
+      checks: [
+        { q: 'Clients report positions and a hacked client teleports across the map. What server-side check stops it?',
+          options: ['Trust the newest position', 'Encrypt the position', 'Accept a position only if it is within max speed times dt of the last accepted one, with fresh sequence numbers and in-bounds finite values', 'Send positions more often'],
+          answer: 2, explain: 'The server owns movement rules and rejects impossible moves instead of applying whatever the client claims.' },
+        { q: 'A packet carries a count field and the parser allocates that many objects before checking the real length. What is the fix?',
+          options: ['Check the length before reading, never trust an embedded count or index, and cap allocations with fail-safe parsing', 'Allocate faster', 'Trust counts from authenticated users', 'Use a bigger server'],
+          answer: 0, explain: 'Every packet is hostile bytes: validate, bound, and fuzz the parser rather than believing its contents.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>The golden rule</h3>
