@@ -1,0 +1,41 @@
+/* Presentation only: replay positions and outcomes come from imported native frames. */
+.native-project-page > .tc { margin-top: 20px; }
+.native-project-page .gk-heading p { max-width: 100ch; line-height: 1.75; }
+.native-project-page .gl-source { max-width: 100%; overflow-x: auto; }
+.native-project-page #npdownloadstatus { display: block; margin: 10px 0; color: var(--muted); }
+.native-project-page #npreplay { display: block; margin-top: 8px; max-width: 100%; }
+.native-project-page #npreplaystatus { display: block; margin: 16px 0; line-height: 1.6; }
+.native-project-page .native-replay-board {
+  padding: 24px 12px;
+  margin-top: 20px;
+  text-align: center;
+  font-family: var(--mono, monospace);
+  font-size: clamp(20px, 4vw, 28px);
+  line-height: 1.3;
+  letter-spacing: .12em;
+  white-space: pre;
+  color: var(--ink);
+  border: 1px solid var(--border, #564369);
+  background: var(--editor, #130d20);
+}
+.np-cell { display: inline-block; width: 1ch; }
+.np-cell-floor { color: var(--muted); opacity: .5; }
+.np-cell-wall { color: var(--muted); }
+.np-cell-player { color: var(--accent, #b98cff); }
+.np-cell-enemy { color: #ff8888; }
+.np-cell-pickup { color: #ffd36e; }
+.np-cell-goal { color: #75dfb1; }
+.np-replay-legend { text-align: center; color: var(--muted); font-size: 13px; }
+.native-project-page #npstats { margin: 16px 0; text-align: center; line-height: 1.65; }
+.native-project-page #npframe { min-width: 160px; accent-color: var(--accent); }
+.native-project-page #npraw { font-size: 12px; }
+@media (max-width: 600px) {
+  .native-project-page .gk-heading p { font-size: 14px; }
+  .native-project-page .native-replay-board { padding: 18px 6px; letter-spacing: .08em; }
+  .native-project-page #npstats { text-align: left; font-size: 13px; }
+  .native-project-page #npframe { width: 100%; }
+}
+@media (forced-colors: active) {
+  .np-cell { color: CanvasText; opacity: 1; }
+  .native-project-page .native-replay-board { border-color: CanvasText; }
+}

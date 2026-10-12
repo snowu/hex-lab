@@ -43,7 +43,7 @@
       const nextProject = ['pong', 'breakout', 'platformer', 'arena'].find((id) => Object.keys(projects[id]?.completed || {}).length < 3);
       if (nextProject) tasks.push({ icon: 'play', title: 'Build: ' + nextProject, detail: 'Complete a playable checkpoint and save what you learned.', href: '#/project/' + nextProject, done: (act.build || 0) >= 1, min: 15 });
       const drill = allExercises().find((e) => lessonPct(e.l) < 100);
-      if (drill) tasks.push({ icon: 'terminal', title: `Practise: ${drill.s.title}`, detail: 'Download the Zig or C++ starter, run the tests locally, then mark it passed.', href: '#/lesson/' + drill.l.id, done: (act.drill || 0) >= 1, min: drill.s.minutes || 20 });
+      if (drill) tasks.push({ icon: 'terminal', title: `Practise: ${drill.s.title}`, detail: 'Download the C, Zig or C++ starter, run the tests locally, then mark it passed.', href: '#/lesson/' + drill.l.id, done: (act.drill || 0) >= 1, min: drill.s.minutes || 20 });
       if (mins >= 30) { const ds = pickDesign(); tasks.push({ icon: 'design', title: `Design: ${ds.title}`, detail: 'Sketch an approach, compare with the reference, save what you learned.', href: '#/design/' + ds.id, done: (act.design || 0) >= 1, min: ds.minutes }); }
       const wt = weakestTrack();
       if (wt) { const l = wt.lessons.find((l) => lessonPct(l) < 100); tasks.push({ icon: wt.id, title: `Learn: ${l.title}`, detail: wt.title + ' · work through the checks and simulations.', href: '#/lesson/' + l.id, done: (act.practice || 0) >= 3, min: l.minutes }); }

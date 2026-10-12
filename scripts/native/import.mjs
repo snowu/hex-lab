@@ -1,3 +1,5 @@
+import {applyContracts} from './apply-contracts.mjs';
+import {formatBundle} from './format-code.mjs';
 // Import pinned, MIT-licensed Exercism native exercise files. Missing ports remain explicit.
 import fs from 'node:fs';import path from 'node:path';import vm from 'node:vm';import {createHash} from 'node:crypto';import {execFileSync} from 'node:child_process';
 const root=path.resolve(import.meta.dirname,'../..'), ctx=vm.createContext({window:{}});vm.runInContext(fs.readFileSync(path.join(root,'content/katas/index.js'),'utf8'),ctx);
@@ -16,7 +18,7 @@ for(const lang of ['c','cpp','zig']){
   const supportFiles={}; if(lang==='c'){for(const name of ['unity.c','unity.h','unity_internals.h']) supportFiles['test-framework/'+name]=fs.readFileSync(path.join(dir,'test-framework',name),'utf8');}
   if(lang==='cpp'){const framework=fs.existsSync(path.join(dir,'test'))?path.join(dir,'test'):path.join(source,'test');for(const name of fs.readdirSync(framework)) if(/\.(cpp|hpp)$/.test(name)) supportFiles['test/'+name]=fs.readFileSync(path.join(framework,name),'utf8');}
   const support=createHash('sha256').update(JSON.stringify(supportFiles)).digest('hex');fs.mkdirSync(path.join(output,'support'),{recursive:true});fs.writeFileSync(path.join(output,'support',support+'.json'),JSON.stringify(supportFiles)); const instructions=JSON.parse(fs.readFileSync(path.join(root,'content/katas/python',meta.slug+'.json'),'utf8')).instructions; const bundle={support,instructions,slug:meta.slug,language:lang,source:'exercism/'+lang,ref,license:'MIT',authors:config.authors||[],contributors:config.contributors||[],starter,solution,tests};
-  fs.writeFileSync(path.join(output,meta.slug+'-'+lang+'.json'),JSON.stringify(bundle));coverage.push({slug:meta.slug,language:lang,status:'imported',ref});
+  applyContracts(bundle);formatBundle(bundle);fs.writeFileSync(path.join(output,meta.slug+'-'+lang+'.json'),JSON.stringify(bundle));coverage.push({slug:meta.slug,language:lang,status:'imported',ref});
  }
 }
 fs.writeFileSync(path.join(output,'coverage.json'),JSON.stringify({required:required.map(k=>k.slug),languages:['c','zig','cpp'],variants:coverage},null,2));

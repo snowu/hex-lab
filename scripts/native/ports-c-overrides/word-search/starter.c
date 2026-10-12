@@ -1,0 +1,1 @@
+bool find_word(const char*const*g,size_t n,const char*w,coordinate*s,coordinate*e){(void)g;(void)n;(void)w;(void)s;(void)e;return false;}

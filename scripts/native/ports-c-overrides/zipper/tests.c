@@ -1,0 +1,41 @@
+tree leaf = {3, NULL, NULL}, left_tree = {2, NULL, &leaf}, right_tree = {4, NULL, NULL};
+tree root = {1, &left_tree, &right_tree};
+zipper original = zipper_from_tree(&root);
+assert(original.focus && zipper_value(&original) == 1);
+zipper clone = zipper_clone(&original);
+assert(clone.focus && clone.root != original.root && zipper_value(&clone) == 1);
+zipper missing_up = zipper_up(&original);
+assert(!missing_up.focus);
+zipper left = zipper_left(&original);
+assert(left.focus && zipper_value(&left) == 2 && zipper_value(&original) == 1);
+zipper missing_left = zipper_left(&left);
+assert(!missing_left.focus);
+zipper deep = zipper_right(&left);
+assert(deep.focus && zipper_value(&deep) == 3);
+zipper changed = zipper_set_value(&deep, 30);
+assert(zipper_to_tree(&changed)->left->right->value == 30);
+assert(zipper_value(&deep) == 3 && zipper_value(&left) == 2);
+assert(zipper_to_tree(&original)->left->right->value == 3 && root.left->right->value == 3);
+/* Independent branches retain their values after subsequent edits/navigation. */
+zipper sibling = zipper_set_value(&deep, 50);
+assert(zipper_value(&changed) == 30 && zipper_value(&sibling) == 50);
+zipper parent = zipper_up(&changed);
+assert(parent.focus && zipper_value(&parent) == 2 && zipper_value(&changed) == 30);
+zipper removed = zipper_set_right(&parent, NULL);
+assert(!zipper_to_tree(&removed)->left->right);
+assert(zipper_to_tree(&parent)->left->right->value == 30);
+zipper inserted = zipper_set_left(&removed, &right_tree);
+assert(zipper_to_tree(&inserted)->left->left->value == 4);
+assert(!zipper_to_tree(&removed)->left->left && !root.left->left);
+zipper root_again = zipper_up(&inserted);
+zipper right = zipper_right(&root_again);
+assert(zipper_value(&right) == 4);
+/* A result remains valid after freeing the snapshots from which it arose. */
+zipper_free(&original); zipper_free(&left); zipper_free(&deep); zipper_free(&parent);
+assert(zipper_to_tree(&changed)->left->right->value == 30);
+assert(zipper_to_tree(&sibling)->left->right->value == 50);
+zipper_free(&changed); zipper_free(&sibling); zipper_free(&removed);
+zipper_free(&inserted); zipper_free(&root_again); zipper_free(&right);
+zipper_free(&missing_up); zipper_free(&missing_left);
+
+assert(zipper_to_tree(&clone)->left->right->value == 3); zipper_free(&clone);

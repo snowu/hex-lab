@@ -1,0 +1,2807 @@
+{
+  "scope": {
+    "bundles": 417,
+    "reviewedOriginalPorts": 149,
+    "exercises": 70,
+    "languages": {
+      "c": 55,
+      "cpp": 54,
+      "zig": 40
+    }
+  },
+  "evidenceMeaning": "The checklist records manual instruction/reference/test review. Assertion sites and test-case counts describe evidence size; they do not claim exhaustive correctness. Execute validate.mjs and contract-regressions.mjs for runtime evidence.",
+  "records": [
+    {
+      "slug": "accumulate",
+      "language": "c",
+      "reviewedContract": "Ordered mapping, empty inputs, generic element types and different output types.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 3,
+      "namedTestCases": 0,
+      "instructionsSha256": "77f023722b03a24354a89882faf24baa34bcc44b0117737001ec63c0b71bbc60",
+      "starterSha256": "897b4250ab1fb45c4eaf6baae15c838f80f7c3c4abde644c1e4cb75728881d5b",
+      "referenceSha256": "32abe7a4969860a761861b92b09b52425459f261e622e164d94562c341e3e4e4",
+      "testsSha256": "22b13516b63a237b0514aeb17bdc85604a9f41a47ba885ff922664036f2f4ead",
+      "provenanceSha256": "72061e40cbe6f2fe3b878437a1aa39a0ee8510d5c3b5c9bf11baa6376d8d6f6a"
+    },
+    {
+      "slug": "accumulate",
+      "language": "cpp",
+      "reviewedContract": "Ordered mapping, empty inputs, generic element types and different output types.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 3,
+      "namedTestCases": 0,
+      "instructionsSha256": "77f023722b03a24354a89882faf24baa34bcc44b0117737001ec63c0b71bbc60",
+      "starterSha256": "089d9a177186ce2b92f725a731be44b1af76bd03057af0943492855cfecc13d9",
+      "referenceSha256": "2c7010413199399d061d6d332c8c0b9f84b53db90ee080207d3779e130e521d8",
+      "testsSha256": "ef57ba7bec95ec3f65f6d1bf23ccd9c8a4f21727240d8bd292593c6e3b82c399",
+      "provenanceSha256": "11115a69d95c69e978120ce99705d72e972009e25e9bf77b2403d78cf84bb27c"
+    },
+    {
+      "slug": "accumulate",
+      "language": "zig",
+      "reviewedContract": "Ordered mapping, empty inputs, generic element types and different output types.",
+      "nativeTestFiles": [
+        "test_accumulate.zig"
+      ],
+      "nativeReferenceFiles": [
+        "accumulate.zig"
+      ],
+      "assertionSites": 5,
+      "namedTestCases": 1,
+      "instructionsSha256": "77f023722b03a24354a89882faf24baa34bcc44b0117737001ec63c0b71bbc60",
+      "starterSha256": "03c99e1817c13e6191ea4ed0fb84d3d6d002c1b4e14dc563e903bcb82c354472",
+      "referenceSha256": "cd73c04b6df6260ad84fafad12d34c49f43d8460d9fa7062181bc92aaed108dc",
+      "testsSha256": "e10445b34d0910738dbf56f4e8f783bc79bdedaf54af344bc7ecda9e9729b854",
+      "provenanceSha256": "b645a6153d2afd4e006529e94d1f34221f629c576421e9e83d4a509c35ac70ea"
+    },
+    {
+      "slug": "affine-cipher",
+      "language": "c",
+      "reviewedContract": "Coprime-key validation, modular inverse, alphabet rotation, digits, punctuation filtering and five-character groups.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 32,
+      "namedTestCases": 0,
+      "instructionsSha256": "63045d0d533bd3e1bc50f105f964e38a97d6f3b3991ece7569bd48f9fb95dd84",
+      "starterSha256": "51e0738e266d89986b02ab54d94654c286384bf893c0c03f0688fcb26468e28f",
+      "referenceSha256": "08807b2113ac86409f67b03618cc20999a63215f774317649e1d0396bacb5b03",
+      "testsSha256": "1a4f32ea027f4beeff13aca3b4c23d9aff7af9403f4a640e246327008607f27a",
+      "provenanceSha256": "bb07a01a1ba53b04d731b83501ad9dcaf010c93315e4484a5d5f2d2889b55b0b"
+    },
+    {
+      "slug": "alphametics",
+      "language": "c",
+      "reviewedContract": "Distinct digits, leading-zero prohibition, repeated letters, multi-column carries and unsatisfiable equations.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 4,
+      "namedTestCases": 0,
+      "instructionsSha256": "8f798632934cfd35d9e2f36b9e66cae5ffa23279a09ddc61974f64e88180c4de",
+      "starterSha256": "81184554e9043818619318b6fbd7ec2d2f0aa938948b3c37394232ec8cda9d46",
+      "referenceSha256": "22250d29a5fc5dc1236d0e96b9d2ba0340b64e6f29d98f02811fad645d65a701",
+      "testsSha256": "c5daa96af55f35237933ffae35e8e571a84eef273ca0d3fd3030fd82b4460c29",
+      "provenanceSha256": "2926c3808a8e8da1f260a51dc6b7d2d636de0b8dc604253a6b36b64df31a7449"
+    },
+    {
+      "slug": "alphametics",
+      "language": "zig",
+      "reviewedContract": "Distinct digits, leading-zero prohibition, repeated letters, multi-column carries and unsatisfiable equations.",
+      "nativeTestFiles": [
+        "test_alphametics.zig"
+      ],
+      "nativeReferenceFiles": [
+        "alphametics.zig"
+      ],
+      "assertionSites": 50,
+      "namedTestCases": 9,
+      "instructionsSha256": "8f798632934cfd35d9e2f36b9e66cae5ffa23279a09ddc61974f64e88180c4de",
+      "starterSha256": "e84bf6fc25914c9d2dd248104c919dc3fd64c4944a324e82b430780163e31987",
+      "referenceSha256": "d60eb503f6c82c2c45df946758e9dff01619184a69c9f37cdcd2b80e3e4b5cda",
+      "testsSha256": "31ba5b31231526841a875e5b20e29f1ef680b55f2edef5bd223a909d22742b05",
+      "provenanceSha256": "b6e510b186e13dd6f86ac898a4c839e226207230274574c251b972a714cd6be9"
+    },
+    {
+      "slug": "bank-account",
+      "language": "c",
+      "reviewedContract": "Open/close/reopen, invalid and zero amounts, funds checks, overflow without mutation and atomic concurrent transactions/lifecycle.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 18,
+      "namedTestCases": 0,
+      "instructionsSha256": "d9098485bee4a661b881a9048df83ab30d5343feae0f7ec53425a89db8ce640d",
+      "starterSha256": "47b3d2da48cf68a0991f06f799103776a9a1ad2c64b73225626ecf536337a91f",
+      "referenceSha256": "e6c15662b31385d1febe9078db50d80b70ee2ea64d796cb5a546574be08b0e0f",
+      "testsSha256": "8fbbd5caac72544f72554daf5d8b42f4ad3d8a8b0bfacc9d32e60019a7b0fd3d",
+      "provenanceSha256": "699f175cb758602f156a50126ec7144d87f40823da4d85935146ef43d47a1d17"
+    },
+    {
+      "slug": "bank-account",
+      "language": "zig",
+      "reviewedContract": "Open/close/reopen, invalid and zero amounts, funds checks, overflow without mutation and atomic concurrent transactions/lifecycle.",
+      "nativeTestFiles": [
+        "test_bank_account.zig"
+      ],
+      "nativeReferenceFiles": [
+        "bank_account.zig"
+      ],
+      "assertionSites": 22,
+      "namedTestCases": 2,
+      "instructionsSha256": "d9098485bee4a661b881a9048df83ab30d5343feae0f7ec53425a89db8ce640d",
+      "starterSha256": "3d74d4352e9df630a616f2bbb705d0646c80600f0f560000360b286cce5c5f7b",
+      "referenceSha256": "e3234ed7041763eb206a40aa102508c2de38a4aed113aa974b0a20c47da60db2",
+      "testsSha256": "d9764b91cfed84cf7ef8da32aee2a901a18c574c7f2dfd9f721db8b855dd015f",
+      "provenanceSha256": "08ea07255467e860d31427b9eb66f475ba98e8dc8643578bf87af8dc3dfb5d7a"
+    },
+    {
+      "slug": "beer-song",
+      "language": "zig",
+      "reviewedContract": "99-to-zero verses, singular/plural, store restart and blank-line separation.",
+      "nativeTestFiles": [
+        "test_beer_song.zig"
+      ],
+      "nativeReferenceFiles": [
+        "beer_song.zig"
+      ],
+      "assertionSites": 5,
+      "namedTestCases": 1,
+      "instructionsSha256": "74f85047feabcf41b1846d5c58ad0133a51e0963567d0afbc5e21541beb37e4f",
+      "starterSha256": "c411b3c94dd8f11d943b69b6602126e49c372464230cea6b8cb7484aaefbdcf3",
+      "referenceSha256": "cf11d2c4955fd61ad1cc263b67aeb8e4f58220502507cfdb0e4bf158eee62435",
+      "testsSha256": "fc2d1c5fa701782e82b6ee770cbf94a6844cd49d4055d4e1049b30dcab82d7a4",
+      "provenanceSha256": "80e9575703d6bd3ffd3fa3ced27f39d67c3518360f6a935a3bf35434195cb2d8"
+    },
+    {
+      "slug": "binary",
+      "language": "zig",
+      "reviewedContract": "Manual positional conversion, invalid digits, zero/empty input and fixed-width overflow errors.",
+      "nativeTestFiles": [
+        "test_binary.zig"
+      ],
+      "nativeReferenceFiles": [
+        "binary.zig"
+      ],
+      "assertionSites": 8,
+      "namedTestCases": 1,
+      "instructionsSha256": "d8161af5debd3296684f97ecb8e51dc723cfa0ea3b0dfbb2dfa2f9b1e70ec97e",
+      "starterSha256": "ae9348176c41a9c953b80872fc0b7f771aa75bf645cde98c25c313c6f81c2404",
+      "referenceSha256": "15ce70930c99caf226642d40dfe4a7678580557459f6e6b11787ad8ce6b77251",
+      "testsSha256": "5e7bf5204309631350d2f005ab6c6619ee5d0ca7001d383e41594322dc7aa5a6",
+      "provenanceSha256": "2a89ff1a58948d40a8613a29575fbac91683216dac3574aa0aad1dd0b00ac119"
+    },
+    {
+      "slug": "book-store",
+      "language": "c",
+      "reviewedContract": "All group discounts, repeated volumes, global optimal grouping rather than greedy grouping, and prices in cents.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 24,
+      "namedTestCases": 0,
+      "instructionsSha256": "025999b58db674568be4d2239fc577b749ec40e98593fc3638e21e72915ad4c5",
+      "starterSha256": "9cc2c8ed0510c48b00757aa1cee51bb2212ba38e53a6ca8992ca106aa5db0a94",
+      "referenceSha256": "453c7398ee2813b8b32bfd62c6bc3c13455032a8364986d94452e686e2333109",
+      "testsSha256": "b35e0fa547fc6e68f9c595affc5e89ee307b4d117cbba1ed6e980bd9bc8bf2a2",
+      "provenanceSha256": "a676bbfef6da5dc3d32191fa10fea9eb91661b807eb0ae655a2bc54f98545c9a"
+    },
+    {
+      "slug": "book-store",
+      "language": "cpp",
+      "reviewedContract": "All group discounts, repeated volumes, global optimal grouping rather than greedy grouping, and prices in cents.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 24,
+      "namedTestCases": 0,
+      "instructionsSha256": "025999b58db674568be4d2239fc577b749ec40e98593fc3638e21e72915ad4c5",
+      "starterSha256": "5b4de15d8b797ede7c3378c721208000d95ae703d9d13d21012beb2bd059a44f",
+      "referenceSha256": "c8e85c57e43155693200353548a58f16223f99d385292e94d0f11d1ad57ab99f",
+      "testsSha256": "053c033acffa695589edd2086a4aefa054317820e5393c38b4121d2586fd5d24",
+      "provenanceSha256": "d8305a720088d9f183395b885754bd4a03c287286fc1c8a90278276ea3b3fd03"
+    },
+    {
+      "slug": "bottle-song",
+      "language": "c",
+      "reviewedContract": "Ten-to-zero words, singular/plural, requested verse count and blank-line separation.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 9,
+      "namedTestCases": 0,
+      "instructionsSha256": "0e4fd6e0e83949fe62ef118036e7b28fb597666ed19a478eca3d3d9018614b11",
+      "starterSha256": "022cd084c047cecbbdc096e01f84f1180ab87e458e710a48b94a21af651d0427",
+      "referenceSha256": "12851cb4f58872536677af42b5f6e15863948d619eab4387b85a76115495ff13",
+      "testsSha256": "f7f909a986af9a13da992f2dfe8e83d96a49b599b492289bb1b8125e654e2e28",
+      "provenanceSha256": "ab455049c5be878da853bf8ef9fbae8a5369c2468557402f96a57d826f428ecf"
+    },
+    {
+      "slug": "bottle-song",
+      "language": "cpp",
+      "reviewedContract": "Ten-to-zero words, singular/plural, requested verse count and blank-line separation.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 9,
+      "namedTestCases": 0,
+      "instructionsSha256": "0e4fd6e0e83949fe62ef118036e7b28fb597666ed19a478eca3d3d9018614b11",
+      "starterSha256": "86edd88090625819737735d5ed9d5a65040e81b88a997f37fceb26911e6c170c",
+      "referenceSha256": "59f03c2e4d9dc321fbd3226ebd1d643ca09fcc3677494ae0b1f37514119f49f0",
+      "testsSha256": "49afcca13cbebbcaa42c8de612532e15d3e2dd6e10d1f0e8be3bc8fd60dc2b89",
+      "provenanceSha256": "92ede69c177ef2173eb18482eedd6934edc6204a6b5d1d2e7c17cdfd7867adfc"
+    },
+    {
+      "slug": "bowling",
+      "language": "c",
+      "reviewedContract": "Ten frames, strike/spare bonuses, tenth-frame bonus rules, invalid rolls, incomplete scores and post-game rejection.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 40,
+      "namedTestCases": 0,
+      "instructionsSha256": "4ec644a2d0722730dab904e02ecaef152c7583a568c8b417af25a565fa45be8f",
+      "starterSha256": "e1f4257e3e0974e0c612d0d4f6fe3844efb94440c49278436f20b232ef5c3739",
+      "referenceSha256": "d1fe8126db66434cc67cd1010578a9f5bf516d80dfefbd217eaf53a92d60fdc2",
+      "testsSha256": "61904c77e996fdd6f5613d566c42316b8546f2d3d0fe5915e455a13cec4ecc69",
+      "provenanceSha256": "c378f1a9c9e786e078e84a2f697020ddc1398262b84c7d8125baebc48258af54"
+    },
+    {
+      "slug": "bowling",
+      "language": "cpp",
+      "reviewedContract": "Ten frames, strike/spare bonuses, tenth-frame bonus rules, invalid rolls, incomplete scores and post-game rejection.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 40,
+      "namedTestCases": 0,
+      "instructionsSha256": "4ec644a2d0722730dab904e02ecaef152c7583a568c8b417af25a565fa45be8f",
+      "starterSha256": "2a8c8630ec1f31fb0f90cbe2c30734e61498c7c4d37cdc1f99b80b3305af6aaf",
+      "referenceSha256": "7325c5d97676af29d95f71ea8d7b062210a5d548590f7cb04b8afdc6f3445f45",
+      "testsSha256": "71c5b98381fceba7a808d8d424b1a7c26913a429a2fe2c6e1d04c1c0b296fcd3",
+      "provenanceSha256": "71382db7ec09ac853a113e6ddc45164ff1712a53f5120ed97432f5a6b1502f8f"
+    },
+    {
+      "slug": "camicia",
+      "language": "c",
+      "reviewedContract": "Payment-card interruptions, deck/pile order, exhaustion, trick counts and exact loop states including player turn.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 3,
+      "namedTestCases": 0,
+      "instructionsSha256": "c184a6dc9a5ae17dd2869b1c79a7b1425211a6754b0a3251fefe6db66b851333",
+      "starterSha256": "aed5fd6c72fdc74074968c3148676e9a02b2bcac59179c093c2ba0359b3cbd9b",
+      "referenceSha256": "879c2460c35d8262c9ff954c584ea048d52b0cb2f9a1f0818ed1d6470cf6ec4d",
+      "testsSha256": "80e2d36f27fbc4db6f1c4152b36cf46eb2f2e27db293751eb03c50dea3e737c6",
+      "provenanceSha256": "248e562c25b57eba187720d848916ae5769401aa3f4825158e952627f465e6b5"
+    },
+    {
+      "slug": "camicia",
+      "language": "cpp",
+      "reviewedContract": "Payment-card interruptions, deck/pile order, exhaustion, trick counts and exact loop states including player turn.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 3,
+      "namedTestCases": 0,
+      "instructionsSha256": "c184a6dc9a5ae17dd2869b1c79a7b1425211a6754b0a3251fefe6db66b851333",
+      "starterSha256": "aaf1f5721f980d8e7ab6d8d4ef9839984751436f960b09846a4d3da56bae2409",
+      "referenceSha256": "3db9e435f450cbb66ec0a53611d2e3426c6b024f8d803e18b8e9b3d930dc4bc1",
+      "testsSha256": "05f0a898c6ffe79fd5d7d66376c2f5c1719c4132431bf5a46472f156c5a5d8c3",
+      "provenanceSha256": "0f4f9f34ada9daae5a3e109d5e9941b02ea935161a4a5dd075d5971139913083"
+    },
+    {
+      "slug": "camicia",
+      "language": "zig",
+      "reviewedContract": "Payment-card interruptions, deck/pile order, exhaustion, trick counts and exact loop states including player turn.",
+      "nativeTestFiles": [
+        "test_camicia.zig"
+      ],
+      "nativeReferenceFiles": [
+        "camicia.zig"
+      ],
+      "assertionSites": 84,
+      "namedTestCases": 28,
+      "instructionsSha256": "c184a6dc9a5ae17dd2869b1c79a7b1425211a6754b0a3251fefe6db66b851333",
+      "starterSha256": "ae0fe4403dc46e7e37809a5f1cb133eded54bed92d4dc3579f611922afb594e7",
+      "referenceSha256": "8394416cb43c43581e5b6675e3a1fb57d77c8e51e448704e2e43bfd9b1d76b51",
+      "testsSha256": "082def88f058d3ffdc498a9e71d4233c0ebaae19fc4e8877408b091e59de8250",
+      "provenanceSha256": "b661342d14592900ddf62229c7e7a40172f391989fcf82070eb01dd09a798163"
+    },
+    {
+      "slug": "change",
+      "language": "c",
+      "reviewedContract": "Minimum coin count rather than greedy selection, sorted results, zero target and unreachable/negative targets.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 53,
+      "namedTestCases": 0,
+      "instructionsSha256": "41755b040bc2f6af3cd6296d9ba1ac7ff31afce8f186627cc9fc75e8f18bd0fd",
+      "starterSha256": "8cf9bfc2ea469f4c216735ab09e0d28988ec0c89e93758e457046c0fc9e8fb1f",
+      "referenceSha256": "66f8fdd657b5da5a62e0c2d1edaa96823d6f4fcc80f6b237584f1ae11cb90a60",
+      "testsSha256": "3d33ea13f4d48cd2cb118987f23da5d56d8055623a57740e2292ea99d3ad07a9",
+      "provenanceSha256": "c553348b3d10403a9a3895fa151225d1301d3039ea09e9a5ca9632579bb59eb9"
+    },
+    {
+      "slug": "change",
+      "language": "cpp",
+      "reviewedContract": "Minimum coin count rather than greedy selection, sorted results, zero target and unreachable/negative targets.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 53,
+      "namedTestCases": 0,
+      "instructionsSha256": "41755b040bc2f6af3cd6296d9ba1ac7ff31afce8f186627cc9fc75e8f18bd0fd",
+      "starterSha256": "d00f660e107d4d29dc89ec4505d5b737e383b4d822dea4951a63b0c2c8fb8a23",
+      "referenceSha256": "c6a7ac50271f279d5fa25c70e8255fcd6f88bd84cb8a553d9711dceff336953c",
+      "testsSha256": "5c01435844b91cb8bcb3e8bcc7ef9e4ebe1245b8e2e35c4a9a903dd758b0c72c",
+      "provenanceSha256": "053449b2602f5e4704577fc38881d202c1dc44ae100b6bbb3a8fe10887fb5c5c"
+    },
+    {
+      "slug": "connect",
+      "language": "c",
+      "reviewedContract": "Whitespace-normalized hex boards, six neighbors, X west/east, O north/south and no winner.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 4,
+      "namedTestCases": 0,
+      "instructionsSha256": "3c717817dc88865be3fd9ad5b084d0244602e8bd416a59eca9c3cbea546b70aa",
+      "starterSha256": "1923aedbd23412ece652c9793b4c3357760d97f3376c9fcab3640a1dabd10e1a",
+      "referenceSha256": "a3739085886efaa0570d08e6d268ff12dc15e41e782ad41e13b3ab5cccc3bde6",
+      "testsSha256": "5cd18666d3667f9ec13ac110128d14427b26c5a122f3a184d83612a89ed4cf70",
+      "provenanceSha256": "88ee74f8d37220c68d80ccd79e2fffe1a2b0dbe18ae63827afb0001bb1dd5f61"
+    },
+    {
+      "slug": "connect",
+      "language": "cpp",
+      "reviewedContract": "Whitespace-normalized hex boards, six neighbors, X west/east, O north/south and no winner.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 4,
+      "namedTestCases": 0,
+      "instructionsSha256": "3c717817dc88865be3fd9ad5b084d0244602e8bd416a59eca9c3cbea546b70aa",
+      "starterSha256": "2fe88dacb2cf4b15ad0252a4e2f8c421a926eba90680c1320dc7ed271611bb61",
+      "referenceSha256": "dd2aaafa8bd34e10feaf83802335987b63486019d987e259c4bf26fdc6a2264e",
+      "testsSha256": "0b40fe1a8b6ca5a1697c7bf38774fbc6ab75b9fd988a847cd6d2e89409396116",
+      "provenanceSha256": "c486c8fb5aa2fe592a8bac3542a2c676164327ad065c62ebe94b8d11a972fc69"
+    },
+    {
+      "slug": "custom-set",
+      "language": "c",
+      "reviewedContract": "Duplicate elimination, membership/add, subset/disjoint/equality, union/intersection/difference and empty sets.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 4,
+      "namedTestCases": 0,
+      "instructionsSha256": "2c1f80439e843b6264113d687aa0bc9a2d8314759e987cd163474a50c237f81d",
+      "starterSha256": "344932ee714a64f526d0a126d99d01499c7e0fa76e01b4764b732d6b661b9f4a",
+      "referenceSha256": "cdcce0c979bf064b0c0632b85ca72490140d674f89d572f7d7efc1535dc1da95",
+      "testsSha256": "59394fe20bd5bfaa8652c14daf08b8f80f1435d6283b6583472c818306689ad9",
+      "provenanceSha256": "c5e48b0ce3da57828825cb68418e537566b9df670ceebe1b7b88ab3e65eaf098"
+    },
+    {
+      "slug": "custom-set",
+      "language": "cpp",
+      "reviewedContract": "Duplicate elimination, membership/add, subset/disjoint/equality, union/intersection/difference and empty sets.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 4,
+      "namedTestCases": 0,
+      "instructionsSha256": "2c1f80439e843b6264113d687aa0bc9a2d8314759e987cd163474a50c237f81d",
+      "starterSha256": "f915a6cdf5103573ae1383e314359876a938302f00b5a048cae96f7f5cac6d86",
+      "referenceSha256": "be9e3b77bd04973c3d8278d43c852d42ddbe9bd1436bcb08f9324f8b9027e8c5",
+      "testsSha256": "a567fd51e4a6a7907854fafd38e3e65a7a178f90a0e8a34d84987002c7bfb4e7",
+      "provenanceSha256": "8658190221b14ba6883a45a99791e0240a59b27707d7a94cda2a700a2637eeb4"
+    },
+    {
+      "slug": "custom-set",
+      "language": "zig",
+      "reviewedContract": "Duplicate elimination, membership/add, subset/disjoint/equality, union/intersection/difference and empty sets.",
+      "nativeTestFiles": [
+        "test_custom_set.zig"
+      ],
+      "nativeReferenceFiles": [
+        "custom_set.zig"
+      ],
+      "assertionSites": 15,
+      "namedTestCases": 1,
+      "instructionsSha256": "2c1f80439e843b6264113d687aa0bc9a2d8314759e987cd163474a50c237f81d",
+      "starterSha256": "f3d9841d8f135035b7c6abecd8ecf5b53e3f6c57e3d456d1d8700fa559ec57de",
+      "referenceSha256": "caf03627d9a8f882aa675d6e3df0e58084515d84b04e1d06fc0c4de59d896e58",
+      "testsSha256": "e190ba76545754314cce90ad4b1bbed3e06ab93cced5aa83034f3089b277f942",
+      "provenanceSha256": "71058be32fa29cbdb3ca035985c929dfaab60ed22f32cea94b90fac6e0e9af16"
+    },
+    {
+      "slug": "diffie-hellman",
+      "language": "c",
+      "reviewedContract": "Private-key range/randomness, public/shared modular exponentiation and products that do not overflow before reduction.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 6,
+      "namedTestCases": 0,
+      "instructionsSha256": "cf65d35af019cc545abecdc58641496abf6b43f5d788f1738517b8cc07d1152f",
+      "starterSha256": "b1537fec1ecb111903da070ef018738f011e0a4092fdbf7543d3d5381fbf0b76",
+      "referenceSha256": "4809696850331727365d4d8e822dc1cccf35b932b17279b2576b1fbd050cef3b",
+      "testsSha256": "47355ed7958af3a7e1828c5fba6d4f0b6d859cece6f6457886504611ca4cf2ae",
+      "provenanceSha256": "778a9200fbc85c406ca779b9655f7b1b3f4fe30382484d141222781718b715da"
+    },
+    {
+      "slug": "diffie-hellman",
+      "language": "cpp",
+      "reviewedContract": "Private-key range/randomness, public/shared modular exponentiation and products that do not overflow before reduction.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 6,
+      "namedTestCases": 0,
+      "instructionsSha256": "cf65d35af019cc545abecdc58641496abf6b43f5d788f1738517b8cc07d1152f",
+      "starterSha256": "6c18e83cecd8b1464c7ba35ea7d77b15cdc4afd26f46dfd352bbbd041cedbb4c",
+      "referenceSha256": "fdcd09e2082c84ff757e76db135baeb12bbd75bd95861c3175a2cb090d4a1aa9",
+      "testsSha256": "f5a34470e89ec876a8c29e386573b551727dc4b078417746fa43434614a3bb81",
+      "provenanceSha256": "ef9078aeedaca4c26186e8d225b7bb91bb3caf6cf32175f055a6cd9b42e6690b"
+    },
+    {
+      "slug": "diffie-hellman",
+      "language": "zig",
+      "reviewedContract": "Private-key range/randomness, public/shared modular exponentiation and products that do not overflow before reduction.",
+      "nativeTestFiles": [
+        "test_diffie_hellman.zig"
+      ],
+      "nativeReferenceFiles": [
+        "diffie_hellman.zig"
+      ],
+      "assertionSites": 8,
+      "namedTestCases": 1,
+      "instructionsSha256": "cf65d35af019cc545abecdc58641496abf6b43f5d788f1738517b8cc07d1152f",
+      "starterSha256": "f7af849d1e73aa32a57426f272851911200faa35f17f130f7b4628d6284fbf85",
+      "referenceSha256": "78126a1d8e2f5285cb2844e231a3e34ba5869c4b9c4ff370168cc2d0cb9ba785",
+      "testsSha256": "fa28d9468bc60bc9e56ec45acd31d78806ebb0d83cee529cd70db38609f89886",
+      "provenanceSha256": "fba64500bd78c30d62ceec16b290e5b80641ca53a85da5e85fabc2aaddee8fac"
+    },
+    {
+      "slug": "dominoes",
+      "language": "c",
+      "reviewedContract": "Every tile exactly once, both orientations, closed endpoints, empty chains and disconnected/impossible chains.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 4,
+      "namedTestCases": 0,
+      "instructionsSha256": "d129b08b8b832bb85255361b7cb69519966cb863ca206d3009612daf436aa799",
+      "starterSha256": "cfbbf7f79e004ddcc253b34afcbdb9acd9c7152fef353e2cabe617408df8e246",
+      "referenceSha256": "37d1ebc106695ff689a1c75fca42c9a98b624237341680cdb8037cca867acbf7",
+      "testsSha256": "5c07646cb75d6a1c35e7e664588d939bad5c136e74e5988ee61c7e5a428f651b",
+      "provenanceSha256": "5142d0301be2933c6a86db21ec6351d8b8a0b782102926c96651722a6b83d9ed"
+    },
+    {
+      "slug": "dominoes",
+      "language": "cpp",
+      "reviewedContract": "Every tile exactly once, both orientations, closed endpoints, empty chains and disconnected/impossible chains.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 4,
+      "namedTestCases": 0,
+      "instructionsSha256": "d129b08b8b832bb85255361b7cb69519966cb863ca206d3009612daf436aa799",
+      "starterSha256": "ad7b1264eea155293e33310fbab6c0d598407d433c8656f3182d62c555b670fa",
+      "referenceSha256": "b5ea66edca338924e46531620eb7fb5ba62796038216488c22529df295f70151",
+      "testsSha256": "a9fd2f70755f8b005b252b9a22291d432d283eb49b427a15140a1212a55dea77",
+      "provenanceSha256": "91f84b4fdfe72d2421183ec94b5538d87d377d112ae2a2f880fbedc3080b06e5"
+    },
+    {
+      "slug": "dot-dsl",
+      "language": "c",
+      "reviewedContract": "Nodes/edges/attributes, graph attribute replacement, malformed arities and unknown item kinds.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 5,
+      "namedTestCases": 0,
+      "instructionsSha256": "1688eaafe1d20c1b1196ee4a727fe11f4d66386381671cf04df9c2d7e4cdccc2",
+      "starterSha256": "8c0fa58cde0ed0b41954a61ff9454b0fbd80912549ee215dd2c1b41ffeb962fd",
+      "referenceSha256": "30aa249c9fdf3493a71c67090cdfbaf47df5bff4a18318a427f282eab8fc326b",
+      "testsSha256": "ac9de67ca170d118232dfb57897d5728fa2f4ab0894a989e4a31401e4b8f020b",
+      "provenanceSha256": "03b11ace44eb92d8a9890e52aad8142a7bfb21fbd614810d454bd1628371099b"
+    },
+    {
+      "slug": "dot-dsl",
+      "language": "cpp",
+      "reviewedContract": "Nodes/edges/attributes, graph attribute replacement, malformed arities and unknown item kinds.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 5,
+      "namedTestCases": 0,
+      "instructionsSha256": "1688eaafe1d20c1b1196ee4a727fe11f4d66386381671cf04df9c2d7e4cdccc2",
+      "starterSha256": "7a50085656c09f2b0af40a55a02e48f24c17d96b31ac72eb99006eadad176a4b",
+      "referenceSha256": "52cb364a80dd393525c665eccd84e9215a1dbaef287d84ee04a265d807608041",
+      "testsSha256": "d26ebbdc12446f0953548848f27245d1a09656af45064d6c94cc79beb3ec0316",
+      "provenanceSha256": "e25eab25f4dbd29cb3abaf4493aef7f973254984aceda3c071e1d72fe4ddb24c"
+    },
+    {
+      "slug": "dot-dsl",
+      "language": "zig",
+      "reviewedContract": "Nodes/edges/attributes, graph attribute replacement, malformed arities and unknown item kinds.",
+      "nativeTestFiles": [
+        "test_dot_dsl.zig"
+      ],
+      "nativeReferenceFiles": [
+        "dot_dsl.zig"
+      ],
+      "assertionSites": 13,
+      "namedTestCases": 2,
+      "instructionsSha256": "1688eaafe1d20c1b1196ee4a727fe11f4d66386381671cf04df9c2d7e4cdccc2",
+      "starterSha256": "8a5a5d201701b91df8e1b038957b9cd3d367ee0622879e296e6d536d22a2bc71",
+      "referenceSha256": "5cce8811778f29482cff652c93ed87fdcb3d6f78d1aa94fc218c1446faf35702",
+      "testsSha256": "d440ea9e593be14ad438353750f0515277dd72936c0e23be30be4244b7233e17",
+      "provenanceSha256": "1ab8c1745641d611ba0c695bb23bfd833235336931b28857fe42186c90c9289d"
+    },
+    {
+      "slug": "flatten-array",
+      "language": "c",
+      "reviewedContract": "Arbitrary nesting, integer-leaf order, null omission and empty nested arrays; native tagged-tree representation is explicit.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 2,
+      "namedTestCases": 0,
+      "instructionsSha256": "76d3456f7f47be3046540fc44bace47c4fb70e2a140915bf2bdb81edd1bf1d88",
+      "starterSha256": "c60b44fb88f44b32b541ed182a9d7a550b95f9940ae28fde81c18fd643b8d96c",
+      "referenceSha256": "9487543ab60813193d2ed0c36762e70c25e44344ffaa1a77a762aad16fe17dd7",
+      "testsSha256": "811fa018e17e622e3600dd4a85c6469564a8d8efa9613dfbf81993d6f1cb360e",
+      "provenanceSha256": "5fe09edf20a514c053355b90d32707b985d98cb861930305c6fe2ccac0e64d9f"
+    },
+    {
+      "slug": "flatten-array",
+      "language": "cpp",
+      "reviewedContract": "Arbitrary nesting, integer-leaf order, null omission and empty nested arrays; native tagged-tree representation is explicit.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 2,
+      "namedTestCases": 0,
+      "instructionsSha256": "76d3456f7f47be3046540fc44bace47c4fb70e2a140915bf2bdb81edd1bf1d88",
+      "starterSha256": "a72ac539f4dab9e3209cb0cfd27caf0bdaa46d96d6fa0a4489aa501d6ceefb93",
+      "referenceSha256": "519a6f94d25f8adc8c5594c607c517baaa269c4b91ff978aa5155fed3ac1d4e5",
+      "testsSha256": "d20ec07092e3b3f863c2dcebaf0e5d4b77eaa83ac992876cec747488cf29eddd",
+      "provenanceSha256": "48c8d7abcc4f74e457e2319959a6ca940b0ba8548ddc890db017b3ea55724731"
+    },
+    {
+      "slug": "food-chain",
+      "language": "c",
+      "reviewedContract": "Cumulative swallowing order, spider text, first verse, terminal horse verse and multi-verse separation.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 12,
+      "namedTestCases": 0,
+      "instructionsSha256": "282ba689e0653e74892e2104962c2ed4ef79fd307a182c343cd72ae807e466f3",
+      "starterSha256": "1e6afd9079d97db93b66ef295494b1c542686b4d9ca465b56f6f07367eeb92e9",
+      "referenceSha256": "2d4d1992f77f5243bafef01e9ef697f55b0231e200cc6351c88927f5bc7f23a9",
+      "testsSha256": "4c88c0b2b94e154837e84596ae138b0a909e6edcadd485ee6819c51ac695bfae",
+      "provenanceSha256": "62e1c95b6ba46e35d996c0a677825923c3a72c337f02a363aca5eebb15d9453e"
+    },
+    {
+      "slug": "forth",
+      "language": "c",
+      "reviewedContract": "Case-insensitive operations, stack order, empty input, underflow/division errors, word overriding and definition-time binding.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 125,
+      "namedTestCases": 0,
+      "instructionsSha256": "12b1f8fd772c56a32bcb24cd57a03b5523ba9df3842ef7e7eb5532962ca5b19f",
+      "starterSha256": "5438a72d02d22f72b940106188f1ba2dea16bacfda1dd7d298aeafa509db8756",
+      "referenceSha256": "3d50f37d80bb8a24f18d1185d9d54d66f5857e0d11217f82485897dca0ba5774",
+      "testsSha256": "46562e479f97f5e92432e456abd2e42bcb65b45fbcc66f2077681ce90e1ac5f7",
+      "provenanceSha256": "9542663af2d6d636ddd73b9c274bdaf2f64478811ba79385c173759a57e6ee59"
+    },
+    {
+      "slug": "forth",
+      "language": "cpp",
+      "reviewedContract": "Case-insensitive operations, stack order, empty input, underflow/division errors, word overriding and definition-time binding.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 125,
+      "namedTestCases": 0,
+      "instructionsSha256": "12b1f8fd772c56a32bcb24cd57a03b5523ba9df3842ef7e7eb5532962ca5b19f",
+      "starterSha256": "d3d4fc4e3f94cf97bf1ff05dbe8c20978e8b20d1a8a9f941992445ed8849f531",
+      "referenceSha256": "5e90cfc6a024a7b03bf99ae6381f7be57013f82627045e302090d605791ab750",
+      "testsSha256": "afe5870da6c915883ada102adacdc4026fb643ecca428e5543274f368a48b187",
+      "provenanceSha256": "d6e21722847b6aa6bb6518a8ebefcfbe6a2202dbb4d75888526fb633156ad523"
+    },
+    {
+      "slug": "forth",
+      "language": "zig",
+      "reviewedContract": "Case-insensitive operations, stack order, empty input, underflow/division errors, word overriding and definition-time binding.",
+      "nativeTestFiles": [
+        "test_forth.zig"
+      ],
+      "nativeReferenceFiles": [
+        "forth.zig"
+      ],
+      "assertionSites": 54,
+      "namedTestCases": 54,
+      "instructionsSha256": "12b1f8fd772c56a32bcb24cd57a03b5523ba9df3842ef7e7eb5532962ca5b19f",
+      "starterSha256": "d2e6b6e31557a476f6e64971cb2977057c08a71dbde730632e90a430d08ff49b",
+      "referenceSha256": "553a5410565cdc36fd2a9e32965ec1e9571b9e8e43bc5b65cb2a4cda13e6d2b7",
+      "testsSha256": "c335d297516e83319aec218b2209d93737c64be922bc5728ed83325da64bd0f4",
+      "provenanceSha256": "6cac6cd750901fa9b80b6b657dd855bb63d052e1146a09eeeb870ac46cdbac1d"
+    },
+    {
+      "slug": "game-of-life",
+      "language": "c",
+      "reviewedContract": "Eight neighbors, simultaneous generation, finite board boundaries, survival/birth/death and empty boards.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 121,
+      "namedTestCases": 0,
+      "instructionsSha256": "1eac40826741e214ecb3971cd52bb5ceeeac0df9d0f86cd7f391ec78aa5ebb12",
+      "starterSha256": "2bcac90b8ea3b56f392f48e7fe8f5d045a3d7d23c419f1dfd858fb88b0d9e6e2",
+      "referenceSha256": "4ff292f8cac22c9eaee13c6e4e629e587b02d3cc2418b00f3a02afb2c055e2fe",
+      "testsSha256": "173af29a5973325d43340290109199760596ebf5e0382c7c12120f031d731166",
+      "provenanceSha256": "8b4de345d2e77b1a1624d8c615a24b61392c6b7001b2ec0158f0f1c0731dee27"
+    },
+    {
+      "slug": "game-of-life",
+      "language": "cpp",
+      "reviewedContract": "Eight neighbors, simultaneous generation, finite board boundaries, survival/birth/death and empty boards.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 121,
+      "namedTestCases": 0,
+      "instructionsSha256": "1eac40826741e214ecb3971cd52bb5ceeeac0df9d0f86cd7f391ec78aa5ebb12",
+      "starterSha256": "179a207e2d5e36a5601a69397d811d7ea425d045a977c1eb4d3cf853f2dd1f4f",
+      "referenceSha256": "cf945ed29cfa8419885e33f8053ec22fc2a46d3d5092ff368cd9cd5c91c0f40b",
+      "testsSha256": "c25acc6a5a54cc3a6cb657fa4f469e623a90f3ef6c8b004548abbd3dd8835e9e",
+      "provenanceSha256": "c539885e735e51811e8ed9113b193aaca801b70d6c9d92b04aca350601cc2dce"
+    },
+    {
+      "slug": "game-of-life",
+      "language": "zig",
+      "reviewedContract": "Eight neighbors, simultaneous generation, finite board boundaries, survival/birth/death and empty boards.",
+      "nativeTestFiles": [
+        "test_game_of_life.zig"
+      ],
+      "nativeReferenceFiles": [
+        "game_of_life.zig"
+      ],
+      "assertionSites": 2,
+      "namedTestCases": 1,
+      "instructionsSha256": "1eac40826741e214ecb3971cd52bb5ceeeac0df9d0f86cd7f391ec78aa5ebb12",
+      "starterSha256": "09aa112581ab5bed65e97c7fc1d26b25a1203f804eb5a5b83ce1d9c537dcb5ca",
+      "referenceSha256": "dacbfcc13476197466155707bb32af8f918f5b6ebf9d018e1a266126256c509f",
+      "testsSha256": "74a3f50f0d76ca3dc3ba903d154b078c25c0b708a47ba7381d5a148c528ac3c8",
+      "provenanceSha256": "247bc52f1e6b444e407d124d0e32abe7f9865c6c0fde3b0005b93ecac4602ab0"
+    },
+    {
+      "slug": "gigasecond",
+      "language": "zig",
+      "reviewedContract": "Exactly one billion seconds, sub-day fields, Gregorian month/leap/year rollover and invalid date-time rejection.",
+      "nativeTestFiles": [
+        "test_gigasecond.zig"
+      ],
+      "nativeReferenceFiles": [
+        "gigasecond.zig"
+      ],
+      "assertionSites": 6,
+      "namedTestCases": 1,
+      "instructionsSha256": "2fc544bc83bb2789c6f4122c6997df9d5c8dc9489f2453400c96301b2665cc58",
+      "starterSha256": "f61211077c62d46a79e849b799df0b77701adb0497b964f2225edc26307edce9",
+      "referenceSha256": "28bdaabc88f899b3062e3292b1be266bf1894edecf0ea00509e991523472428e",
+      "testsSha256": "a31c83221a993109caf4be3b4cc1649da87d25856e4b02b2217dcdc5d67ba342",
+      "provenanceSha256": "81a4d3d4556ed081851a9cac0938a67cf4466f385d7775eb1d285f20d9c24678"
+    },
+    {
+      "slug": "go-counting",
+      "language": "c",
+      "reviewedContract": "Orthogonal connected regions, black/white/mixed/neutral borders, occupied coordinates, invalid coordinates and all territories.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 5,
+      "namedTestCases": 0,
+      "instructionsSha256": "25844380f773acf5dd1da806cb1eda345c5b59da0eb19649858a0b45caa88acb",
+      "starterSha256": "a26d30bdf3391f6f6bd14bb16b55aaaf4aa73ca120e0e1b5c97f9d844ec8f3cd",
+      "referenceSha256": "071d8a2e9deeced9aa4ec19df3f6fcac9939d360ad9b80e7c3fcbbb35065f044",
+      "testsSha256": "bf624d4d334803e82286a167c35895420401744ebbfa2621d06e9dbeaa1774ca",
+      "provenanceSha256": "fa94415cc677e31885bc4ee5a5980d0baaf9507c3ee0ae6d6ff1feb2b7292849"
+    },
+    {
+      "slug": "go-counting",
+      "language": "cpp",
+      "reviewedContract": "Orthogonal connected regions, black/white/mixed/neutral borders, occupied coordinates, invalid coordinates and all territories.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 5,
+      "namedTestCases": 0,
+      "instructionsSha256": "25844380f773acf5dd1da806cb1eda345c5b59da0eb19649858a0b45caa88acb",
+      "starterSha256": "396fabb9aba49bea5663ebb5c19c68ef94307e5f2191074ddd10c370fdfa561f",
+      "referenceSha256": "7f1901dd58a3bce04b50f05cd57962e5e32cd77a951fed3d91edea8569dd42c8",
+      "testsSha256": "dc6b13a9bd2b556cd991e9447b66d79ceb2b1ff57f1cfa4e302ac78f239865fe",
+      "provenanceSha256": "71c4677ffecbdb236620f80134a209e25b14614d6297c2ca95f43143568abcc0"
+    },
+    {
+      "slug": "go-counting",
+      "language": "zig",
+      "reviewedContract": "Orthogonal connected regions, black/white/mixed/neutral borders, occupied coordinates, invalid coordinates and all territories.",
+      "nativeTestFiles": [
+        "test_go_counting.zig"
+      ],
+      "nativeReferenceFiles": [
+        "go_counting.zig"
+      ],
+      "assertionSites": 18,
+      "namedTestCases": 2,
+      "instructionsSha256": "25844380f773acf5dd1da806cb1eda345c5b59da0eb19649858a0b45caa88acb",
+      "starterSha256": "d2cd7aa41d1f6e6c25fbfdabe017075b04024cb563a44f766c46464e23849142",
+      "referenceSha256": "2d218583f965abed8cc1071cfbe6ba067b738d8aeb791553cd3e0f54ab84c7ef",
+      "testsSha256": "b663b61ce5650771368a6f8f4bf0afc74ce47cb26e1607b03b58869153647b6b",
+      "provenanceSha256": "9df7329f7b8b6950f492a6ae1cf8427fd46f09bb2f8afe093c332c3b4ca15a0b"
+    },
+    {
+      "slug": "grade-school",
+      "language": "zig",
+      "reviewedContract": "Duplicate names across grades, attempted-addition results, alphabetical names within sorted grades and empty queries.",
+      "nativeTestFiles": [
+        "test_grade_school.zig"
+      ],
+      "nativeReferenceFiles": [
+        "grade_school.zig"
+      ],
+      "assertionSites": 10,
+      "namedTestCases": 1,
+      "instructionsSha256": "29bf6bf41cefbbd85256b4c7f488532f67a8669bd6a938527b97aede4a4ae879",
+      "starterSha256": "75500355bc59d501658c67ccc2fef63a41daefa06d066f3685f6d3d4033e8823",
+      "referenceSha256": "73636fd2425134b03deda5533394fe0dd2899fd7aed23e52791f4b433cd27284",
+      "testsSha256": "5bb01a25ac6d6e01e54267181df26a4630e6bc463676319adc50c73fde6b9111",
+      "provenanceSha256": "516faca143f51b2b15cb12a1b136b026f4e3cf1ef59027e17248a60fb81bb946"
+    },
+    {
+      "slug": "grep",
+      "language": "c",
+      "reviewedContract": "Real input files, multiple filenames, line numbers, case folding, inversion, whole-line matching and filenames-only mode.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 5,
+      "namedTestCases": 0,
+      "instructionsSha256": "06f999225d5aa6c8624c5bd2ba146119e1ce4a1aed2f1ae326f9d8296ddf84b5",
+      "starterSha256": "8f2a9d4173ed6bab4a02f5583d49be26a15264dade03bac49bf2c6a81e1b0d13",
+      "referenceSha256": "e3e29cc9ce69564a62119a4be71f9a6d470c3fc4a2c4a59e4479f086e61457ce",
+      "testsSha256": "3bfbb8b4aee36fe798ff5d33e2ebe93e65ebaada8f34b8737e06d4a9e6f953a1",
+      "provenanceSha256": "d77e3177fca96bc656d4beb7285a86292c4c21404ab815c8856a68539eb5c522"
+    },
+    {
+      "slug": "grep",
+      "language": "cpp",
+      "reviewedContract": "Real input files, multiple filenames, line numbers, case folding, inversion, whole-line matching and filenames-only mode.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 5,
+      "namedTestCases": 0,
+      "instructionsSha256": "06f999225d5aa6c8624c5bd2ba146119e1ce4a1aed2f1ae326f9d8296ddf84b5",
+      "starterSha256": "c7f190e68551b7a35bf61c56a46b1286ad36477406a6dc30af9f3735fc16112a",
+      "referenceSha256": "c5cd5a0574a28161cf68604bb2ce0975e0ef8fbf3e4956f7fa758afbe5ac9624",
+      "testsSha256": "25d222739cff594f95cb091682b7ee43fea09d8b83d966093cfe951fefa80de0",
+      "provenanceSha256": "88a01bfab5741467e95a71ed48ea570ac9e6f56b560b19c6712a056fd7521ea0"
+    },
+    {
+      "slug": "grep",
+      "language": "zig",
+      "reviewedContract": "Real input files, multiple filenames, line numbers, case folding, inversion, whole-line matching and filenames-only mode.",
+      "nativeTestFiles": [
+        "test_grep.zig"
+      ],
+      "nativeReferenceFiles": [
+        "grep.zig"
+      ],
+      "assertionSites": 25,
+      "namedTestCases": 25,
+      "instructionsSha256": "06f999225d5aa6c8624c5bd2ba146119e1ce4a1aed2f1ae326f9d8296ddf84b5",
+      "starterSha256": "5a37563f11789bd40a33e63688c4f94bb4a7a6c1d10f99e23b920d4a9c38a97f",
+      "referenceSha256": "c533fd16ac8e29bddfd2c1c88437fa3fc84e96d577be9b9b3abe425c20e1a5da",
+      "testsSha256": "a45334f5fd500e33f83ab96814ffdccf4ce2da394ec51a03541fac4f989878b6",
+      "provenanceSha256": "f0620e84234d824aa357b107578f83b4564685058ce55d54305d982478a86aba"
+    },
+    {
+      "slug": "hangman",
+      "language": "c",
+      "reviewedContract": "Masked repeated letters, repeated/missing guesses, remaining-guess threshold, win/loss and rejection after game end.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 6,
+      "namedTestCases": 0,
+      "instructionsSha256": "ec0fc34a2bdeb810c7587f37b8c52d1097cabf91bcb95a1759cc75daba7fd6dd",
+      "starterSha256": "fb5ede88b44abe7aaf74aed56cdcd61c3e78befc4b9b20e90105c976db703dae",
+      "referenceSha256": "09bccb2387428be3bb71db6fffb477c26582d1213a296adb9ab953b72dddcf91",
+      "testsSha256": "f49015fdc5b41d8131f9f1f32d29963558e41bff98c55086be8b131116eba0c9",
+      "provenanceSha256": "0ba9b92633e495ec63d4027bee6ac430061131e64b7fc06b0b279247c5e3ee5c"
+    },
+    {
+      "slug": "hangman",
+      "language": "cpp",
+      "reviewedContract": "Masked repeated letters, repeated/missing guesses, remaining-guess threshold, win/loss and rejection after game end.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 6,
+      "namedTestCases": 0,
+      "instructionsSha256": "ec0fc34a2bdeb810c7587f37b8c52d1097cabf91bcb95a1759cc75daba7fd6dd",
+      "starterSha256": "6206fe0761139405eab4b97e2a1482820b261a23510c06eeddf3a75281e3bb2a",
+      "referenceSha256": "d238314283aacfaccb51726a319280af9eab28cfce509d4af6b6fb99dbdf0249",
+      "testsSha256": "3a7d9c5e35716c16767ce801e75a330d02743ac623282b73e1ff8507c1207098",
+      "provenanceSha256": "b531785a7b3e3a1bc0ea07fdbf39c754fd253fb760c34b0ca9441ef8cd269fd3"
+    },
+    {
+      "slug": "hangman",
+      "language": "zig",
+      "reviewedContract": "Masked repeated letters, repeated/missing guesses, remaining-guess threshold, win/loss and rejection after game end.",
+      "nativeTestFiles": [
+        "test_hangman.zig"
+      ],
+      "nativeReferenceFiles": [
+        "hangman.zig"
+      ],
+      "assertionSites": 10,
+      "namedTestCases": 1,
+      "instructionsSha256": "ec0fc34a2bdeb810c7587f37b8c52d1097cabf91bcb95a1759cc75daba7fd6dd",
+      "starterSha256": "84a62a37f9056a90299e167e16f9a4ba2ab27dc7c5d2f198af87c248892c8966",
+      "referenceSha256": "768bbf691aa4d8addeb04cf0dc5d6a241285d0c3e769d203ac5dfd88d63cb154",
+      "testsSha256": "d3d7ebe92b17efd6c6f03de94a6dde27f6dbedb464ce44b3c828b01a602acaad",
+      "provenanceSha256": "fb5d66087c8bcd33e31cf2bf06b3cd108f64d36147b8ab3d0b525ff5780c6051"
+    },
+    {
+      "slug": "hexadecimal",
+      "language": "c",
+      "reviewedContract": "Manual conversion, both letter cases, leading zeroes, invalid digits and checked fixed-width overflow.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 16,
+      "namedTestCases": 0,
+      "instructionsSha256": "d4910935fc36d7353859aa8b6211a86dfbba7ca217ef247b91f4174b8bff4189",
+      "starterSha256": "cf654482b0ce0c9b7358cd32b90e5e7e3fe2434e0d385614eb0c7c7fcb991018",
+      "referenceSha256": "f9e2f0eb2a4ddb7e280ca4ef65cce03f605c40af82c1ea3a835e5bd54ed412d8",
+      "testsSha256": "b8d31f4b9c05d10cd5881798052cdec6ad6f31de7cf6bb492e965e3a952ddd16",
+      "provenanceSha256": "36071fcc24c34ca9cad620f86d2eab13d2540254817ef61d437c29795adf1643"
+    },
+    {
+      "slug": "hexadecimal",
+      "language": "zig",
+      "reviewedContract": "Manual conversion, both letter cases, leading zeroes, invalid digits and checked fixed-width overflow.",
+      "nativeTestFiles": [
+        "test_hexadecimal.zig"
+      ],
+      "nativeReferenceFiles": [
+        "hexadecimal.zig"
+      ],
+      "assertionSites": 8,
+      "namedTestCases": 1,
+      "instructionsSha256": "d4910935fc36d7353859aa8b6211a86dfbba7ca217ef247b91f4174b8bff4189",
+      "starterSha256": "14ad70219bef5a70da3f43a82567e4c0e69067e105a5996b482ff49caec9e5b3",
+      "referenceSha256": "62490f365e8d7a18485f89ef6d37d94438d4b383e16418568f7a24d4a44ad309",
+      "testsSha256": "0b0874f79e9cf8110967e47ee67c588a1b087bd4aa2c31f0a5991f5199b70737",
+      "provenanceSha256": "59e1ad943fd97e356631d7c40adcdc3d220932ee21abad9b1dcf0c4d69b9ea8c"
+    },
+    {
+      "slug": "house",
+      "language": "c",
+      "reviewedContract": "All twelve cumulative verses, exact order/text and requested start/end range.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 16,
+      "namedTestCases": 0,
+      "instructionsSha256": "70540211217baa8d993ed7545ae35b2e0a917461cce9704f6207a5df92cea22a",
+      "starterSha256": "1e6afd9079d97db93b66ef295494b1c542686b4d9ca465b56f6f07367eeb92e9",
+      "referenceSha256": "5af877e5f460244b5c4939f6fb8b73539813e8da5b6560e38e38d0d5166a097a",
+      "testsSha256": "a32835c9e101266fd2e1b31f529125884941ee0582ba1fe01de57cc36971b12e",
+      "provenanceSha256": "492e9535994da327b7ac1ae0bedae184e2d5a6db23a37c2d519b6ccff36c6f0b"
+    },
+    {
+      "slug": "house",
+      "language": "cpp",
+      "reviewedContract": "All twelve cumulative verses, exact order/text and requested start/end range.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 16,
+      "namedTestCases": 0,
+      "instructionsSha256": "70540211217baa8d993ed7545ae35b2e0a917461cce9704f6207a5df92cea22a",
+      "starterSha256": "354f187cfef467d2212ac8406683d967bd311d3e4c1b2a29259faf283b34308e",
+      "referenceSha256": "bd7f0609e0b84afdc7ba14ec88f994af17573380865e8552db4ce8c222005339",
+      "testsSha256": "fde5f70789be57c17bf01e39f54a3de5cfbe5705f5db26aeca2338b3501a733a",
+      "provenanceSha256": "ae01cb3272ded54b8b343a86a03de1742acc722435a8d33f9faeb19f5b6bb514"
+    },
+    {
+      "slug": "isbn-verifier",
+      "language": "c",
+      "reviewedContract": "Hyphen omission, exactly ten digits, X only in final position and weighted modulus-11 validation.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 26,
+      "namedTestCases": 0,
+      "instructionsSha256": "f5fb98c13a958239286c75feaabfbd345cc7b8d09198921739f2740d9e4e0572",
+      "starterSha256": "dd0ea7e13783dc98badb3d8bf6c57ab7b82031c83a7ca5cdc46732db9f80689c",
+      "referenceSha256": "0dc54421ea764694ec314877052793badb0c2c00f7a9f35b0d06adde9c82a115",
+      "testsSha256": "60ad87fa6628f9ffb8b42a8c22a7a3e3ac091fc1ef37716e9893e023119cd0cc",
+      "provenanceSha256": "1db4d6a8de8c0027c17871bfb6a1fae90bf4590b75938b0b3ad1ad6ba7dc54c7"
+    },
+    {
+      "slug": "killer-sudoku-helper",
+      "language": "c",
+      "reviewedContract": "Distinct 1..9 digits, cage size/sum, excluded digits, lexicographic combination order and empty combination.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 36,
+      "namedTestCases": 0,
+      "instructionsSha256": "629626bf0f7c64d4f2486120d2631855f5d3d7b6e09c577293b24811f66c8139",
+      "starterSha256": "5ae4712b443d64bdd41c4a3be32270d60fd5eb77f3c5b1b31f564a954bddd20c",
+      "referenceSha256": "ee033391c5eb3ce0e759135125b2eaef19b2df14da9c32c19b481751065ae629",
+      "testsSha256": "cd5af63f90de363bff35cb06a4fc876dfd739003bc113aa8beaaf8abf3e257ae",
+      "provenanceSha256": "0a21feb07240ab7a179965f2bba66233f636eb62af2147ee796748a381a2d845"
+    },
+    {
+      "slug": "killer-sudoku-helper",
+      "language": "cpp",
+      "reviewedContract": "Distinct 1..9 digits, cage size/sum, excluded digits, lexicographic combination order and empty combination.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 36,
+      "namedTestCases": 0,
+      "instructionsSha256": "629626bf0f7c64d4f2486120d2631855f5d3d7b6e09c577293b24811f66c8139",
+      "starterSha256": "f5d6cbb96353c799560e15cdc6f5630ba2408b2d3c44ac747ba97aa267ba1248",
+      "referenceSha256": "29312cab173c8c559e7c8af4eb9968be1f73ebc6313f2e6ac9dfa51f1c37797e",
+      "testsSha256": "fc6ff2cccbf47a351494513fccab003aa1a0f213c96ab274696d3a8a8cc4dafc",
+      "provenanceSha256": "65b60bb532e3c305ae0419deee8839bac44e4b9e7f284f8819c7f061bea948e9"
+    },
+    {
+      "slug": "ledger",
+      "language": "c",
+      "reviewedContract": "Date/order tie-breakers, truncation/alignment, USD/EUR, American/Dutch separators, negative formatting and Unicode character widths.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 15,
+      "namedTestCases": 0,
+      "instructionsSha256": "f14fb62c9cec2bc0a0d2ae3064c52585023034f71cc752e92091bc2b38693424",
+      "starterSha256": "866d1a5003c200437ae085e86b8e945672cf0304ac55398b9e6f730ab2e7b91e",
+      "referenceSha256": "a8d93a2e33b1d9230ee0be357d27c32fe5f4ea762784c65de2c9dff241cd8e44",
+      "testsSha256": "b40fdfb8990b9fb1d9c3ede0bbf9f6593564b120b49a045e77b3b27e2bbcb958",
+      "provenanceSha256": "cd5645eeafce96b486490b0951043fe457f7462845948cb91f200c464166cbdd"
+    },
+    {
+      "slug": "ledger",
+      "language": "cpp",
+      "reviewedContract": "Date/order tie-breakers, truncation/alignment, USD/EUR, American/Dutch separators, negative formatting and Unicode character widths.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 15,
+      "namedTestCases": 0,
+      "instructionsSha256": "f14fb62c9cec2bc0a0d2ae3064c52585023034f71cc752e92091bc2b38693424",
+      "starterSha256": "a643027b5b118c475043cbc5b1ed9dfc3fbb717f206341c93e1a47df03d1a048",
+      "referenceSha256": "60e689b37ebaa0672ecd6baed3a03f6a942c3bee6c59f2e71902528fc26170a9",
+      "testsSha256": "037fbda53a3ac5511cc8786ad81aaf4d3ff9db1d12d184a78a0af0481d252d81",
+      "provenanceSha256": "c9cdedc68be56fb4ed2bed23fa6bd05828d908a69c16355a039c563c43e7ca86"
+    },
+    {
+      "slug": "ledger",
+      "language": "zig",
+      "reviewedContract": "Date/order tie-breakers, truncation/alignment, USD/EUR, American/Dutch separators, negative formatting and Unicode character widths.",
+      "nativeTestFiles": [
+        "test_ledger.zig"
+      ],
+      "nativeReferenceFiles": [
+        "ledger.zig"
+      ],
+      "assertionSites": 11,
+      "namedTestCases": 11,
+      "instructionsSha256": "f14fb62c9cec2bc0a0d2ae3064c52585023034f71cc752e92091bc2b38693424",
+      "starterSha256": "015d010fe729e369b324781b8beda885f20e669e1577e487af2d27d04c9efdc6",
+      "referenceSha256": "8149fd19e40575b01e2a8b92525c83943dc175223122222076f237fd37dc5fe7",
+      "testsSha256": "a4b4714da07fef8fda4e06d6b791868295dea34a0d50a36606d32fb681554bca",
+      "provenanceSha256": "4fbd55a4a6b593f09bf53a852d8491563e04cde89bc0b6043104a812ba499059"
+    },
+    {
+      "slug": "line-up",
+      "language": "c",
+      "reviewedContract": "Personalized sentence, ordinal 1/2/3 suffixes, 11/12/13 exceptions and valid 1..999 domain.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 28,
+      "namedTestCases": 0,
+      "instructionsSha256": "13fdd6b9014692f764cf745c90f7afdbd598774a0b65243f672df018e9d084c6",
+      "starterSha256": "3614141fc5459480daaf53b193de1dbb1502fdd31da1dc1f2d1fc89ff96edc0f",
+      "referenceSha256": "a9a49102efe504178070821d0f2a8f3fb6e9e401ee6b8c67175981af4934083e",
+      "testsSha256": "8fb2a04415dae372d00a1b6072a640ff776f3e61a304701aa78da56df496d19f",
+      "provenanceSha256": "5fd10fc568db8e1fe60816b72eea5bf65a7a2a11a8cebb4e7ce541833cbfd862"
+    },
+    {
+      "slug": "line-up",
+      "language": "cpp",
+      "reviewedContract": "Personalized sentence, ordinal 1/2/3 suffixes, 11/12/13 exceptions and valid 1..999 domain.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 28,
+      "namedTestCases": 0,
+      "instructionsSha256": "13fdd6b9014692f764cf745c90f7afdbd598774a0b65243f672df018e9d084c6",
+      "starterSha256": "6b6303ab7df11bb3aa54b7ad6c9454cb18e4619bc6d93d452f4eba1f5d2d460c",
+      "referenceSha256": "9dd60adb126e46eda6c9b680f56378f05274a2f3c4a7320f991ef3efa91ebcfa",
+      "testsSha256": "1405b0089a2448d970ef68ced4bf59f4fad51f24dc77ebbf70786e81d4189225",
+      "provenanceSha256": "7c23e6dfc19393e3aefe1fbffe0218c00859f4126e474bff9ebf9fde92604a7b"
+    },
+    {
+      "slug": "list-ops",
+      "language": "zig",
+      "reviewedContract": "Append/concat/filter/length/map, generic types, ordered left/right folds, reverse and empty lists without delegating list operations.",
+      "nativeTestFiles": [
+        "test_list_ops.zig"
+      ],
+      "nativeReferenceFiles": [
+        "list_ops.zig"
+      ],
+      "assertionSites": 11,
+      "namedTestCases": 1,
+      "instructionsSha256": "99b119333c4f19ab2563d6205781813f165bcef909c227a206305543d739e74b",
+      "starterSha256": "2167ee10d66efed0fb44b607e3b2d7450c5d6e4671c9aed01f5b50aba7678d2c",
+      "referenceSha256": "f022c1065657306857d6a0571364cf645c6cbc0de02c9f162e083faee2180236",
+      "testsSha256": "c2e255c56e550f6ce9e63e5affce2d5c0c733e6c8f15777d70b72fd91ea8c4bc",
+      "provenanceSha256": "02c5a333b2b2613d889c1e4682bf96bd5f0e0147e50549d33ed11967444ea327"
+    },
+    {
+      "slug": "markdown",
+      "language": "c",
+      "reviewedContract": "Headers 1..6, paragraphs, list open/close transitions, strong/emphasis and multiple inline spans.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 20,
+      "namedTestCases": 0,
+      "instructionsSha256": "b206cf223181a97e3caa039c9b99aa0aaed97eb25e5b6ef23e258931ff00e7c3",
+      "starterSha256": "a336149a349df7f870ecb421cb444d108821ad1eb0fbc29c9ab8f1613d5b3d5b",
+      "referenceSha256": "13369afbb00a1d440c5c3740c07dfb53615ef6a55a237e92c6707833b8d7b9b9",
+      "testsSha256": "2d186657d499af16e8057c1b15a0a6b186d51d171f0d159f98e9adfd1d286d1a",
+      "provenanceSha256": "349f3f1a7a0d73611d8b4513e536926c514ce0127b25609e2a42875e854c75c5"
+    },
+    {
+      "slug": "markdown",
+      "language": "cpp",
+      "reviewedContract": "Headers 1..6, paragraphs, list open/close transitions, strong/emphasis and multiple inline spans.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 20,
+      "namedTestCases": 0,
+      "instructionsSha256": "b206cf223181a97e3caa039c9b99aa0aaed97eb25e5b6ef23e258931ff00e7c3",
+      "starterSha256": "027774a39a4526dcecaff0b0e09c8de34037b10bc4c8d8fd1c3e42a731aeb415",
+      "referenceSha256": "a6ff55d192cdb40b68186017db35b37125ee9f9264419a2f7486116ae51fc3ca",
+      "testsSha256": "895fbe8f6611b987a9e1e5bf90091135224553988028bcd858dfed1444135649",
+      "provenanceSha256": "d8441f02d9517b194981e8867036ad7a85d19fe41dd3e785a4b1c2b52ccec143"
+    },
+    {
+      "slug": "markdown",
+      "language": "zig",
+      "reviewedContract": "Headers 1..6, paragraphs, list open/close transitions, strong/emphasis and multiple inline spans.",
+      "nativeTestFiles": [
+        "test_markdown.zig"
+      ],
+      "nativeReferenceFiles": [
+        "markdown.zig"
+      ],
+      "assertionSites": 17,
+      "namedTestCases": 17,
+      "instructionsSha256": "b206cf223181a97e3caa039c9b99aa0aaed97eb25e5b6ef23e258931ff00e7c3",
+      "starterSha256": "41a7d28b34a4de3ca4851b601e5c5d326e091552d2edbcfd14f6b563efdbe6ad",
+      "referenceSha256": "68489c8dca97448aedb2750f4508f85313113cd34765fa59063b4a038f02d827",
+      "testsSha256": "c2324b253708c538f3f7f5e721cb8ae59d736c5834c625c75528625980d081e6",
+      "provenanceSha256": "d82be4cb31c64311164fc8bad491e1966e66553c8845f0a0f8f464ce62f461fd"
+    },
+    {
+      "slug": "matrix",
+      "language": "c",
+      "reviewedContract": "Text parsing, multiple rows/columns, one-based row/column extraction, empty and malformed/ragged inputs.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 5,
+      "namedTestCases": 0,
+      "instructionsSha256": "bdbdb9560f0a13299672fe96225d668157ee7bcf04565d5f52632077a6679db6",
+      "starterSha256": "4a3cfae207804249b53defea049335a4fb6b302bf2c7ce4bf02431114ffc670e",
+      "referenceSha256": "96b1905b77bd08f9997f30c86cdb99acecabb0eb6869e94fbf8fd378a9f9a502",
+      "testsSha256": "4aac6813f6428a59e0d8296187babf5f98cdc77bc09092b7659e58def56ea33a",
+      "provenanceSha256": "622aca7472fc55a04edb9a1b297c02530355647c5b30d1116e2eb9f0c2f9a103"
+    },
+    {
+      "slug": "matrix",
+      "language": "cpp",
+      "reviewedContract": "Text parsing, multiple rows/columns, one-based row/column extraction, empty and malformed/ragged inputs.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 5,
+      "namedTestCases": 0,
+      "instructionsSha256": "bdbdb9560f0a13299672fe96225d668157ee7bcf04565d5f52632077a6679db6",
+      "starterSha256": "feb7ae21e8e29b79d42dd890346a7f06320ada4223c35d7839ffd3609f603cab",
+      "referenceSha256": "de8f522bdc60f19076dfa4d2e51e94f8c05002ad45a2115d661cb6db795561f8",
+      "testsSha256": "e05e38546ca4d0b7b810d3b18975abc97a60d475f44fa4ad8c6dd42d06fa1905",
+      "provenanceSha256": "02496d75e0b792d392e540aba362edc542d7e4a94be241c8ebe1689e0e219ca2"
+    },
+    {
+      "slug": "minesweeper",
+      "language": "zig",
+      "reviewedContract": "All eight neighbors, unchanged mines, zero-neighbor spaces, edge/corner/empty boards and malformed cells/rows.",
+      "nativeTestFiles": [
+        "test_minesweeper.zig"
+      ],
+      "nativeReferenceFiles": [
+        "minesweeper.zig"
+      ],
+      "assertionSites": 32,
+      "namedTestCases": 16,
+      "instructionsSha256": "9c349a72c85f3ee25a70b64c8e7f0bf614974b5ac876bc9b2fe0f0b18fbcf5d7",
+      "starterSha256": "f0e269a38508a1b141fa907bdab42931ac9d6ab16e18c623843d27baf72130a8",
+      "referenceSha256": "43c37147fa0c1c111fbefa6beb5cef5e909c97e19eb78c641fead459e7f5ff11",
+      "testsSha256": "bf415671f970b127ce8263d03060d768268009760ae60adfbb1a71c32233fb8c",
+      "provenanceSha256": "d5d3ad9a914174c7329ae0a09a7ea98a7793b1925cf71ec14c14ab6120e17aa4"
+    },
+    {
+      "slug": "ocr-numbers",
+      "language": "c",
+      "reviewedContract": "All ten glyphs, unknown glyphs, multiple digits/lines, comma separation and 4-row/3-column dimensional checks.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 34,
+      "namedTestCases": 0,
+      "instructionsSha256": "a3a9e4c73200cedafc2f61bc0978e57652c9438b89477a9e6775e893af3e4f32",
+      "starterSha256": "5efc919111a6bc55a8193784afe8c7674c2f8e1ccc75204aed4a64dbac4f7402",
+      "referenceSha256": "4f578e0febc215f2a45a099eadf0c958ce285627f06e49a757a467d2ea6bc7ca",
+      "testsSha256": "c1dc1b4e0573e305dc4b3217ab842862a0a8ce3062cfe7b019a45e803f1e08e8",
+      "provenanceSha256": "f2c01a4e30b3375b8c55f5bad2e39b5b5c91de7413cbe62586e30074ed1ca1c7"
+    },
+    {
+      "slug": "ocr-numbers",
+      "language": "cpp",
+      "reviewedContract": "All ten glyphs, unknown glyphs, multiple digits/lines, comma separation and 4-row/3-column dimensional checks.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 34,
+      "namedTestCases": 0,
+      "instructionsSha256": "a3a9e4c73200cedafc2f61bc0978e57652c9438b89477a9e6775e893af3e4f32",
+      "starterSha256": "501a75e4df38542cb62756f6110dc8e06d60145234a9d58b1b048b8afc332628",
+      "referenceSha256": "5913af1543ec7e8c1b26ae97a9beaae4765b4dbe661303f55dd0873a38b2d964",
+      "testsSha256": "558c41ebc2685d6260eb24d0e42480cc0ff1879195cfc37f9f38012917d73e68",
+      "provenanceSha256": "88541649d12cb31800e19d987b9db8558916a19b775bf14dc2c1233c3fc2cb56"
+    },
+    {
+      "slug": "octal",
+      "language": "c",
+      "reviewedContract": "Manual base-eight conversion, leading zeroes and invalid input as zero; checked status API in C/C++.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 14,
+      "namedTestCases": 0,
+      "instructionsSha256": "8a445b79778ababa35f1046b23fa7d6355fd12b07bacd9c3bbc2552c05eee4c2",
+      "starterSha256": "cf654482b0ce0c9b7358cd32b90e5e7e3fe2434e0d385614eb0c7c7fcb991018",
+      "referenceSha256": "65d55fc451e0cacc20d701269b0b52d31f9a62813606d15e0d5724254594aa73",
+      "testsSha256": "6234668da161860f7a4bf571be86845afd49044ae87d031314dfc6edfe81e8bb",
+      "provenanceSha256": "1870951fb19c060fab9e1a0a9c905beac34face6144a0659d34ab6483a6e3343"
+    },
+    {
+      "slug": "octal",
+      "language": "cpp",
+      "reviewedContract": "Manual base-eight conversion, leading zeroes and invalid input as zero; checked status API in C/C++.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 14,
+      "namedTestCases": 0,
+      "instructionsSha256": "8a445b79778ababa35f1046b23fa7d6355fd12b07bacd9c3bbc2552c05eee4c2",
+      "starterSha256": "e308701f738afd6359d64c449eeb7c3a808a86e94b9cfc9625a414064ab472ae",
+      "referenceSha256": "cb3240fe52c4226d8d7d67aa491755fce62b91874a2368d1d679a65e1d2a0f78",
+      "testsSha256": "99e70ff3d22b34a1506b8dc2095cbc54d17545689cb43005cca9ce763bec4a31",
+      "provenanceSha256": "f2289151bbc2377dae4602c859c75f2be49f6e4341f63d4b5e44c808b0615685"
+    },
+    {
+      "slug": "octal",
+      "language": "zig",
+      "reviewedContract": "Manual base-eight conversion, leading zeroes and invalid input as zero; checked status API in C/C++.",
+      "nativeTestFiles": [
+        "test_octal.zig"
+      ],
+      "nativeReferenceFiles": [
+        "octal.zig"
+      ],
+      "assertionSites": 12,
+      "namedTestCases": 8,
+      "instructionsSha256": "8a445b79778ababa35f1046b23fa7d6355fd12b07bacd9c3bbc2552c05eee4c2",
+      "starterSha256": "0b8271995d9f7ab26186fd21eaaa61e1656394b35b8863e4802d824cfa294438",
+      "referenceSha256": "89c46ad9508f045ee886b4d686dbfdaa46e23504fca9fc25c14dae054b494cdf",
+      "testsSha256": "052e45630be71c24c159685bd762e52fafa83b8d5482b5070ebec621aeabc678",
+      "provenanceSha256": "06066f2c4c63d940a93c5c6f9b97d904b44c5ede096e1ec32ab677a6312a94e0"
+    },
+    {
+      "slug": "palindrome-products",
+      "language": "cpp",
+      "reviewedContract": "Smallest/largest palindrome, every factor pair, equal bounds and invalid/no-product ranges; explicit owned-result API.",
+      "nativeTestFiles": [
+        "test_palindrome_products.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "palindrome_products.cpp",
+        "palindrome_products.h"
+      ],
+      "assertionSites": 31,
+      "namedTestCases": 14,
+      "instructionsSha256": "6348afd40d5ae1a49a2a5516516b5535e9199c39980e1c8f800838eabe3f43aa",
+      "starterSha256": "990e12a6fccc3924345f298b45ab1a089a8ee3b759925a53b7168fea6e815cda",
+      "referenceSha256": "7ce0b6e1a7dd29cc17a4a3b8fc41bd67a96baec9d40bd2b3c946da4b3c0a2ebe",
+      "testsSha256": "26ecf68cebd7af01fd9ea0b90a06cdc7f7a3722dfc49d1978d8589aa3a5f3a7f",
+      "provenanceSha256": "042e4689738f497c433899d1241833b16d96ab44a12b1deb1e5a62c2a1c8d463"
+    },
+    {
+      "slug": "point-mutations",
+      "language": "c",
+      "reviewedContract": "Deprecated exercise's zip-to-shorter-strand behavior, differences and empty strands.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 11,
+      "namedTestCases": 0,
+      "instructionsSha256": "24ea074b4386583d9e03bf31a6fde6d32759cf2089d0bf01c70356b52e1cd37b",
+      "starterSha256": "f3f88819c7974b7eb18fa081ab3ea4d896ef187f07d34660b9f5081c2eed0f99",
+      "referenceSha256": "990d9b03feca822b8b8b37e5bc0bd989f6803c2405674ee761cb50a6a37b3767",
+      "testsSha256": "7aff75834952f48d0bcbc3d6278a3bf28d5960f44446edaeecd8079e6a6b5e38",
+      "provenanceSha256": "4b4c13224de2ecdbd2e9da303da0824d9db9c6665fd701415ba03f84f801548b"
+    },
+    {
+      "slug": "point-mutations",
+      "language": "cpp",
+      "reviewedContract": "Deprecated exercise's zip-to-shorter-strand behavior, differences and empty strands.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 11,
+      "namedTestCases": 0,
+      "instructionsSha256": "24ea074b4386583d9e03bf31a6fde6d32759cf2089d0bf01c70356b52e1cd37b",
+      "starterSha256": "b852e02fe2dac19c51639dba70c2c148a09f2dcd90e6e3e50c4d75ed67837bf4",
+      "referenceSha256": "145d4ccc268ccf72e7d700a3eb8fb5a45c6bfa36ab33acb54c0c87b703f99cf8",
+      "testsSha256": "b3f198ba815050eb95d453827a269e3a2652b01dd5ca4df9101578643785ecf1",
+      "provenanceSha256": "c650b31693413baaee7f8c0c7a181c8e0e066f69e44e955124d40abf0b7224ae"
+    },
+    {
+      "slug": "point-mutations",
+      "language": "zig",
+      "reviewedContract": "Deprecated exercise's zip-to-shorter-strand behavior, differences and empty strands.",
+      "nativeTestFiles": [
+        "test_point_mutations.zig"
+      ],
+      "nativeReferenceFiles": [
+        "point_mutations.zig"
+      ],
+      "assertionSites": 12,
+      "namedTestCases": 9,
+      "instructionsSha256": "24ea074b4386583d9e03bf31a6fde6d32759cf2089d0bf01c70356b52e1cd37b",
+      "starterSha256": "5de2394a2c7ae625945bd060bae51f161d94cad74151bff001e5f3e82161bc70",
+      "referenceSha256": "e80a849ae1d151b30ce75291b5f3a5a2fafae3aff93025b7d7789c440763bb94",
+      "testsSha256": "db75e5fa4a6e54c150a196002b15f3768dba78b1ef8c63520ce22af61a04e17d",
+      "provenanceSha256": "005248475705b0e579a1015283c92e8bf85121798e1b47388ead48095cc030cc"
+    },
+    {
+      "slug": "poker",
+      "language": "c",
+      "reviewedContract": "All categories including five-of-a-kind across decks, ace-low straight, tie breakers/all tied winners and malformed cards.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 83,
+      "namedTestCases": 0,
+      "instructionsSha256": "62427ba25c07f8c57519f93cbfc293dd3eb9e8b74a33aae3645281433b8941ea",
+      "starterSha256": "d50c8c1df73a01a5abc83c80f35659da2169d7c90205488774e3bbbd697292f2",
+      "referenceSha256": "b661f8808d5c807d5248af1b18f596e091ea1d37d127b2666f94ce33abb2bb0d",
+      "testsSha256": "c729b7f1d49182eee0f7df0fa1d6c9e853303afc50f25b2f8c9ca1847329fde7",
+      "provenanceSha256": "e0b4d0c68799024c0f7b0cb3f3f6a0b1be38cbcbd85a25a60b2df11b722e8d0f"
+    },
+    {
+      "slug": "poker",
+      "language": "cpp",
+      "reviewedContract": "All categories including five-of-a-kind across decks, ace-low straight, tie breakers/all tied winners and malformed cards.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 83,
+      "namedTestCases": 0,
+      "instructionsSha256": "62427ba25c07f8c57519f93cbfc293dd3eb9e8b74a33aae3645281433b8941ea",
+      "starterSha256": "f35ede5154d84c2d648d27e59a83e9d609a8a1228349eb511044ea9bfc430c4b",
+      "referenceSha256": "0a39d122a76b2eacabdb64aabeb5aa2044a24d53f4caf1ef930b5acc9f1694ef",
+      "testsSha256": "0e9046eee755fe19b6608e183a90c32d1b517fd172a059d54f32308fc3779a32",
+      "provenanceSha256": "0f78adea07f3cccfa8e9522e07ee147af1008fbb98e33af7619662a604d5e700"
+    },
+    {
+      "slug": "poker",
+      "language": "zig",
+      "reviewedContract": "All categories including five-of-a-kind across decks, ace-low straight, tie breakers/all tied winners and malformed cards.",
+      "nativeTestFiles": [
+        "test_poker.zig"
+      ],
+      "nativeReferenceFiles": [
+        "poker.zig"
+      ],
+      "assertionSites": 6,
+      "namedTestCases": 41,
+      "instructionsSha256": "62427ba25c07f8c57519f93cbfc293dd3eb9e8b74a33aae3645281433b8941ea",
+      "starterSha256": "c7137fc3e7f82b4cc4041fbccdc99f008fcfd914cd91af2152e06593f7d0debd",
+      "referenceSha256": "d575b38e633b945c36d237fad74c8807440b4209a6711765d95e048669670dee",
+      "testsSha256": "f83b240cfbded1a6b3e5670a9b4a259479ab89888c173fabe461b3753a3bfaca",
+      "provenanceSha256": "4a427c6ae688d4cebc0b19321fa66b999f9ec8ef8fcd1f8775e8d59366a1a62a"
+    },
+    {
+      "slug": "pov",
+      "language": "c",
+      "reviewedContract": "Rerooting without input mutation, upward/downward edges, shortest tree path, same/unknown labels and returned-tree ownership.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 4,
+      "namedTestCases": 0,
+      "instructionsSha256": "f771bc69b991182ef93c1054c34b2e145ec331ed97001ada0c7ceb5ba08d39c3",
+      "starterSha256": "24c80586759e0dfd9f528364f1921ad94a087e314e93c0c836ed0034bff7170c",
+      "referenceSha256": "e3edfaba73f220bccb1acfaae0dcaa9ccbd0d8acbb67b9b2adb4b3e33e75467e",
+      "testsSha256": "7ea5cdb87c927f10789ce61fccd012d55cfa3c5ab664b04fcd811d9834458abc",
+      "provenanceSha256": "24a7bed6a32c893e0d9f110e0e47dd50a00e92fcb895c197985688869ccfcd07"
+    },
+    {
+      "slug": "pov",
+      "language": "cpp",
+      "reviewedContract": "Rerooting without input mutation, upward/downward edges, shortest tree path, same/unknown labels and returned-tree ownership.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 4,
+      "namedTestCases": 0,
+      "instructionsSha256": "f771bc69b991182ef93c1054c34b2e145ec331ed97001ada0c7ceb5ba08d39c3",
+      "starterSha256": "54dca80b2ff803f808a61ad9227d6f849fb9d994d594d530255850bfa946f5e5",
+      "referenceSha256": "2dc0b6c2fa2a5ab2490967156d8601d01012c96f76ad3b3eff19d542c81518ad",
+      "testsSha256": "9548f62edf5fc1ff0a1f6fe923977987f17084ccf4bc5d728a3345590c188ad9",
+      "provenanceSha256": "f5a49b49fd14c42d97b193fc0a0ad05c17ae0cb235f208b49f29daeab5f32967"
+    },
+    {
+      "slug": "pov",
+      "language": "zig",
+      "reviewedContract": "Rerooting without input mutation, upward/downward edges, shortest tree path, same/unknown labels and returned-tree ownership.",
+      "nativeTestFiles": [
+        "test_pov.zig"
+      ],
+      "nativeReferenceFiles": [
+        "pov.zig"
+      ],
+      "assertionSites": 27,
+      "namedTestCases": 16,
+      "instructionsSha256": "f771bc69b991182ef93c1054c34b2e145ec331ed97001ada0c7ceb5ba08d39c3",
+      "starterSha256": "225fc3f9114a0647e1c31845e8a03007410bb4f2e26f31357fe8b83749abcefe",
+      "referenceSha256": "bc03cef2ec77542cf5cc74f0f8b66109bdd52532c87cee8e24cc0d9a9a27148e",
+      "testsSha256": "a7c3682546672b5fc24a4a4eb05b90c933afdd9c59e99a6398ad20c492962763",
+      "provenanceSha256": "5844cfd43b984b89ee1ad317fa4835f9d15a5e0e9b4b3e1ed07aae51c817e6ff"
+    },
+    {
+      "slug": "proverb",
+      "language": "c",
+      "reviewedContract": "Adjacent item links, final first-item line, optional qualifier and empty/single-item input.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 2,
+      "namedTestCases": 0,
+      "instructionsSha256": "ed53decbb501ea11aafd7d9918dd22273d9d132780b557d0423ebf2cae665813",
+      "starterSha256": "a3d47a9f87a3a20dc4212ed72431c67987105b1414b7edd1dc146ce2f8fb9a6f",
+      "referenceSha256": "1ec3c7b2300bf7fe372e5adae9d6bd807925c4e88b2228df77c7129183b4afaf",
+      "testsSha256": "b33cdc7b17826e70cddd4ff9fbce81869cc02ef0414c077bf2d0040576f582ab",
+      "provenanceSha256": "83ea5e0a8ea6423a9056b398bbc73740fbfbd21257879a1cae8ef9e23d19ebfe"
+    },
+    {
+      "slug": "proverb",
+      "language": "cpp",
+      "reviewedContract": "Adjacent item links, final first-item line, optional qualifier and empty/single-item input.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 2,
+      "namedTestCases": 0,
+      "instructionsSha256": "ed53decbb501ea11aafd7d9918dd22273d9d132780b557d0423ebf2cae665813",
+      "starterSha256": "0fe2d08102f96881f9910179ee6e31db7c45ef4e2dc1f135f35fd490451dca20",
+      "referenceSha256": "758910bb8d3376460f018e1a53b81a70e6fcaf027789b0fa0b0c141ad7c375b8",
+      "testsSha256": "253128e9d0571df536cec6fea20eab42c29ff446e315ba600086975173192ee7",
+      "provenanceSha256": "f4b4dbb02d2091ad747d0a283df6609835817947af29d40f416044077ac7ad22"
+    },
+    {
+      "slug": "pythagorean-triplet",
+      "language": "cpp",
+      "reviewedContract": "a<b<c, exact requested sum, every valid triple, no triples and 64-bit square intermediates.",
+      "nativeTestFiles": [
+        "test_pythagorean_triplet.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "pythagorean_triplet.h",
+        "pythagorean_triplet.cpp"
+      ],
+      "assertionSites": 1,
+      "namedTestCases": 7,
+      "instructionsSha256": "34ceef94484259a3b51d711de951df05a5d21d5fa4c6ff06e6fe4a6b4249db6e",
+      "starterSha256": "1b406d3a16844f7986dacb976db7526d8f49a95ed04be1ae3fc1384f709df341",
+      "referenceSha256": "a4958d2dc5fa43c2f07e606e1afb22108987f746765d0709fa1f099eb4b423d0",
+      "testsSha256": "0317964e74eb788e51e66f252aa73b35f94e14a997b0e5105265622ff5388662",
+      "provenanceSha256": "84a7951a983d7089afa19515a1760b518a56a1611bd0ddcff44eb049077d94c1"
+    },
+    {
+      "slug": "rational-numbers",
+      "language": "cpp",
+      "reviewedContract": "GCD reduction, positive denominator, zero numerator, add/subtract/multiply/divide, absolute value, signed integer powers and real exponentiation.",
+      "nativeTestFiles": [
+        "test_rational_numbers.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "rational_numbers.cpp",
+        "rational_numbers.h"
+      ],
+      "assertionSites": 5,
+      "namedTestCases": 43,
+      "instructionsSha256": "982aefbb4814ff536d58bd076f3ee21ead2bb0c893d8cb776b8818eaabbc980d",
+      "starterSha256": "caa662d4b3cfaba67d25e0e8ea6bce4acaad612d055fe8b14dbe5375c5bb9f70",
+      "referenceSha256": "096eb317c5ffa2b25b445d3d7ea0ecd67ee99c933eb9eb9b00d15d0826fdfb91",
+      "testsSha256": "e845a17e13fd9015530cd186775727be83a12f612004a634464f2a41029f2c0a",
+      "provenanceSha256": "38df888d4276bc69f071e42da30081e48f87eb3a7ff7d7f206c493ae35e451dc"
+    },
+    {
+      "slug": "rational-numbers",
+      "language": "zig",
+      "reviewedContract": "GCD reduction, positive denominator, zero numerator, add/subtract/multiply/divide, absolute value, signed integer powers and real exponentiation.",
+      "nativeTestFiles": [
+        "test_rational_numbers.zig"
+      ],
+      "nativeReferenceFiles": [
+        "rational_numbers.zig"
+      ],
+      "assertionSites": 55,
+      "namedTestCases": 44,
+      "instructionsSha256": "982aefbb4814ff536d58bd076f3ee21ead2bb0c893d8cb776b8818eaabbc980d",
+      "starterSha256": "2accdcc6a7b7a0db5792c7c1548182f0c47471d0076afa0e47afdb4b22d42880",
+      "referenceSha256": "5d543994a9a7f513f62fe3c11330d1e726174f1624f63a20405d793d36042bc8",
+      "testsSha256": "d16adcbd9653e09be96deb1e7c1cf2e0a528cdb003f35241d91756f17b1ee91f",
+      "provenanceSha256": "d3d3ca5a6d9962425e35e0cdaa785ffae8cf2d3634ab9312117f40d750afc5b6"
+    },
+    {
+      "slug": "react",
+      "language": "cpp",
+      "reviewedContract": "Input/compute cells, multi-input DAG propagation, settled once-only callbacks, unchanged outputs, callback removal and repeated-input ownership.",
+      "nativeTestFiles": [
+        "test_react.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "react.cpp",
+        "react.h"
+      ],
+      "assertionSites": 32,
+      "namedTestCases": 15,
+      "instructionsSha256": "2d227f7e0b99585c441704993f1ed93009b946ec1ab46c3e9cde89e4dbee500b",
+      "starterSha256": "2148fa3d308b434a4096fa0a0cd87217b418a82f28c371390938b7943d9302e3",
+      "referenceSha256": "1cee63ef2fc378fa0df6ec3f07de6bf79e28583d6dfb7d298e048df2b262d466",
+      "testsSha256": "73def1f2b84d4332d9eda9a763c56c93837f8902ee9a7da82351d1e8ccdceda9",
+      "provenanceSha256": "5408c017ae30b1b1ae29116cc9538dff213fa6db4ad04d417f1372c8a8e04f9d"
+    },
+    {
+      "slug": "react",
+      "language": "zig",
+      "reviewedContract": "Input/compute cells, multi-input DAG propagation, settled once-only callbacks, unchanged outputs, callback removal and repeated-input ownership.",
+      "nativeTestFiles": [
+        "test_react.zig"
+      ],
+      "nativeReferenceFiles": [
+        "react.zig"
+      ],
+      "assertionSites": 14,
+      "namedTestCases": 3,
+      "instructionsSha256": "2d227f7e0b99585c441704993f1ed93009b946ec1ab46c3e9cde89e4dbee500b",
+      "starterSha256": "553214e3c7239eb0fc4f040bf9acc8b26a1758f95a21d57e9c1749c24902d458",
+      "referenceSha256": "1b0dd8b22105e1cb44199ad4e38220275c2f3c2dc4685cf40c3a85ecf0464104",
+      "testsSha256": "11ca8cf262cc01304dfc96bdfb853f05098c9c5b3e73470359cdd722bf643e73",
+      "provenanceSha256": "675666883f7e8b3ad69d50c3e02260a57d02e15fc224fb8ad60b23d9aa1b4d2c"
+    },
+    {
+      "slug": "rectangles",
+      "language": "c",
+      "reviewedContract": "Valid + corners, uninterrupted horizontal/vertical edges, overlapping/shared rectangles and empty/malformed drawings.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 17,
+      "namedTestCases": 0,
+      "instructionsSha256": "9d79ea05c5188315a7fd181ff07c2567cd10fb99c355519fec84cb1494ca50d2",
+      "starterSha256": "bd30e9a137e07d3faa882dd1727065fd500880a662bee251091fb46c6313e960",
+      "referenceSha256": "d4b31f9057972e0fdb5e9f9c8cd727adc2111a3f79ea1e547d7e21d0a25e7bd4",
+      "testsSha256": "dd1a2cf8f4260392f95cdb7d103570c2380a467f1d09d243781237e72a27b878",
+      "provenanceSha256": "822b3278b1d7cbdb5133a2ab4d2fea5fd3010fd5c3ab7bc0dec245f3fac1d79d"
+    },
+    {
+      "slug": "rectangles",
+      "language": "cpp",
+      "reviewedContract": "Valid + corners, uninterrupted horizontal/vertical edges, overlapping/shared rectangles and empty/malformed drawings.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 17,
+      "namedTestCases": 0,
+      "instructionsSha256": "9d79ea05c5188315a7fd181ff07c2567cd10fb99c355519fec84cb1494ca50d2",
+      "starterSha256": "4a7d4f5c46598712dbe9c91ab6770ed83b9bc8887654e7c3b7f48dee1f278031",
+      "referenceSha256": "f54fa6dc28447cd9bb672f1d2ae11e0bf7a170d7723d125aeef888605cec400b",
+      "testsSha256": "83ea17e960ddb7e1a48baee838a5cfd976d8123a4151f33aca2adf1be8c11aec",
+      "provenanceSha256": "5113bdc26bb9fac4dab770432e8af6e168a9df05b531ddf2d0cfe751b49b5938"
+    },
+    {
+      "slug": "relative-distance",
+      "language": "c",
+      "reviewedContract": "Parent/child and sibling edges, shortest undirected connection, shared/two parents, identical people and missing/disconnected-person errors.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 5,
+      "namedTestCases": 0,
+      "instructionsSha256": "ed10eff029589faea862b802555864ec9601b6ad11adcdc4a4a55166b4c620c3",
+      "starterSha256": "1d13a01954fca1e374f171ee09873fd227a003875d7cfa88e9374382c8ef4600",
+      "referenceSha256": "c2f64ac797049b0861b3132da4c05616b072889113f8ebc65b6bf638875fe6f9",
+      "testsSha256": "60bf7108cba762e8dc2f026b5bf59ed274c138ca318b12c1b85621f6423b736f",
+      "provenanceSha256": "1655c75329ccf023dabf2804a26dce6066ebc4a520a417c878b8685de56d2a93"
+    },
+    {
+      "slug": "relative-distance",
+      "language": "cpp",
+      "reviewedContract": "Parent/child and sibling edges, shortest undirected connection, shared/two parents, identical people and missing/disconnected-person errors.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 5,
+      "namedTestCases": 0,
+      "instructionsSha256": "ed10eff029589faea862b802555864ec9601b6ad11adcdc4a4a55166b4c620c3",
+      "starterSha256": "d69b18862377a3708627dadd2211c8936bf5ac4c10ad697a923141f2c77d2ee0",
+      "referenceSha256": "395211e74b5420658ece9c384d5c286e93bcab7deb5faecbcf8519e0439bfb90",
+      "testsSha256": "bce48ae11eeacd95dbc546c37e16eee59ae425189edda7f4ab21ad7d2d3ddffd",
+      "provenanceSha256": "5418dbd49a6ffbb5e0984130b9a655d413e6539e3fb11c255453e725ac281a96"
+    },
+    {
+      "slug": "relative-distance",
+      "language": "zig",
+      "reviewedContract": "Parent/child and sibling edges, shortest undirected connection, shared/two parents, identical people and missing/disconnected-person errors.",
+      "nativeTestFiles": [
+        "test_relative_distance.zig"
+      ],
+      "nativeReferenceFiles": [
+        "relative_distance.zig"
+      ],
+      "assertionSites": 14,
+      "namedTestCases": 8,
+      "instructionsSha256": "ed10eff029589faea862b802555864ec9601b6ad11adcdc4a4a55166b4c620c3",
+      "starterSha256": "185fd11795b4a1c315c8cb1d7dd6096e1b9aec85da29ee9ed261cd6d543c9939",
+      "referenceSha256": "8e4ca2faf84c2ff6781a67c8277833f5a24dca55c685541792119e7e3d8d1a5b",
+      "testsSha256": "ab8a2ac50135893c4c587a7b698cce7cbcb3f689a2c5e70ccb4f8c07e93ae4f5",
+      "provenanceSha256": "d9d413b4382d0132923bdc5d41358dbe5a1585ccc9de423dce251029dae74c96"
+    },
+    {
+      "slug": "resistor-color-expert",
+      "language": "c",
+      "reviewedContract": "One/four/five bands, significant digits, multiplier, all tolerance bands and fractional kilo/mega labels.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 27,
+      "namedTestCases": 0,
+      "instructionsSha256": "1f6cddc3349c971231b5afbbfe2331df37bcc0936969475bf6e069b9e7009c1a",
+      "starterSha256": "b9b2dd44109b472f5b55f74d378a4456f33b1d460933667f49466b90fc225041",
+      "referenceSha256": "2291526b23d2cd1f0cb37e21ca126335edfd39beffc72e2ca0da25c7e1fb3b49",
+      "testsSha256": "451fa5520e5106ae35f772a6820a87808659824e573e3355cd2e8498f47895d1",
+      "provenanceSha256": "4f3e85afd576baf79b6c9627b43ca22431579cae79111acfca441bddd550b3b6"
+    },
+    {
+      "slug": "resistor-color-expert",
+      "language": "cpp",
+      "reviewedContract": "One/four/five bands, significant digits, multiplier, all tolerance bands and fractional kilo/mega labels.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 27,
+      "namedTestCases": 0,
+      "instructionsSha256": "1f6cddc3349c971231b5afbbfe2331df37bcc0936969475bf6e069b9e7009c1a",
+      "starterSha256": "adba072dd99c27b6aad6e5797b355395a4c2f862aea0cace99fcd2b9163c866e",
+      "referenceSha256": "596e0fdefffbd74b42c4741f726fd7a076c9f93d77e7c2ebf66a031bd268d531",
+      "testsSha256": "8c16f4cd27c6fd15b3844d267b6f120d52d4e902040b95ba83bfcf05322550af",
+      "provenanceSha256": "4e41b54655f6ed17d558ceea759bf21d0e64fbd0949f0c907e800c271b8df81c"
+    },
+    {
+      "slug": "resistor-color-expert",
+      "language": "zig",
+      "reviewedContract": "One/four/five bands, significant digits, multiplier, all tolerance bands and fractional kilo/mega labels.",
+      "nativeTestFiles": [
+        "test_resistor_color_expert.zig"
+      ],
+      "nativeReferenceFiles": [
+        "resistor_color_expert.zig"
+      ],
+      "assertionSites": 1,
+      "namedTestCases": 13,
+      "instructionsSha256": "1f6cddc3349c971231b5afbbfe2331df37bcc0936969475bf6e069b9e7009c1a",
+      "starterSha256": "a398b74645342a7cf6ef4dffbf15fd3681c7ce4f246464ac1fbd5c2d0457771e",
+      "referenceSha256": "b30ea9f4ca09f629d8b1e06989584be96d973326dea815210c7859d8d50a8b3a",
+      "testsSha256": "3212c46345112e85e5f463aa0f6656adb2a6a5cb7e014c88b099ef82c11a2c74",
+      "provenanceSha256": "91bdabaad13db234f2e8e59b4c856428686583fba3d82a63f6bd399c785aff18"
+    },
+    {
+      "slug": "resistor-color-trio",
+      "language": "cpp",
+      "reviewedContract": "First two digits and multiplier through giga, zero and extra bands; integral C/C++ representation preserves exact resistance rather than truncating fractions.",
+      "nativeTestFiles": [
+        "test_resistor_color_trio.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "resistor_color_trio.cpp",
+        "resistor_color_trio.h"
+      ],
+      "assertionSites": 22,
+      "namedTestCases": 11,
+      "instructionsSha256": "2f9e3ed82470bd9e9cf73d0cb99328d7b154f14dfd26ca212d3841949b757d01",
+      "starterSha256": "9b2eb6a7e4e334c95cd0a35c6192f8db0e302cbee356838a659e7b5311f1ceab",
+      "referenceSha256": "68e7a2a3f6851ca6a373af2e2145f4b227b55564d6ff5143c3e92098d0752873",
+      "testsSha256": "279ea2aefdd0645bad869da85a7032e2ca59736e2abd199b6b832aedbb70e613",
+      "provenanceSha256": "9375e37fb87d493ae8126d4e2ce48f65da3131a5d615b340a6aab912e3492a20"
+    },
+    {
+      "slug": "rest-api",
+      "language": "c",
+      "reviewedContract": "Database initialization, sorted/filterable GET, add/IOU POST, opposing debt netting, balances, JSON responses and caller-owned output.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 9,
+      "namedTestCases": 0,
+      "instructionsSha256": "c73521d19ed4586ad169f9396f91f8d18a6fdebb09ffc0d5586274031d71e729",
+      "starterSha256": "88a907277b220602fdcb633deb7635f8cb787f76ecc7a1ae8a9ebb030a2ac9ae",
+      "referenceSha256": "c3241e3add9122940ba3d6600d5b9a9845e8f68aff185babdabf2221097aa282",
+      "testsSha256": "c50d9a922e9120bb16700b92af05d8ad016ad001d765bcef473ec65ac4d701a0",
+      "provenanceSha256": "0c67197eea8b154e8e482867f957fd98f0547eef5bf8c64e2c2b1425ca2e4f62"
+    },
+    {
+      "slug": "rest-api",
+      "language": "cpp",
+      "reviewedContract": "Database initialization, sorted/filterable GET, add/IOU POST, opposing debt netting, balances, JSON responses and caller-owned output.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 9,
+      "namedTestCases": 0,
+      "instructionsSha256": "c73521d19ed4586ad169f9396f91f8d18a6fdebb09ffc0d5586274031d71e729",
+      "starterSha256": "cbad3e61778444ec5f47e19d13d8da76c0c9f22c9c29142f20f62ed0aa8b0105",
+      "referenceSha256": "654d9116ab4c76d981d04659e9378755e16d81b646b0143c36415d244c8c1c07",
+      "testsSha256": "cc977c1db3e348f4d84e480c7f46674d0fafa7d408db212c8f07bbe50d82cf15",
+      "provenanceSha256": "a5cbc812cfebdb8262ceb9e0a671a49b09bb1879c6c753fe780b03374ea7f062"
+    },
+    {
+      "slug": "rest-api",
+      "language": "zig",
+      "reviewedContract": "Database initialization, sorted/filterable GET, add/IOU POST, opposing debt netting, balances, JSON responses and caller-owned output.",
+      "nativeTestFiles": [
+        "test_rest_api.zig"
+      ],
+      "nativeReferenceFiles": [
+        "rest_api.zig"
+      ],
+      "assertionSites": 9,
+      "namedTestCases": 10,
+      "instructionsSha256": "c73521d19ed4586ad169f9396f91f8d18a6fdebb09ffc0d5586274031d71e729",
+      "starterSha256": "bd176164e75d3cec65b5c63f07a5e63f0f082742228f89b31065365864c54c05",
+      "referenceSha256": "f22e721e3662384a6faff0abc822bf899ebb2d1c527f4ecdd54c9b93756b12bd",
+      "testsSha256": "185761983353a6b1df1d4bf6ccd5383b9d551ff0bd9a9ad23c74374bf5212171",
+      "provenanceSha256": "b549bebd59c513661b51745163539a958886827a768bfdb159c6455d65a4c24a"
+    },
+    {
+      "slug": "robot-name",
+      "language": "c",
+      "reviewedContract": "AA000 format, retained name, random assignment order, global noncollision, retired-name nonreuse and reset.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 11,
+      "namedTestCases": 0,
+      "instructionsSha256": "bbb01d54e892de555eb900b3b93fd3645ad7fcfd09eace353fb6b81e768c4310",
+      "starterSha256": "16a3ea5c73d3be69c4b5ccc21b59208a39e68540c5c6496cfb054ef96f4cf8be",
+      "referenceSha256": "1fddaef9cd28e9e0dc0922c553e434ee0aae6c39280eed15013106b12d4b6d62",
+      "testsSha256": "5014a75cb38c3157aa15cf60c65cbfdfaf991ca775f91e9ea81cf34033ad995e",
+      "provenanceSha256": "55ddff48be95d07dd7ed8119b69adb5960d76da8fc1ab6f7adaf5d0fc3ef9580"
+    },
+    {
+      "slug": "robot-name",
+      "language": "zig",
+      "reviewedContract": "AA000 format, retained name, random assignment order, global noncollision, retired-name nonreuse and reset.",
+      "nativeTestFiles": [
+        "test_robot_name.zig"
+      ],
+      "nativeReferenceFiles": [
+        "robot_name.zig"
+      ],
+      "assertionSites": 5,
+      "namedTestCases": 1,
+      "instructionsSha256": "bbb01d54e892de555eb900b3b93fd3645ad7fcfd09eace353fb6b81e768c4310",
+      "starterSha256": "889b533dc1ad53fcf9e87f6fd6a756ac32434385becb57a103f94dac82797367",
+      "referenceSha256": "b4620ff14fdbfd1cbb058103bce098cbf924cbf8eb059e5d657a7fd1bd40fd8c",
+      "testsSha256": "bcebe2d9086c64c4a17dd4de7e91b20e0542f749067fdbce1ed7d7810ea8750d",
+      "provenanceSha256": "577ffe3d2588350ab47b2108c69296dedea8f19556bb243de620642ceccacbc0"
+    },
+    {
+      "slug": "saddle-points",
+      "language": "cpp",
+      "reviewedContract": "Every row-maximum/column-minimum intersection, ties, empty input, checked dimensions and explicit coordinate/result ownership.",
+      "nativeTestFiles": [
+        "test_saddle_points.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "saddle_points.h",
+        "saddle_points.cpp"
+      ],
+      "assertionSites": 1,
+      "namedTestCases": 9,
+      "instructionsSha256": "502eac80a61491cbe66535b2a003e26291f9734e9cf25b860bab15c038e201bd",
+      "starterSha256": "d4b0fb19185e11cd717aa167205d142da8e70e1ba29dc357ebe639a6135e9b69",
+      "referenceSha256": "9301fda6e2d76b92ec61142629ba832e31e11093c7aaa1a71eec42753352b272",
+      "testsSha256": "8d8d9678c618ab01895d95855bf037a242c1064234d6ec75acd46aa93b35d9cf",
+      "provenanceSha256": "d0fa50b7438e6775037ba272599bb3779f28c951c5f1729c4f5e677b68e596f4"
+    },
+    {
+      "slug": "satellite",
+      "language": "c",
+      "reviewedContract": "Preorder/inorder reconstruction, child order, empty trees, separate traversal-length validation, unknown/different nodes and duplicate rejection.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 8,
+      "namedTestCases": 0,
+      "instructionsSha256": "460a82ea83dcac7ff5516d2af4a79087bbf37377a740d03624615e5868b4498d",
+      "starterSha256": "49bf781c3b5af7e8d8e1b6d9a0931219f9f92853d7c5bae04a333637a3663edd",
+      "referenceSha256": "5128c14d7c8cfc55aa8eb7cb874fd7bb4c6ae5790405b819b050ffe098d33ec8",
+      "testsSha256": "219f3dc0cba1c16720f5cfd5672a96d4e49c05668195b42bf678383ab1819073",
+      "provenanceSha256": "737e554abfd739df47342ce21b87679d163c89a2ecf3c87c24ded5b51a5b231b"
+    },
+    {
+      "slug": "satellite",
+      "language": "cpp",
+      "reviewedContract": "Preorder/inorder reconstruction, child order, empty trees, separate traversal-length validation, unknown/different nodes and duplicate rejection.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 8,
+      "namedTestCases": 0,
+      "instructionsSha256": "460a82ea83dcac7ff5516d2af4a79087bbf37377a740d03624615e5868b4498d",
+      "starterSha256": "74b1f3099ec478e1433f07b2395c8653de88323f82878e65f5533819ab4c7aa2",
+      "referenceSha256": "e879e26103cd7e35cd94fb47720808f8597acaf250daf1e40907fad0e3f9f37a",
+      "testsSha256": "27715ffe5d72b7da51f7684d02034d295a5174f3ffae4ca0582cfa1d03426e80",
+      "provenanceSha256": "811eb5ff940e75c2d6309342c56aaf8e9a56c2d6430141c746111522736ad25e"
+    },
+    {
+      "slug": "scale-generator",
+      "language": "c",
+      "reviewedContract": "Sharp/flat tonic policy, rotated chromatic scale, m/M/A steps, N+1 pitches and actual final note for partial intervals.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 6,
+      "namedTestCases": 0,
+      "instructionsSha256": "4101835869d2d6376accf0644e51bb216fa0bd252ba93b7102827e43b6342859",
+      "starterSha256": "aef0a19058bf21a321c6535cfae503654c4f2db4baabcd8a56fc3f3de260ad6e",
+      "referenceSha256": "541e710d69edc12caa7f36ed520819095558fa543287d7456b2e810966e74280",
+      "testsSha256": "18fe0eb246da74fa048ead6becb2bfcb2d5f080fd702c2b0937341e7a3afb0ec",
+      "provenanceSha256": "718a05ff7379d567324728c2d310852075c053bbb3bf2428f681f866369a5253"
+    },
+    {
+      "slug": "scale-generator",
+      "language": "cpp",
+      "reviewedContract": "Sharp/flat tonic policy, rotated chromatic scale, m/M/A steps, N+1 pitches and actual final note for partial intervals.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 6,
+      "namedTestCases": 0,
+      "instructionsSha256": "4101835869d2d6376accf0644e51bb216fa0bd252ba93b7102827e43b6342859",
+      "starterSha256": "8e492fa5c27070fee14144c3e7a1e8de3b3492fab0a2a191fb8116167977c8c8",
+      "referenceSha256": "ae88fb7fe3434c98992a891639fff4e206f271d8da106de020d614cf921c91cf",
+      "testsSha256": "0dd4869dec99fdc935ea8291bc540fd9566ce8e3c1fb0fc3a39524299da53925",
+      "provenanceSha256": "73eb4259bbda33f4aff0cf5a627bcc8ed0b464822ff30eeaef10ec079ecbdaeb"
+    },
+    {
+      "slug": "scale-generator",
+      "language": "zig",
+      "reviewedContract": "Sharp/flat tonic policy, rotated chromatic scale, m/M/A steps, N+1 pitches and actual final note for partial intervals.",
+      "nativeTestFiles": [
+        "test_scale_generator.zig"
+      ],
+      "nativeReferenceFiles": [
+        "scale_generator.zig"
+      ],
+      "assertionSites": 41,
+      "namedTestCases": 18,
+      "instructionsSha256": "4101835869d2d6376accf0644e51bb216fa0bd252ba93b7102827e43b6342859",
+      "starterSha256": "06b117525e58d577d129a90f21b426bef25af8a5326a7dadaedb1091cb462627",
+      "referenceSha256": "44be039ee076d98f95aa7ca8e076b0c6c6b3326ed859e5a008b8092812a13891",
+      "testsSha256": "98668b5a2cd06a9532d1c4e758ce03cd47b202b5d0419af959bdb67567600d21",
+      "provenanceSha256": "b805adf44514f85dc671188dac5249d561f15320518533cd2928774223e259df"
+    },
+    {
+      "slug": "sgf-parsing",
+      "language": "c",
+      "reviewedContract": "Sequences/variations, uppercase properties, multiple/duplicate property values, escaping/whitespace rules, malformed input and owned parsed values/identifiers.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 4,
+      "namedTestCases": 0,
+      "instructionsSha256": "e9c043e3fd24958237c4818e7c1c4fe4c094086adeb0866be032a8872e90abf7",
+      "starterSha256": "f675a05d07643997ddace727a13833ce1dbf6161af9c029f99466501b18c9558",
+      "referenceSha256": "638647bb4899beb6ac00c36a213e7e92edb025ff7e147de200fabc8047ae15be",
+      "testsSha256": "e52dc2a594d0c0eee52b914582031b5e1c05eca84a5bd630a2a45dfa33bb19fe",
+      "provenanceSha256": "1062c60defb5d17bdbaf0cde0fb15f745fc3416aca3102994a7f3cf907553fc6"
+    },
+    {
+      "slug": "sgf-parsing",
+      "language": "cpp",
+      "reviewedContract": "Sequences/variations, uppercase properties, multiple/duplicate property values, escaping/whitespace rules, malformed input and owned parsed values/identifiers.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 4,
+      "namedTestCases": 0,
+      "instructionsSha256": "e9c043e3fd24958237c4818e7c1c4fe4c094086adeb0866be032a8872e90abf7",
+      "starterSha256": "a1144cf3ba139df0756703bae4f3957f8523837f8130a15cad09785fa9a430e0",
+      "referenceSha256": "a298a447efbe8b1f1912a755a10657c881aab559744149dac2cad5940c3e45d3",
+      "testsSha256": "f02268ac79335e89ce1b77a82681d6d9c00831b09fa5ee7b32b08eba5bbfb119",
+      "provenanceSha256": "0a1669f92ac42e3b1e2b406592d743f7a53f29c5a0764d800f33d5b98c5bbc4b"
+    },
+    {
+      "slug": "sgf-parsing",
+      "language": "zig",
+      "reviewedContract": "Sequences/variations, uppercase properties, multiple/duplicate property values, escaping/whitespace rules, malformed input and owned parsed values/identifiers.",
+      "nativeTestFiles": [
+        "test_sgf_parsing.zig"
+      ],
+      "nativeReferenceFiles": [
+        "sgf_parsing.zig"
+      ],
+      "assertionSites": 16,
+      "namedTestCases": 24,
+      "instructionsSha256": "e9c043e3fd24958237c4818e7c1c4fe4c094086adeb0866be032a8872e90abf7",
+      "starterSha256": "ac3655d9e4f5f8fce73bfd598a5af5a9932168b86abf30c385e53bcb9381e29c",
+      "referenceSha256": "c3a7b904c57bde529525505f2905cb9284c5b5645a6588e6291c286114e5e97f",
+      "testsSha256": "b0497923d253838c2ff642d2481be40d9a70df4953bb97f8905bc8e5729c1871",
+      "provenanceSha256": "77a238ffeafc1e812ec6fbced99e037e178103bb3cb13c64d92cee7d9a6ddcde"
+    },
+    {
+      "slug": "simple-cipher",
+      "language": "c",
+      "reviewedContract": "Lowercase nonempty key validation, repeated-key wrap, encode/decode reversibility and random lowercase key generation.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 5,
+      "namedTestCases": 0,
+      "instructionsSha256": "7e0a13f75e6058bacc363c8e5879b7179aa74a10048000e59f6dfc19c6ee01d3",
+      "starterSha256": "7dad8ee1dc52fc211ae635a996d4089a6c4aafbab361d1f7c2d47e53d65e1ce8",
+      "referenceSha256": "079bfc98e9d8a7745dfef71aebb06080adac043abe16482e6747df88059fe872",
+      "testsSha256": "43465d8e2601332514c084b06846ff9f864f3743e3c384ce74727ed4d06229ad",
+      "provenanceSha256": "f96e8d827d7138c23ba852ed1e34f870d0b9da406eb9bab4223764c4f9663ec3"
+    },
+    {
+      "slug": "simple-cipher",
+      "language": "cpp",
+      "reviewedContract": "Lowercase nonempty key validation, repeated-key wrap, encode/decode reversibility and random lowercase key generation.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 5,
+      "namedTestCases": 0,
+      "instructionsSha256": "7e0a13f75e6058bacc363c8e5879b7179aa74a10048000e59f6dfc19c6ee01d3",
+      "starterSha256": "4b7cd1d67559e5e9a8c46e7f28f2d3c8b07c9dbb3c6a77af97129cb46c757e0c",
+      "referenceSha256": "77005bbd0fe5ad8c7ecefd2122a0246e2ea1761a6106aea0d25a21693a5d9787",
+      "testsSha256": "24550ea8fb4e3761bad55e832fb1789d004ba1b55ed8a4032dc42aeba7dbe522",
+      "provenanceSha256": "dbdb338a90a628b130825d1c51fb33512db82fa25536db84e885ee8552d54796"
+    },
+    {
+      "slug": "simple-linked-list",
+      "language": "c",
+      "reviewedContract": "Push/pop, head/value/next traversal, length, empty errors, reversed copy and independent list ownership.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 5,
+      "namedTestCases": 0,
+      "instructionsSha256": "88ed05792fe7eec837362b11bb7ef2379f01e2c8d2c6f3bdc5553e053e980d8a",
+      "starterSha256": "7d8d3a9c33a09c5ebac1acce01f334c01da8b32c48678bd3c91aa9c8d783f913",
+      "referenceSha256": "743137bc766fd1671bcfcb7bd1c8a1cf41a026fbe4e1c812a2c2fd91d60b41f1",
+      "testsSha256": "2cb67e829e62152bbc05396d24095dd12f18f04a48bfbd44aef8769a8f0140a4",
+      "provenanceSha256": "255ff07ec34931a55ad2f3dd55dbc6bae11f32178122f942bfd65b27c8ef6a94"
+    },
+    {
+      "slug": "simple-linked-list",
+      "language": "zig",
+      "reviewedContract": "Push/pop, head/value/next traversal, length, empty errors, reversed copy and independent list ownership.",
+      "nativeTestFiles": [
+        "test_simple_linked_list.zig"
+      ],
+      "nativeReferenceFiles": [
+        "simple_linked_list.zig"
+      ],
+      "assertionSites": 19,
+      "namedTestCases": 3,
+      "instructionsSha256": "88ed05792fe7eec837362b11bb7ef2379f01e2c8d2c6f3bdc5553e053e980d8a",
+      "starterSha256": "0690344bae01aea657be0270dd6a51556ec7f913e630480a0144c9c41e2a9d17",
+      "referenceSha256": "200cf44d59886c118ebf40369d4b48a0cd7d1b179f3aae793d89b4af196ba25e",
+      "testsSha256": "82f22dbd93e9925d2158f8f1a6fe4b76cc0382b2c9744af98caca0d577bd0b78",
+      "provenanceSha256": "e245e6571a530444f867cdd5b017521c7cffdc50f436644b2f6c301cf4cc3763"
+    },
+    {
+      "slug": "square-root",
+      "language": "cpp",
+      "reviewedContract": "Manual integral square-root algorithm, exact squares, non-square floor behavior and native uint16 input domain.",
+      "nativeTestFiles": [
+        "test_square_root.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "square_root.cpp",
+        "square_root.h"
+      ],
+      "assertionSites": 6,
+      "namedTestCases": 6,
+      "instructionsSha256": "44b151682c188dd581c89d2fa887b7588d914e81db494b12d6cc299e9e44c6eb",
+      "starterSha256": "4d3eb39f09a7c0c2756cf4df72312929fe0cebe0834c994308c2e00faf2af588",
+      "referenceSha256": "73eaeb1f12616c625a60f9a356ee679fd40660768372950b971dc0e5f27a5074",
+      "testsSha256": "e8d18f27193fd4fb0c9d3f606deeb9377d8fdf3e31241643fa91c4970a3925bf",
+      "provenanceSha256": "01274e56e151a03eea0f4171b9f2926bf4afb1012f048498ab735dbe13d62428"
+    },
+    {
+      "slug": "state-of-tic-tac-toe",
+      "language": "c",
+      "reviewedContract": "X starts, move-count legality, row/column/diagonal wins, incompatible simultaneous wins, ongoing and draw.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 28,
+      "namedTestCases": 0,
+      "instructionsSha256": "8211ec484f84f568894ab52485c95ecb0d47acafb194a1216afa4cd6961a173f",
+      "starterSha256": "0e3bdee9e2a8db9ade38559ec25841dd3ef0f353d413cd8bc8fdec884a6d828e",
+      "referenceSha256": "a76a02d70f141ee7377b2705322ac9095ba1bd78b9c5a14e3bc8dfaa9f08d254",
+      "testsSha256": "ac8cb266f4993dad1a5f850ef3dbb9e35dfe43cdf45c6dde51e39c2e694c0973",
+      "provenanceSha256": "72021eb9358c005df2179848947d8478eb1e3171a34554e27a5ffe54c36928e3"
+    },
+    {
+      "slug": "state-of-tic-tac-toe",
+      "language": "cpp",
+      "reviewedContract": "X starts, move-count legality, row/column/diagonal wins, incompatible simultaneous wins, ongoing and draw.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 28,
+      "namedTestCases": 0,
+      "instructionsSha256": "8211ec484f84f568894ab52485c95ecb0d47acafb194a1216afa4cd6961a173f",
+      "starterSha256": "df205f12bd6942e9dff0765c3bcbd87b557e38fa5b21bd1fc63a30b72e0c4204",
+      "referenceSha256": "93d837eec1ae9bde00b40d020905bde2f67054d56dae04604d0917fa9cb2cfe0",
+      "testsSha256": "aabe3a5f2311db5cf0f282cad64bedb414078e95cbfb2c0f5cf05ff205775bb4",
+      "provenanceSha256": "62d111250023514c2b338cb32a0e1d8e706e2165a71e6bd9b6c97d810e292c53"
+    },
+    {
+      "slug": "strain",
+      "language": "c",
+      "reviewedContract": "Keep/discard predicate complements, ordered results, empty inputs and generic non-integer elements.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 4,
+      "namedTestCases": 0,
+      "instructionsSha256": "0709d5cea2a0a7abb8479b4706e317cda0ca54cebb5e27a3f21e2decb256263b",
+      "starterSha256": "5d173ced7f90a5da854f770542e172b95ea288f6a2ad84aefb877369e77e6312",
+      "referenceSha256": "931f69dc003e57255ad7e1b55ff8c0dc2d737d962a807f203cf25ab7b18104a9",
+      "testsSha256": "a50ab9957ba8cd7e66d7a8458dbe148eb3c597a5abce224a325f70b0adde0d10",
+      "provenanceSha256": "d692c9ed3e5c2b22ea7d8a75e700028945fb230a67d128cfd7f8a50b345d1775"
+    },
+    {
+      "slug": "strain",
+      "language": "cpp",
+      "reviewedContract": "Keep/discard predicate complements, ordered results, empty inputs and generic non-integer elements.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 4,
+      "namedTestCases": 0,
+      "instructionsSha256": "0709d5cea2a0a7abb8479b4706e317cda0ca54cebb5e27a3f21e2decb256263b",
+      "starterSha256": "9502f6a00394d201979ec241039ea26c7a02e7544d9dddd319f89fdea4ed24fd",
+      "referenceSha256": "9f1c1853f464a4666c2d1577c3e4110a471da1699b4e76576d0c62830d8916e8",
+      "testsSha256": "9be24a649526cfab9bc3f78c8ed5153be3e0bb680ac45a7588e245b184e9b353",
+      "provenanceSha256": "74ac3fcd065fa4ec7acabbef183787ddf5fdd45919effd783ff5fd616e5d5020"
+    },
+    {
+      "slug": "swift-scheduling",
+      "language": "c",
+      "reviewedContract": "NOW/ASAP/EOW, month and quarter policies, first/last workdays, leap years and date/time rollover.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 126,
+      "namedTestCases": 0,
+      "instructionsSha256": "d61d1a2d267fda71f1aeef0afb19f42ab3170d81fcba3fbc61889f73dfec012f",
+      "starterSha256": "be82f0fec4cafdc25346a468a00bab1ef8f7029ce060289393cc13cb89f4bbd2",
+      "referenceSha256": "763ebd5999169d0a2cc07224f004efe253bb560715d8729614215413a5afcf76",
+      "testsSha256": "a5baa1c6de25d93315e52cfa9c8daf5f6c03bd204e014b628411e01ff401048b",
+      "provenanceSha256": "d5a90b8dc9edca06dce1c19ac0a605ff90131c999bd96faa55cb0be498dbf053"
+    },
+    {
+      "slug": "swift-scheduling",
+      "language": "cpp",
+      "reviewedContract": "NOW/ASAP/EOW, month and quarter policies, first/last workdays, leap years and date/time rollover.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 126,
+      "namedTestCases": 0,
+      "instructionsSha256": "d61d1a2d267fda71f1aeef0afb19f42ab3170d81fcba3fbc61889f73dfec012f",
+      "starterSha256": "5a5de9ae979addc647d0747979f1b1f753ca7f801530929fd60bd8e40d21bd0b",
+      "referenceSha256": "04abab5df0010eeacbb141e8283e3cf679227a5d5d79d49f32d087923e507199",
+      "testsSha256": "3538203ca5ae007fe8462449e92113276cc462f21da948d24c7b9abdd9cbd13e",
+      "provenanceSha256": "28281defe7fcdc768e12761ed4b78a684ac1a6b4324889c27239685c770deb42"
+    },
+    {
+      "slug": "swift-scheduling",
+      "language": "zig",
+      "reviewedContract": "NOW/ASAP/EOW, month and quarter policies, first/last workdays, leap years and date/time rollover.",
+      "nativeTestFiles": [
+        "test_swift_scheduling.zig"
+      ],
+      "nativeReferenceFiles": [
+        "swift_scheduling.zig"
+      ],
+      "assertionSites": 1,
+      "namedTestCases": 1,
+      "instructionsSha256": "d61d1a2d267fda71f1aeef0afb19f42ab3170d81fcba3fbc61889f73dfec012f",
+      "starterSha256": "8dc59efa1d0a17f24d583efd4198049aa902d72684e361473632ed7ce8408e3a",
+      "referenceSha256": "0f66d8d794a5a1821003094c64f97279169fd52111a0560f636588d99faba470",
+      "testsSha256": "7f6cd2c4c3c3da3fc6fd9d4f9594278f3241fea63caca9a8c945d2784eb9103e",
+      "provenanceSha256": "520ab6a2e98bfe49c39a6d850f0c85f20afdecfc226e42d266c567799f0a5011"
+    },
+    {
+      "slug": "tournament",
+      "language": "c",
+      "reviewedContract": "Win/draw/loss inversion, points/played totals, points-then-name sorting, exact columns and ignored malformed lines.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 15,
+      "namedTestCases": 0,
+      "instructionsSha256": "a545d4c4160a1d9310ad162434a716f20db989b3a995bb818fec8038c1362b6e",
+      "starterSha256": "d6f3d4c928753bf58e60ccd76e1011300a64b92a30f6c3fedbfc8decd1663f9e",
+      "referenceSha256": "db6ba3ce7db442e3388a758a6e5833d29edc482e8a4d3739c48a5b3492865b72",
+      "testsSha256": "7d2d8ea51530be088563e5692d84bf37ba3c9c81d26ef1ea47de96ca78b10d36",
+      "provenanceSha256": "c2e58528b539c6b756c2b72c274db725a2d3e1c1374658e1528c6a4aebe635cc"
+    },
+    {
+      "slug": "tournament",
+      "language": "cpp",
+      "reviewedContract": "Win/draw/loss inversion, points/played totals, points-then-name sorting, exact columns and ignored malformed lines.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 15,
+      "namedTestCases": 0,
+      "instructionsSha256": "a545d4c4160a1d9310ad162434a716f20db989b3a995bb818fec8038c1362b6e",
+      "starterSha256": "39728f155ea707382207f1f5a0df87f9725dafbd5272ca99836c9fd3bcff67be",
+      "referenceSha256": "310887cfecd83e6659bb822802e874d4192a4f1c80dc02c4923ddf201e44f05f",
+      "testsSha256": "f97ea4bfe4a4c67b8c51bef623933670e18a58c7b1885b40d384d0e731cc4d78",
+      "provenanceSha256": "9c16e1cc79de0ae155cad4c71e83387d9cbe0d39d6a7d342f9c46645b94019ac"
+    },
+    {
+      "slug": "tournament",
+      "language": "zig",
+      "reviewedContract": "Win/draw/loss inversion, points/played totals, points-then-name sorting, exact columns and ignored malformed lines.",
+      "nativeTestFiles": [
+        "test_tournament.zig"
+      ],
+      "nativeReferenceFiles": [
+        "tournament.zig"
+      ],
+      "assertionSites": 1,
+      "namedTestCases": 12,
+      "instructionsSha256": "a545d4c4160a1d9310ad162434a716f20db989b3a995bb818fec8038c1362b6e",
+      "starterSha256": "3c6b61e489856d7c0027456c8cd2bb9453c65579b8b7ad9cfabe52f2c33973f7",
+      "referenceSha256": "8905e9765c187ef39b7e583e79b752724ca6321aa3c59a19a0cebfe2f7b3f768",
+      "testsSha256": "b6098202d16279ae61bcf84db8e5f645c2758897efa84c54898568d93c8c8926",
+      "provenanceSha256": "d14cce3a3d6ca5a46dcf32b4175a7402ccc20ba16d0ee83db8ac4c690c37eada"
+    },
+    {
+      "slug": "transpose",
+      "language": "c",
+      "reviewedContract": "Rows become columns, uneven lengths, interior padding versus trailing omission, blank rows and empty input.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 15,
+      "namedTestCases": 0,
+      "instructionsSha256": "4107fc3ed25cb2106df05774f9e6328663bf96777712df14ab5c3090438c6c66",
+      "starterSha256": "c14710d734c9643eb50c24b077c7a0a27afa9a9725fd15d0f05132daf54e1a4c",
+      "referenceSha256": "87e3312a0106fec983db360ffb38125ed89c844ae80e63a7d1e03dddb30a643c",
+      "testsSha256": "de0439694be24013dc3c0c852eb37ffc83b3e3ac331673809eceae70603bba6f",
+      "provenanceSha256": "8a636f56033b73eac64a7c3e37cbc38d1e8b5021145ba9e56d754cbd1aacbf24"
+    },
+    {
+      "slug": "transpose",
+      "language": "cpp",
+      "reviewedContract": "Rows become columns, uneven lengths, interior padding versus trailing omission, blank rows and empty input.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 15,
+      "namedTestCases": 0,
+      "instructionsSha256": "4107fc3ed25cb2106df05774f9e6328663bf96777712df14ab5c3090438c6c66",
+      "starterSha256": "7b17381976721aa673782c4ada65c08e207ffd4d2ecf19041aa9703d7af48f89",
+      "referenceSha256": "3a65b4a8b661348ce65b4331fb878088a0924be06fb3fc8e6dd4b7e60d417122",
+      "testsSha256": "852e373977a5df0c5e2c97618885a57ecc9264efc89f96bcd9714df2118340f0",
+      "provenanceSha256": "cad5b8c0822d07062a37f8d3dbbbc326d04aaf67e1da28667ebcd665813a2249"
+    },
+    {
+      "slug": "tree-building",
+      "language": "c",
+      "reviewedContract": "Unordered records, root 0/parent 0, continuous unique IDs, parent-before-child rule and sorted children.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 4,
+      "namedTestCases": 0,
+      "instructionsSha256": "5473273d84113a3d3c1ef8acd1e3e9577536ba3e83a85b28887e87ddd9618135",
+      "starterSha256": "4bb12974a705ccc0453f29468a4ab6775279611a0ddaa24f6eb9a3b8bdb74679",
+      "referenceSha256": "93ac289ffcfa759119a8e53a635f94db06097c2cfbba0cd754098a427e747c90",
+      "testsSha256": "b695f768eb72307f727bc538c9f3d55aca14a3147624483faeeb14c8f1728e4c",
+      "provenanceSha256": "8bf7ef87c5b41cd0c13fc83bd09db32faa689c58eaafd1f90840effaef00c897"
+    },
+    {
+      "slug": "tree-building",
+      "language": "cpp",
+      "reviewedContract": "Unordered records, root 0/parent 0, continuous unique IDs, parent-before-child rule and sorted children.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 4,
+      "namedTestCases": 0,
+      "instructionsSha256": "5473273d84113a3d3c1ef8acd1e3e9577536ba3e83a85b28887e87ddd9618135",
+      "starterSha256": "17b78a55fded5a6c2a4539eeca430d23e382ddb7b6a74337ddb491bdf4590655",
+      "referenceSha256": "9ef671ff42479b3491e0e374a3bf315487d5c438ccf413af3b61d525925cc924",
+      "testsSha256": "1ad8864ae44ebe36a520e01b54b5e82e85428621684c49c31d9278989a5bf9a9",
+      "provenanceSha256": "9e53e68421e13564d41ce74612be4888cb47f62351eb7ab73fd91dc7229c4716"
+    },
+    {
+      "slug": "tree-building",
+      "language": "zig",
+      "reviewedContract": "Unordered records, root 0/parent 0, continuous unique IDs, parent-before-child rule and sorted children.",
+      "nativeTestFiles": [
+        "test_tree_building.zig"
+      ],
+      "nativeReferenceFiles": [
+        "tree_building.zig"
+      ],
+      "assertionSites": 11,
+      "namedTestCases": 18,
+      "instructionsSha256": "5473273d84113a3d3c1ef8acd1e3e9577536ba3e83a85b28887e87ddd9618135",
+      "starterSha256": "b49835143bc99be17ae517fbc29ac871cc6e465429ed7b1626d084b28cae9284",
+      "referenceSha256": "5c614d1b34d628a4bbe5c60b700cad42e071d5488d5a21ca475017cd2cf70d1e",
+      "testsSha256": "1d79153e8390c912ec7acea29bfbeb8eb1b908c84a998ecf1df38e71080c49ac",
+      "provenanceSha256": "1734932c1528dbcdc3e3ea293011f7697555eebfd868272df48b4ab07b2549fc"
+    },
+    {
+      "slug": "trinary",
+      "language": "c",
+      "reviewedContract": "Manual base-three conversion, leading zeroes, invalid input as zero and native fixed-width integer domain.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 14,
+      "namedTestCases": 0,
+      "instructionsSha256": "0089580f98707988a877f149cb9ad78a69545d2a192d449454615adaabb08d5b",
+      "starterSha256": "cf654482b0ce0c9b7358cd32b90e5e7e3fe2434e0d385614eb0c7c7fcb991018",
+      "referenceSha256": "b4d800326d04b1d8bdcf57a137a3365901bb7492cb45db96ea82d74e0e339f40",
+      "testsSha256": "6282ded2ece8520867d4a866a473521206928f409cfc845f766a779ebfb4cf59",
+      "provenanceSha256": "9bea0283574af81d48c26f3541120e851d84e92aea0c4488575d1f0244d02c5e"
+    },
+    {
+      "slug": "trinary",
+      "language": "zig",
+      "reviewedContract": "Manual base-three conversion, leading zeroes, invalid input as zero and native fixed-width integer domain.",
+      "nativeTestFiles": [
+        "test_trinary.zig"
+      ],
+      "nativeReferenceFiles": [
+        "trinary.zig"
+      ],
+      "assertionSites": 12,
+      "namedTestCases": 8,
+      "instructionsSha256": "0089580f98707988a877f149cb9ad78a69545d2a192d449454615adaabb08d5b",
+      "starterSha256": "a39af7446a259af61cee7062bf008ed862a657b40c96a5c8fc33a22403724c2c",
+      "referenceSha256": "38e9f8ff3a9015ee7771486da48cbd60690e3550dc9a3ef5bec5c4d7f3a79e53",
+      "testsSha256": "323eb75a6c5c87182d3105b1c5b39e2a6cd1ec21e2f13c66b9ca3711214b13f0",
+      "provenanceSha256": "c30542f1819b457e9af1a89767c62b2faa2d53546cc5292aef663e217a7f619f"
+    },
+    {
+      "slug": "twelve-days",
+      "language": "c",
+      "reviewedContract": "All twelve gifts in cumulative reverse order, ordinal day names, first-day versus 'and' punctuation and requested range.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 14,
+      "namedTestCases": 0,
+      "instructionsSha256": "c7f81a660edf4d570351214e2ee8cdc8f31086f278125e80521a6c8338d349f3",
+      "starterSha256": "1e6afd9079d97db93b66ef295494b1c542686b4d9ca465b56f6f07367eeb92e9",
+      "referenceSha256": "9893f18c51d1bf8ef7bcda9248406557e28fff80fec67b452c98b8d419a87c67",
+      "testsSha256": "dd2233f8fa9379f061ff865a634e5ec17257e9b42764c8d0a435321c8c4a5535",
+      "provenanceSha256": "b35024f7154ed2fc1e02be157a6c019ebe39f9c6797c1ca399dafe834aea3085"
+    },
+    {
+      "slug": "variable-length-quantity",
+      "language": "cpp",
+      "reviewedContract": "7-bit groups, high-bit continuation, multiple values, zero/max uint32, incomplete sequences and overflow rejection.",
+      "nativeTestFiles": [
+        "test_variable_length_quantity.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "variable_length_quantity.cpp",
+        "variable_length_quantity.h"
+      ],
+      "assertionSites": 51,
+      "namedTestCases": 27,
+      "instructionsSha256": "9b28b8fd3eff6d044644d3debaa1e360a07197fc18661d764eab9d0b52520464",
+      "starterSha256": "23b25f1f1c6fc2b225b0a1a9991582cf88e7765f5f4ca06bb7f1944d770189f2",
+      "referenceSha256": "a5fc29d0d729df19418ec457c6c4c176d19e1c01339cd0c1e5b1ecd04468e81e",
+      "testsSha256": "69521c789f94b67e344d80bd1ede3a694013bbbdcc66d5aeed0f2c4f2061fd63",
+      "provenanceSha256": "18453c1e9cfa65e81fe3afaca8323ea24b1be2db0aeb7a6903b3618f71b41ed4"
+    },
+    {
+      "slug": "word-search",
+      "language": "c",
+      "reviewedContract": "All eight directions, exact case, zero-based coordinates across native ports, no row wrapping, single characters, empty/absent words and ragged boundaries.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 11,
+      "namedTestCases": 0,
+      "instructionsSha256": "ec749d7e2303930a7c00de1885b426947ce2ef1289c5e753646a749cf2f4a26b",
+      "starterSha256": "e28f7d13ec8ebacf146e738f6595045ee3c23db8132cf59d488a0ff6f84cea68",
+      "referenceSha256": "59f86cac327d55896ffc4e46b5da3cd1b191e1b1e16039c3fb3fc0272a672c22",
+      "testsSha256": "be5716950f39347896cd6415ee2432dd8167330914dd3ba992831b689f6e4113",
+      "provenanceSha256": "a094c69343944fe6d2da85a74101ef902dca2acabe9216e3f5a2964eeb7736ae"
+    },
+    {
+      "slug": "word-search",
+      "language": "cpp",
+      "reviewedContract": "All eight directions, exact case, zero-based coordinates across native ports, no row wrapping, single characters, empty/absent words and ragged boundaries.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp"
+      ],
+      "assertionSites": 11,
+      "namedTestCases": 0,
+      "instructionsSha256": "ec749d7e2303930a7c00de1885b426947ce2ef1289c5e753646a749cf2f4a26b",
+      "starterSha256": "1df31ce24053d30083207d541f9591fde7b39c371382ce4e2664c2870875953b",
+      "referenceSha256": "b43f41584a7d5b0de0a7bceeefc9a840164d68bf1e844c89601871eb127d21f2",
+      "testsSha256": "81dbfe1c63a370c1156dfa067a32e8233ba44fc9e670d2ffbf5dc61772ca7aa8",
+      "provenanceSha256": "8e304524304591ac42264b3dfebd473177a0bd4d04baf9dae79573fd9e21fcb2"
+    },
+    {
+      "slug": "word-search",
+      "language": "zig",
+      "reviewedContract": "All eight directions, exact case, zero-based coordinates across native ports, no row wrapping, single characters, empty/absent words and ragged boundaries.",
+      "nativeTestFiles": [
+        "test_word_search.zig"
+      ],
+      "nativeReferenceFiles": [
+        "word_search.zig"
+      ],
+      "assertionSites": 75,
+      "namedTestCases": 26,
+      "instructionsSha256": "ec749d7e2303930a7c00de1885b426947ce2ef1289c5e753646a749cf2f4a26b",
+      "starterSha256": "f35cad07f4fc3c016953cd6f06216a097b933cef497614ded895b0e53fc10e03",
+      "referenceSha256": "2737b9c8583c8fc236fd73f557b7d2e54af92d58f42f95457aa562f615894cb1",
+      "testsSha256": "eeeb8130212314f312aed80991febb00313e6b304379c03169f728e0ba626e2a",
+      "provenanceSha256": "eec598c968229bcc40e0e986a3fef9937cd56b79fe0daac6d848deb30a096b2a"
+    },
+    {
+      "slug": "wordy",
+      "language": "cpp",
+      "reviewedContract": "Signed operands, plus/minus/multiply/divide in left-to-right order, syntax/unsupported operations, zero division and overflow rejection.",
+      "nativeTestFiles": [
+        "test_wordy.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "wordy.cpp",
+        "wordy.h"
+      ],
+      "assertionSites": 43,
+      "namedTestCases": 24,
+      "instructionsSha256": "562fa834fc36e396a27d9eff6d0e42e29ce3c241fd431ece82c225eda5fcca65",
+      "starterSha256": "25b610946972954122a7fca53d2de97f09434f8245b8e7e56155d59f196dbe8a",
+      "referenceSha256": "e51fb57a6bd32c3db1de85e22431cab060aabd3820673f6b15fa2de1df1d56d9",
+      "testsSha256": "6c36de092e3b82a917ce139a6fc411ab7fd470df341da2a8b9a08143718f4dc8",
+      "provenanceSha256": "10d96173134f2d317f24958a2e8d925b3c8a18ebf7e777196db1bedb100acd41"
+    },
+    {
+      "slug": "zipper",
+      "language": "c",
+      "reviewedContract": "Pure returned navigation/edits, original/focus preservation, independent branches, root/missing-child handling, subtree insertion/removal and safe snapshot lifetime.",
+      "nativeTestFiles": [
+        "test_exercise.c"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.c"
+      ],
+      "assertionSites": 19,
+      "namedTestCases": 0,
+      "instructionsSha256": "30c3fa8f9de3afdd691f3ff72e0407581da6676426ad7f175ef1553504df6066",
+      "starterSha256": "5ec92a2ee608a165e59788172018b9eff602c211aad5791e09bca712f0aa394d",
+      "referenceSha256": "3d91bddc7dd985c49ce0e40b871eab4003ec283854b7d9e1bb5e9ec0e57ee678",
+      "testsSha256": "ebb5603bf6bd932e93060b1548cb0cadee856de2c1d3eed118bd8ff6e56b74ff",
+      "provenanceSha256": "de03a1b9d727006685f73049f1f334b43b43c55b54dc8639fa6bbae99e42bddb"
+    },
+    {
+      "slug": "zipper",
+      "language": "cpp",
+      "reviewedContract": "Pure returned navigation/edits, original/focus preservation, independent branches, root/missing-child handling, subtree insertion/removal and safe snapshot lifetime.",
+      "nativeTestFiles": [
+        "test_exercise.cpp"
+      ],
+      "nativeReferenceFiles": [
+        "exercise.h",
+        "exercise.cpp",
+        "zipper.hpp"
+      ],
+      "assertionSites": 26,
+      "namedTestCases": 0,
+      "instructionsSha256": "30c3fa8f9de3afdd691f3ff72e0407581da6676426ad7f175ef1553504df6066",
+      "starterSha256": "5a3de71333516f9cb3373827e45a03fd039a14aeaa1d38e71a67add38d47d747",
+      "referenceSha256": "37a1e7ab36a02b4feb7f057f67187455668b824e0dbff215b81e173b34ea16e6",
+      "testsSha256": "3c43146f5d4618ec84b7ec231dae7425016c45a572bc32b73fc827febae2a126",
+      "provenanceSha256": "8256830175d429e5ed67d1e591861dfdf65e7003fae4151ab14b381039322790"
+    },
+    {
+      "slug": "zipper",
+      "language": "zig",
+      "reviewedContract": "Pure returned navigation/edits, original/focus preservation, independent branches, root/missing-child handling, subtree insertion/removal and safe snapshot lifetime.",
+      "nativeTestFiles": [
+        "test_zipper.zig"
+      ],
+      "nativeReferenceFiles": [
+        "zipper.zig"
+      ],
+      "assertionSites": 19,
+      "namedTestCases": 15,
+      "instructionsSha256": "30c3fa8f9de3afdd691f3ff72e0407581da6676426ad7f175ef1553504df6066",
+      "starterSha256": "79e4498c8278c0fab080ac6e6123258d979b3c057a0a7136f8810cc7b1f6416a",
+      "referenceSha256": "74a5a8cb547bbeec48b6eece55bca149febe6c61fdeb7a7a9f2fe34952cb6a36",
+      "testsSha256": "ce7a80fd4536da58e63b4592ea588220abd88259e7b7e9a1b0d3a7f3e4eaae23",
+      "provenanceSha256": "bb061383e6b9e26743988554a20f640304966ce325e395bf7de24641f0bd3a85"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+.native-results{margin-top:24px;padding:20px;border:1px solid var(--line);background:var(--panel);min-width:0}
+.native-results h2{margin:0 0 10px}.native-results>p{margin:8px 0}
+.native-results .dbar{margin:12px 0}.native-report-file{position:relative;overflow:hidden;cursor:pointer}
+.native-report-file input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.native-report-file:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.native-report-summary{font-weight:700}.native-report-pass{color:var(--good)}.native-report-error{color:var(--bad)}
+.native-report-cases{padding-left:20px}.native-report-cases li{margin:10px 0;overflow-wrap:anywhere}
+.native-report-cases p{font-size:.8rem;margin:6px 0}.native-report-cases small{color:var(--muted)}
+.native-results pre{max-width:100%;max-height:440px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+.native-source-status{color:var(--muted);font-size:.85rem}
+@media(max-width:520px){.native-results{padding:16px}.native-results .btn{white-space:normal;max-width:100%}}

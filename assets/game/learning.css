@@ -1,0 +1,54 @@
+/* Curriculum uses the application's shared typeface for headings and descriptions. */
+.gk-paths { margin: 1.5rem 0 2rem; }
+.gk-section-heading { display: flex; align-items: start; justify-content: space-between; gap: 1rem; margin: 1rem 0; }
+.gk-section-heading h2 { margin: 0; }
+.gk-section-heading .gk-field { flex: 0 0 auto; }
+.gk-path-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 1rem; }
+.gk-path-card { display: flex; flex-direction: column; gap: .65rem; padding: 1rem; color: inherit; text-decoration: none; }
+.gk-path-card h3, .gk-path-card p { margin: 0; }
+.gk-path-card .chip { align-self: start; }
+.gk-path-card:hover { border-color: var(--accent, var(--fg)); }
+.gk-path-card .muted { margin-top: auto; }
+.gk-filter-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .8rem; margin: 1rem 0; }
+.gk-filter-grid .gk-field { min-width: 0; }
+.gk-filter-grid select { width: 100%; }
+#gklist .dcard { display: block; }
+#gklist .dcard h3 { margin: 0 0 .65rem; }
+#gklist .dcard .chip { margin: .25rem .25rem .25rem 0; }
+#gklist .dcard small { display: block; margin-top: .5rem; }
+.gk-context { color: var(--muted, inherit); }
+.gk-preparation, .gk-examples, .gk-hints, .gk-reference, .gk-path-projects { padding: 1rem; border: 1px solid var(--line, var(--border)); border-radius: var(--radius, 8px); margin: 1rem 0; }
+.gk-preparation h2, .gk-examples h2, .gk-hints h2, .gk-reference h2 { margin-top: 0; }
+.gk-preparation ul { padding-left: 1.3rem; }
+.gk-examples table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.gk-examples th, .gk-examples td { text-align: left; vertical-align: top; padding: .65rem; border-bottom: 1px solid var(--line, var(--border)); overflow-wrap: anywhere; }
+.gk-examples code { white-space: pre-wrap; font-family: inherit; }
+.gk-hints[hidden], .gk-reference[hidden] { display: none; }
+.gk-hints ol { padding-left: 1.5rem; }
+.gk-hints li + li { margin-top: 1rem; }
+.gk-hints pre { max-width: 100%; overflow: auto; }
+.gk-reference pre { max-width: 100%; overflow: auto; }
+.gk-expected-failure { padding: .75rem 1rem; border-left: 3px solid var(--accent, var(--fg)); }
+.gk-expected-failure h3 { margin: 0 0 .4rem; }
+.gk-expected-failure p { margin: 0; }
+.gk-path-steps { list-style: none; padding: 0; display: grid; gap: .75rem; }
+.gk-path-steps li > a { display: flex; gap: 1rem; padding: 1rem; border: 1px solid var(--line, var(--border)); border-radius: var(--radius, 8px); color: inherit; text-decoration: none; }
+.gk-path-steps h2 { font-size: 1rem; margin: 0 0 .5rem; }
+.gk-path-steps p { margin: .35rem 0; }
+.gk-path-steps small { display: block; margin-top: .5rem; }
+.gk-step-number { width: 2rem; height: 2rem; display: grid; place-items: center; border: 1px solid var(--line, var(--border)); border-radius: 50%; flex: 0 0 2rem; }
+.gk-path-projects .btn { margin: .35rem; white-space: normal; }
+#gknextarea { display: grid; gap: .65rem; margin: 1rem 0; }
+#gknextarea .btn { justify-self: start; white-space: normal; }
+#gknextarea p { margin: 0; }
+#gkevidence, .gk-result { overflow-wrap: anywhere; }
+@media (max-width: 900px) { .gk-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) {
+  .gk-filter-grid { grid-template-columns: minmax(0, 1fr); }
+  .gk-section-heading { flex-direction: column; }
+  .gk-section-heading .gk-field { width: 100%; }
+  .gk-section-heading select { width: 100%; }
+  .gk-path-steps li > a { padding: .75rem; gap: .65rem; }
+  .gk-preparation, .gk-examples, .gk-hints, .gk-reference { padding: .75rem; }
+  .gk-examples th, .gk-examples td { padding: .4rem; }
+}

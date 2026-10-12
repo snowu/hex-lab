@@ -568,7 +568,7 @@ window.GameProjectRuntime = function (canvas, kind, options = {}) {
   function list() {
     document.title = "Build-along games · Game Dev Lab";
     const all = store.get("gd:projects", {});
-    app.innerHTML = `<div class="page-h"><h1>Build-along games</h1><p>Work through playable checkpoints in this order. Solve the linked code kata, reach the playable target, keep a learning note, then export a standalone version.</p></div><div class="dgrid">${projects.map((p, i) => `<a class="dcard tc" href="#/project/${p.id}"><span class="chip">${i + 1} · ${Object.keys(all[p.id]?.completed || {}).length}/3 checkpoints</span><h2>${p.title}</h2><p>${p.description}</p></a>`).join("")}</div>`;
+    app.innerHTML = `<div class="page-h"><h1>Build-along games</h1><p>Work through playable checkpoints in this order. Solve the linked code kata, reach the playable target, keep a learning note, then export a standalone version.</p></div><p><a class="btn" href="#/native-projects">Build a game powered by your C, Zig or C++ code →</a></p><div class="dgrid">${projects.map((p, i) => `<a class="dcard tc" href="#/project/${p.id}"><span class="chip">${i + 1} · ${Object.keys(all[p.id]?.completed || {}).length}/3 checkpoints</span><h2>${p.title}</h2><p>${p.description}</p></a>`).join("")}</div>`;
   }
   function view(id) {
     const project = projects.find((p) => p.id === id),
