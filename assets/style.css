@@ -872,3 +872,22 @@ button.tool{background:none;border:0;border-left:0;font:inherit;text-align:left;
 @media(max-width:760px){.xp>span:nth-child(2){display:none}.xp{gap:5px;padding-right:5px}.top-r{min-width:0}.gl-stage{position:static}}
 .gl-instructions{white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--font)}
 #gkref pre{max-width:100%;overflow:auto}#gklanguage,#gkfile,#gkgroup{background:var(--editor);color:var(--ink);border:1px solid var(--line2);padding:8px}#gkfilter{min-width:0;padding:8px;background:var(--editor);color:var(--ink);border:1px solid var(--line2)}
+
+/* Shared native code colors follow the existing dark/light editor palette. */
+pre[data-native-code] code,.native-code-render code{font:inherit;letter-spacing:inherit;white-space:pre;tab-size:inherit}
+pre[data-native-code] .token,.native-code-render .token{font-weight:normal;font-style:normal}
+pre[data-native-code] .token.comment,.native-code-render .token.comment{color:var(--syn-com)}
+pre[data-native-code] .token.keyword,.native-code-render .token.keyword{color:var(--syn-kw)}
+pre[data-native-code] .token.string,pre[data-native-code] .token.char,.native-code-render .token.string,.native-code-render .token.char{color:var(--syn-str)}
+pre[data-native-code] .token.number,.native-code-render .token.number{color:var(--syn-num)}
+pre[data-native-code] .token.function,.native-code-render .token.function{color:var(--syn-def)}
+pre[data-native-code] .token.class-name,pre[data-native-code] .token.builtin,.native-code-render .token.class-name,.native-code-render .token.builtin{color:var(--syn-prop)}
+pre[data-native-code] .token.boolean,pre[data-native-code] .token.constant,.native-code-render .token.boolean,.native-code-render .token.constant{color:var(--syn-atom)}
+pre[data-native-code] .token.operator,.native-code-render .token.operator{color:var(--accent2)}
+pre[data-native-code] .token.macro,pre[data-native-code] .token.directive,.native-code-render .token.macro,.native-code-render .token.directive{color:var(--syn-kw)}
+.native-editor{position:relative;min-width:0;max-width:100%;background:var(--editor)}
+.native-editor .native-code-render{position:absolute;top:0;left:0;margin:0;border:1px solid transparent;box-sizing:border-box;max-height:none;overflow:hidden;pointer-events:none;color:var(--ink);white-space:pre}
+.native-code-render code{display:block;min-width:max-content}
+.native-editor textarea{position:relative;display:block;box-sizing:border-box;margin:0;background:transparent;color:transparent;caret-color:var(--ink);white-space:pre;font-variant-ligatures:none;font-feature-settings:'liga' 0,'calt' 0;line-height:1.6}
+.native-editor textarea::selection{background:color-mix(in srgb,var(--accent) 28%,transparent);color:transparent}
+@media (forced-colors:active){.native-editor .native-code-render{display:none}.native-editor textarea{color:CanvasText;caret-color:CanvasText}.native-editor textarea::selection{color:HighlightText;background:Highlight}}
