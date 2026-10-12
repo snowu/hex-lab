@@ -1,0 +1,13 @@
+/* The full editor opens separately so lesson state and drafts remain available. */
+(window.LAB_VIEWS = window.LAB_VIEWS || []).push((H) => {
+  if (window.MODE !== 'gamedev') return;
+  H.routes.push([/^#\/forge$/, () => {
+    document.title = 'Pixel Forge · Game Dev Lab';
+    H.app.innerHTML = `<div class="page-h"><h1>Pixel Forge</h1><p>Make art for your game with spritewright, the standalone editor built around PixelForge.</p></div>
+      <div class="dbar"><a class="btn primary" href="https://snowu.github.io/spritewright/" target="_blank" rel="noopener">Open spritewright ↗</a><a class="btn" href="#/lesson/px-basics">Try the teaching editor</a><a class="btn" href="#/track/gdpixel">Learn pixel art</a></div>
+      <section class="tc brk"><h2>A first sprite</h2><p>Draw a 16×16 silhouette in four colours. Check it at actual size, choose one light direction, then export a PNG. Import it into your game with nearest-neighbour filtering and an integer scale.</p><p>Next, draw four walking frames on equal canvases with the same foot pivot. Preview the loop and test it at the character’s movement speed.</p></section>
+      <section class="tc brk"><h2>Use it with a project</h2><form id="forgerepo"><label class="lbl">GitHub repository <input class="inp" id="artrepo" placeholder="owner/game" required pattern="(?:[A-Za-z0-9_.]|-)+/(?:[A-Za-z0-9_.]|-)+"></label><label class="lbl">Branch <input class="inp" id="artbranch" value="main" required></label><button class="btn" type="submit">Open project in spritewright ↗</button></form><p>In the editor, import a PNG or open a project folder. Keep source art beside exported PNGs, and document your palette, tile size and pivots. Review art changes with before and after images.</p><p><a href="https://github.com/snowu/spritewright" target="_blank" rel="noopener">Project README and integration instructions ↗</a> · <a href="#/lesson/px-tiles-workflow">Art workflow lesson</a> · <a href="#/design/gd-assets">Practise designing an asset pipeline</a></p><button class="btn" id="artdone">I exported and tested my sprite</button><span id="artstatus" class="muted"></span></section>`;
+    H.$('#forgerepo').onsubmit = (event) => { event.preventDefault(); const url = new URL('https://snowu.github.io/spritewright/index.html'); url.searchParams.set('repo', H.$('#artrepo').value.trim()); url.searchParams.set('branch', H.$('#artbranch').value.trim()); window.open(url.href, '_blank', 'noopener'); };
+    H.$('#artdone').onclick = () => { H.logAct('art'); H.$('#artdone').disabled = true; H.$('#artstatus').textContent = 'Practice recorded in your learning plan.'; };
+  }]);
+});

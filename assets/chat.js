@@ -13,7 +13,7 @@
   const wide = () => { try { return localStorage.getItem(WIDE) === '1'; } catch { return false; } };
   const applyWide = () => document.body.classList.toggle('chat-wide', wide());
 
-  const SUGGEST = ['Explain this page in simple terms', 'Quiz me on this, one question at a time', 'What would a senior interviewer push on here?', 'Review what I have written so far'];
+  const SUGGEST = ['Explain this page in simple terms', 'Quiz me on this, one question at a time', window.MODE === 'gamedev' ? 'Give me a small game project to practise this' : 'What would a senior interviewer push on here?', 'Review what I have written so far'];
 
   /* ---------- page context ---------- */
   function gather() {

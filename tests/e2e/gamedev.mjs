@@ -17,10 +17,43 @@ export default async function ({ url, browser, ok, section }) {
   const accent = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim());
   ok(accent === '#b98cff', 'dark theme uses the violet accent (' + accent + ')');
   const nav = await page.evaluate(() => [...document.querySelectorAll('.top nav a')].map((a) => a.textContent.trim()));
-  ok(nav.join(' ') === 'learn cards links', 'nav is only learn, cards and links (no plan, mock, design, katas or stories): ' + nav.join(' '));
-  for (const r of ['#/katas', '#/mock', '#/plan', '#/design', '#/stories']) { await page.go(url, r, 250); if (await page.evaluate(() => location.hash) !== '#/') ok(false, r + ' should redirect home'); }
-  ok(true, 'interview-only pages (katas, mock, plan, design, stories) redirect home in this section');
-  const tiles = await page.locator('.tools').innerText(); ok(!/Mock interview|AI interviewer/i.test(tiles) && !/Today's plan/.test(await page.locator('.cta').innerText()), 'the home page has no mock interview, AI interviewer or plan entries');
+  ok(nav.includes('plan') && nav.includes('katas') && nav.includes('design') && nav.includes('forge') && !nav.includes('mock') && !nav.includes('stories'), 'learning tools available; interview tools hidden');
+  for (const r of ['#/mock', '#/stories']) { await page.go(url, r, 250); ok(await page.evaluate(() => location.hash) === '#/', r + ' redirects home'); }
+  await page.go(url, '#/plan');
+  ok(await page.locator('#cloudpanel').count() === 1 && await page.locator('#bexp').count() === 1, 'learning plan includes cloud sync and backup');
+  ok(!/interview|STAR|pressure skills/.test(await page.locator('#app').innerText()), 'learning plan has learning copy');
+  await page.locator('#dgo').click();
+  ok(/Game programming/.test(await page.locator('#app').innerText()), 'game diagnostic self ratings');
+  await page.locator('#dcancel').click();
+  await page.evaluate(() => { localStorage.setItem('sil:diag', JSON.stringify({ ts: 1, tracks: { patterns: { right: 1, total: 3 } } })); });
+  await page.go(url, '#/plan');
+  ok((await page.locator('#dgo').textContent()).includes('Take the diagnostic'), 'interview assessment does not leak into game learning');
+  await page.go(url, '#/design');
+  await page.locator('[data-t="est"]').click();
+  const estimate = await page.evaluate(() => { const t = ESTIMATES[0].gen(() => 0); return { q: t.q, answer: t.answer }; });
+  ok(/30 frames/.test(estimate.q) && Math.abs(estimate.answer - 1000 / 30) < 0.01, 'game frame-budget estimate arithmetic');
+  await page.locator('#eans').fill('100'); await page.locator('#echeck').click();
+  ok(await page.evaluate(() => !!localStorage.getItem('sil:gd:estats') && !localStorage.getItem('sil:estats')), 'game estimate history is separate');
+  await page.locator('[data-t="reps"]').click();
+  ok(await page.locator('.dcard').count() === 3, 'three game architecture exercises');
+  await page.go(url, '#/design/gd-platformer');
+  await page.locator('textarea[data-s="scope"]').fill('A playable room with jumps and a moving platform.');
+  await page.locator('#dfinish').click();
+  ok(/last grounded tick/.test(await page.locator('#dcompare').innerText()), 'game reference comparison renders');
+  await page.locator('#dsave').click();
+  ok(await page.evaluate(() => JSON.parse(localStorage.getItem('sil:designhist')).some((x) => x.id === 'gd-platformer')), 'untimed learning rep saves');
+  await page.go(url, '#/katas');
+  ok(await page.locator('#klist .krow').count() > 0, 'katas accessible in game mode');
+  await page.go(url, '#/forge');
+  ok(await page.locator('a[href="https://snowu.github.io/spritewright/"]').count() === 1, 'Pixel Forge editor directly available');
+  await page.locator('#artrepo').fill('snowu/test-game');
+  await page.locator('#artbranch').fill('art/iteration');
+  await page.evaluate(() => { window.open = (url) => { window.__forgeUrl = url; }; });
+  await page.locator('#forgerepo button').click();
+  ok(await page.evaluate(() => { const u = new URL(window.__forgeUrl); return u.searchParams.get('repo') === 'snowu/test-game' && u.searchParams.get('branch') === 'art/iteration'; }), 'project launcher encodes repository and branch');
+  await page.locator('#artdone').click();
+  ok(await page.evaluate(() => Object.values(JSON.parse(localStorage.getItem('sil:activity'))).some((a) => a.art === 1)), 'art practice is recorded');
+  await page.go(url, '#/');
   const h1 = await page.locator('h1').first().innerText();
   ok(/Learn to make games/.test(h1), 'game dev hero copy: ' + h1.replace(/\n/g, ' '));
   ok(/Zig and C\+\+ drills/.test(await page.locator('.lead').first().innerText()), 'the hero counts drills');
@@ -152,6 +185,11 @@ export default async function ({ url, browser, ok, section }) {
   ok(hdr, 'the header fits on a phone');
   await page.setViewportSize({ width: 1280, height: 1000 });
 
+  for (const route of ['#/plan', '#/design', '#/design/gd-assets', '#/forge', '#/katas']) {
+    await page.go(url, route);
+    ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), route + ' fits a phone');
+  }
+  await page.go(url, '#/');
   section('back to interview prep');
   await page.go(url, '#/', 300);
   await page.locator('#modeBtn').click(); await page.waitForTimeout(700);

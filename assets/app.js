@@ -5,8 +5,8 @@ const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const strip = (h) => String(h).replace(/<[^>]*>/g, ' ').replace(/&[a-z#0-9]+;/g, ' ').replace(/\s+/g, ' ').trim();
 const store = {
-  get(k, d) { try { const v = localStorage.getItem('sil:' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
-  set(k, v) { try { localStorage.setItem('sil:' + k, JSON.stringify(v)); } catch {} if (window.CLOUD) window.CLOUD.markDirty(); },
+  get(k, d) { if (window.MODE === 'gamedev' && ['diag', 'self', 'planMin', 'plandone', 'estats'].includes(k)) k = 'gd:' + k; try { const v = localStorage.getItem('sil:' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { if (window.MODE === 'gamedev' && ['diag', 'self', 'planMin', 'plandone', 'estats'].includes(k)) k = 'gd:' + k; try { localStorage.setItem('sil:' + k, JSON.stringify(v)); } catch {} if (window.CLOUD) window.CLOUD.markDirty(); },
 };
 const app = $('#app');
 try { if (!localStorage.getItem('sil:pyMigrated')) { Object.keys(localStorage).filter((k) => k.startsWith('sil:draft:')).forEach((k) => localStorage.removeItem(k)); localStorage.setItem('sil:pyMigrated', 'true'); } } catch {}
@@ -169,7 +169,7 @@ function route() {
   app.innerHTML = '<h1>Not found</h1><p><a href="#/">Back home</a></p>';
 }
 function setNav(h) {
-  const key = ['review', 'mock', 'resources', 'plan', 'design', 'stories', 'data', 'kata'].find((k) => h.startsWith('#/' + k)) || 'home';
+  const key = ['review', 'mock', 'resources', 'plan', 'design', 'stories', 'data', 'kata', 'forge'].find((k) => h.startsWith('#/' + k)) || 'home';
   $$('.top nav a').forEach((a) => a.classList.toggle('on', a.dataset.nav === key));
 }
 addEventListener('hashchange', route);
@@ -228,8 +228,8 @@ function viewHome() {
       <div class="stat"><span class="si" style="color:#ff9a3d">${ic('flame', 20)}</span><div><div class="v">${s} day${s === 1 ? '' : 's'}</div><div class="l">current streak</div></div></div>
       <a class="stat" href="#/review"><span class="si">${ic('cards', 20)}</span><div><div class="v">${due}</div><div class="l">flashcards due</div></div></a>
     </section>
-    ${nx ? `<a class="cont tc" style="--h:${hueOf(nx.t.id)}" href="#/lesson/${nx.l.id}">${ring(lessonPct(nx.l), 52, 5)}<div class="tx"><div class="k">${nx.resume || nx.started ? 'Continue where you left off' : 'Up next'}</div><div class="tt">${esc(nx.l.title)}</div><div class="sub">${esc(nx.t.title)} · ${nx.l.minutes} min</div></div>${ic('arrow', 22)}</a>` : `<div class="cont tc" style="--h:150">${ic('trophy', 28)}<div class="tx"><div class="tt">Every lesson complete. Go run some mock interviews.</div></div></div>`}
-    ${(() => { const ms = mockSummary(); return ms.weakest && ms.weakest.avg < 80 ? `<a class="cont tc" id="weak" style="--h:${MOCK_HUE[ms.weakest.kind] ?? 255};margin-top:12px" href="#/mock"><span class="si" style="width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--panel2);color:var(--c)">${ic('target', 22)}</span><div class="tx"><div class="k">Weak spot from your mock interviews</div><div class="tt">${esc(ms.weakest.kind)} · ${ms.weakest.avg}% rubric coverage</div><div class="sub">${ms.weakest.n} attempt${ms.weakest.n === 1 ? '' : 's'}. Practice it again.</div></div>${ic('arrow', 22)}</a>` : ''; })()}
+    ${nx ? `<a class="cont tc" style="--h:${hueOf(nx.t.id)}" href="#/lesson/${nx.l.id}">${ring(lessonPct(nx.l), 52, 5)}<div class="tx"><div class="k">${nx.resume || nx.started ? 'Continue where you left off' : 'Up next'}</div><div class="tt">${esc(nx.l.title)}</div><div class="sub">${esc(nx.t.title)} · ${nx.l.minutes} min</div></div>${ic('arrow', 22)}</a>` : `<div class="cont tc" style="--h:150">${ic('trophy', 28)}<div class="tx"><div class="tt">${GAME ? 'Every lesson complete. Build a project or revisit a kata.' : 'Every lesson complete. Go run some mock interviews.'}</div></div></div>`}
+    ${(() => { const ms = mockSummary(); return !GAME && ms.weakest && ms.weakest.avg < 80 ? `<a class="cont tc" id="weak" style="--h:${MOCK_HUE[ms.weakest.kind] ?? 255};margin-top:12px" href="#/mock"><span class="si" style="width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--panel2);color:var(--c)">${ic('target', 22)}</span><div class="tx"><div class="k">Weak spot from your mock interviews</div><div class="tt">${esc(ms.weakest.kind)} · ${ms.weakest.avg}% rubric coverage</div><div class="sub">${ms.weakest.n} attempt${ms.weakest.n === 1 ? '' : 's'}. Practice it again.</div></div>${ic('arrow', 22)}</a>` : ''; })()}
     <div class="sec-h"><h2>Tracks</h2><span>${total} lessons · ${Math.round(TRACKS.reduce((a, t) => a + trackMin(t), 0) / 60)} hours</span></div>
     <div class="tgrid">${TRACKS.map((t) => `
       <a class="tcard tc ${t.hot ? 'feat' : ''}" style="--h:${hueOf(t.id)}" href="#/track/${t.id}">
@@ -240,6 +240,10 @@ function viewHome() {
       </a>`).join('')}</div>
     <div class="sec-h"><h2>Toolkit</h2></div>
     <div class="tools">
+      <a class="tool" href="#/plan"><span class="si">${ic('target', 22)}</span><div><b>${GAME ? 'Learning plan' : 'Daily plan'}</b><span>diagnostic · progress · sync · backup</span></div></a>
+      <a class="tool" href="#/katas"><span class="si">${ic('terminal', 22)}</span><div><b>Code katas</b><span>practice · tests · spaced reviews</span></div></a>
+      <a class="tool" href="#/design"><span class="si">${ic('design', 22)}</span><div><b>Design lab</b><span>${GAME ? 'game architecture · references · self review' : 'design reps · estimation'}</span></div></a>
+      ${GAME ? `<a class="tool" href="#/forge"><span class="si">${ic('gdpixel', 22)}</span><div><b>Pixel Forge</b><span>open spritewright · make art for your game</span></div></a>` : ''}
       <a class="tool" href="#/review"><span class="si">${ic('cards', 22)}</span><div><b>Flashcards</b><span>${CARDS.length} cards · spaced repetition</span></div></a>
       ${GAME ? '' : `<a class="tool" href="#/mock"><span class="si">${ic('mic', 22)}</span><div><b>Mock interview</b><span>${MOCK.length} questions · timer · rubric</span></div></a>`}
       ${window.FEEDBACK && FEEDBACK.enabled() && !GAME ? `<a class="tool" href="#/mock/ai"><span class="si">${ic('chat', 22)}</span><div><b>AI interviewer</b><span>follow-ups, then graded</span></div></a>` : ''}
@@ -294,7 +298,7 @@ function viewLesson(id) {
       <aside class="outline"><p class="oh">In this lesson</p><ol>${outline}</ol><div class="sm"><b id="lpct">${lessonPct(l)}%</b> complete<br>${nQuiz} quick check${nQuiz === 1 ? '' : 's'}${nCode ? ` · ${nCode} challenge${nCode === 1 ? '' : 's'}` : ''}${nSim ? ` · ${nSim} simulation${nSim === 1 ? '' : 's'}` : ''}</div></aside>
       <article>
         <div class="crumbs"><a href="#/">${ic('home', 14)}</a> ${ic('arrow', 12)} <a href="#/track/${t.id}">${esc(t.title)}</a> ${ic('arrow', 12)} <span>Lesson ${i + 1}</span></div>
-        <header class="lhead has-ask">${askBtn(`I am reading the lesson "${l.title}". Summarise the key ideas in 5 bullets, then tell me the 3 things interviewers most often probe on this topic and the classic mistakes.`, 'Ask AI about this lesson')}<span class="chip tc" style="--h:${h}">${ic(t.id, 13)} ${esc(t.title)}</span><h1>${esc(l.title)}</h1><p class="sum">${esc(l.summary || '')}</p>
+        <header class="lhead has-ask">${askBtn(`I am reading the lesson "${l.title}". Summarise the key ideas in 5 bullets, then tell me ${GAME ? 'three small experiments I can build to practise this topic and the common mistakes.' : 'the 3 things interviewers most often probe on this topic and the classic mistakes.'}`, 'Ask AI about this lesson')}<span class="chip tc" style="--h:${h}">${ic(t.id, 13)} ${esc(t.title)}</span><h1>${esc(l.title)}</h1><p class="sum">${esc(l.summary || '')}</p>
           <div class="metas"><span class="chip" title="${l.timeParts ? `about ${l.timeParts.read} min of reading + ${l.timeParts.practice} min of practice` : ''}">${ic('clock', 12)} ${l.minutes} min</span>${nQuiz ? `<span class="chip">${ic('target', 12)} ${nQuiz} quick check${nQuiz === 1 ? '' : 's'}</span>` : ''}${nCode ? `<span class="chip">${ic('terminal', 12)} ${nCode} challenge${nCode === 1 ? '' : 's'}</span>` : ''}${nSim ? `<span class="chip">${ic('sim', 12)} ${nSim} simulation${nSim === 1 ? '' : 's'}</span>` : ''}</div>
           <div class="seg" role="group" aria-label="Lesson view"><button data-m="all" class="${mode === 'all' ? 'on' : ''}">text + practice</button><button data-m="read" class="${mode === 'read' ? 'on' : ''}">read</button><button data-m="practice" class="${mode === 'practice' ? 'on' : ''}">practice</button></div></header>
         <div class="lbody" id="body"></div>
@@ -340,7 +344,7 @@ function rText(el, s) { el.innerHTML = `<div class="html">${s.html}</div>`; }
 function rReveal(el, s) { el.innerHTML = `<details><summary>${esc(s.title)}</summary><div class="html">${s.html}</div></details>`; }
 function rQuiz(el, s, l, idx, sync) {
   const key = keysOf(l)[idx], sh = shuffleOpts(s); let done = false;
-  el.innerHTML = `${label('target', 'Quick check')}<div class="quiz has-ask">${askBtn(`Quick check question: ${strip(s.q)}\nOptions: ${sh.options.map((o, i) => 'ABCD'[i] + ') ' + strip(o)).join(' | ')}\nThe correct option is ${'ABCD'[sh.answer]}.\n\nExplain in more depth why that is correct, why each other option is wrong, and what a senior interviewer might ask next.`, 'Ask AI why')}<div class="q">${s.q}</div>${sh.options.map((o, i) => `<button class="opt" data-i="${i}"><span class="l">${'ABCD'[i]}</span><span>${o}</span></button>`).join('')}<div class="explain" hidden></div></div>`;
+  el.innerHTML = `${label('target', 'Quick check')}<div class="quiz has-ask">${askBtn(`Quick check question: ${strip(s.q)}\nOptions: ${sh.options.map((o, i) => 'ABCD'[i] + ') ' + strip(o)).join(' | ')}\nThe correct option is ${'ABCD'[sh.answer]}.\n\nExplain in more depth why that is correct, why each other option is wrong, and ${GAME ? 'what I could build to practise this concept.' : 'what a senior interviewer might ask next.'}`, 'Ask AI why')}<div class="q">${s.q}</div>${sh.options.map((o, i) => `<button class="opt" data-i="${i}"><span class="l">${'ABCD'[i]}</span><span>${o}</span></button>`).join('')}<div class="explain" hidden></div></div>`;
   const ex = $('.explain', el);
   if ((progress[l.id] || {})[key]) { /* already solved earlier: show the answer */
     const b = $(`.opt[data-i="${sh.answer}"]`, el); b.classList.add('right'); $$('.opt', el).forEach((x) => (x.disabled = true)); ex.hidden = false; ex.classList.add('ok'); ex.innerHTML = s.explain + cardBtn(strip(s.q), `${strip(sh.options[sh.answer])}\n\n${strip(s.explain)}`); done = true;
@@ -545,7 +549,7 @@ function rDrill(el, s, l, idx, sync) {
     $('.ddl', body).onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([file()], { type: 'text/plain' })); a.download = `${s.id}.${L.ext}`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
     $('.hint', body).onclick = () => { const h = $('.dhint', body); h.hidden = !h.hidden; };
     $('.dsol', body).onclick = () => { const b = $('.dsolbox', body); b.hidden = !b.hidden; };
-    $('.dpass', body).onclick = () => { if (mark(l.id, key, 40, 'Drill passed')) { sync(); paint(); const c = $('.st', el); c.className = 'chip st good'; c.innerHTML = ic('check', 12, 3) + ' Passed'; } };
+    $('.dpass', body).onclick = () => { if (mark(l.id, key, 40, 'Drill passed')) { logAct('drill'); sync(); paint(); const c = $('.st', el); c.className = 'chip st good'; c.innerHTML = ic('check', 12, 3) + ' Passed'; } };
     if (window.FEEDBACK) FEEDBACK.mount($('.dfbk', body), { kind: 'code', prompt: `${L.name} drill "${s.title}": ${strip(s.prompt)}`, getAnswer: () => $('.dpaste', body).value });
   }
   $$('[data-lang]', el).forEach((b) => (b.onclick = () => { lang = b.dataset.lang; store.set('drilllang', lang); paint(); }));
@@ -664,7 +668,7 @@ function viewReview() {
     else {
       const c = deck[cur], h = trackHue(c.track);
       body = `<div class="deck tc" style="--h:${h}"><div class="pgl"><span>Card ${Math.min(cur + 1, total)} of ${total}</span><span>${deck.length - cur} left</span></div><div class="pg"><i style="width:${(cur / Math.max(1, total)) * 100}%"></i></div>
-        <div class="fc-wrap has-ask">${askBtn(`Flashcard (${strip(c.track)}). Question: ${strip(c.q)}\nCard answer: ${strip(c.a)}\n\nThat answer is too terse. Explain it properly: the intuition, a concrete example with numbers or code, why it matters in an interview, common misconceptions, and one follow-up a senior interviewer might ask.`, 'Ask AI to explain this card')}<div class="fc ${flipped ? 'flipped' : ''}" id="fc" tabindex="0" role="button" aria-label="Flip card"><div class="face front"><span class="chip tc tagl" style="--h:${h}">${esc(c.track)}</span><div class="qq">${c.q}</div><div class="hint">${matchMedia('(pointer:coarse)').matches ? 'Tap the card to reveal' : 'Click or press <kbd>Space</kbd> to reveal'}</div></div><div class="face back"><span class="chip tc tagl" style="--h:${h}">Answer</span><div class="aa">${c.a}</div>${c.custom ? '<button type="button" class="linkbtn delcard" title="Delete this card">delete card</button>' : ''}</div></div></div>
+        <div class="fc-wrap has-ask">${askBtn(`Flashcard (${strip(c.track)}). Question: ${strip(c.q)}\nCard answer: ${strip(c.a)}\n\nThat answer is too terse. Explain it properly: the intuition, a concrete example with numbers or code, ${GAME ? 'how it applies when building games, common misconceptions, and a small practice task.' : 'why it matters in an interview, common misconceptions, and one follow-up a senior interviewer might ask.'}`, 'Ask AI to explain this card')}<div class="fc ${flipped ? 'flipped' : ''}" id="fc" tabindex="0" role="button" aria-label="Flip card"><div class="face front"><span class="chip tc tagl" style="--h:${h}">${esc(c.track)}</span><div class="qq">${c.q}</div><div class="hint">${matchMedia('(pointer:coarse)').matches ? 'Tap the card to reveal' : 'Click or press <kbd>Space</kbd> to reveal'}</div></div><div class="face back"><span class="chip tc tagl" style="--h:${h}">Answer</span><div class="aa">${c.a}</div>${c.custom ? '<button type="button" class="linkbtn delcard" title="Delete this card">delete card</button>' : ''}</div></div></div>
         <div class="rate" ${flipped ? '' : 'hidden'}><button class="r0" data-r="0">Again<small>1 · soon</small></button><button class="r1" data-r="1">Hard<small>2 · 1 day</small></button><button class="r2" data-r="2">Good<small>3 · days</small></button><button class="r3" data-r="3">Easy<small>4 · weeks</small></button></div></div>`;
     }
     app.innerHTML = `<div class="page-h"><h1>Flashcards</h1><p>Say the answer out loud before flipping. Cards you miss come back sooner.</p><button class="btn sm" id="newcard">${ic('cards', 14)} New card</button> <span class="muted">Missed something? Use <b>Add to my cards</b> under any explanation, or the chat's <b>+ card</b>.</span></div><div id="cardform" hidden></div>${filters}${body}`;
@@ -853,7 +857,12 @@ function buildIndex() {
 }
 const QUICK = () => [
   { kind: 'Go to', icon: 'home', title: 'Learn', sub: 'All tracks', href: '#/' }, { kind: 'Go to', icon: 'cards', title: 'Flashcards', sub: 'Spaced repetition', href: '#/review' },
-  { kind: 'Go to', icon: 'mic', title: 'Mock interview', sub: 'Random question + timer', href: '#/mock' }, { kind: 'Go to', icon: 'link', title: 'Free resources', sub: 'Curated links', href: '#/resources' },
+  ...(!GAME ? [{ kind: 'Go to', icon: 'mic', title: 'Mock interview', sub: 'Random question + timer', href: '#/mock' }] : []),
+  { kind: 'Go to', icon: 'target', title: GAME ? 'Learning plan' : 'Daily plan', sub: 'Diagnostic, progress and backup', href: '#/plan' },
+  { kind: 'Go to', icon: 'terminal', title: 'Code katas', sub: 'Exercises and spaced reviews', href: '#/katas' },
+  { kind: 'Go to', icon: 'design', title: 'Design lab', sub: 'Architecture practice', href: '#/design' },
+  ...(GAME ? [{ kind: 'Go to', icon: 'gdpixel', title: 'Pixel Forge', sub: 'Open spritewright for your project', href: '#/forge' }] : []),
+  { kind: 'Go to', icon: 'link', title: 'Free resources', sub: 'Curated links', href: '#/resources' },
   ...TRACKS.map((t) => ({ kind: 'Tracks', icon: t.id, hue: hueOf(t.id), title: t.title, sub: `${t.lessons.length} lessons`, href: '#/track/' + t.id })),
 ];
 function openPalette() { $('#cmdk').hidden = false; $('#cq').value = ''; renderPal(); $('#cq').focus(); }

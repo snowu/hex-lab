@@ -86,7 +86,7 @@
       <div class="kfilters"><input id="kq" class="inp" type="search" placeholder="Search katas…" value="${esc(view.q)}" aria-label="Search katas">
         ${BANDS.map(([k, n]) => `<button class="fchip ${view.band === k ? 'on' : ''}" data-b="${k}">${n}</button>`).join('')}<span class="ksep"></span>
         ${[['all', 'Any status'], ['todo', 'To do'], ['solved', 'Solved'], ['due', 'Due']].map(([k, n]) => `<button class="fchip ${view.status === k ? 'on' : ''}" data-s="${k}">${n}</button>`).join('')}<span class="ksep"></span>
-        <button class="fchip ${view.picks ? 'on' : ''}" id="kpicks" title="Classics that map well to backend interviews">Interview picks</button></div>
+        <button class="fchip ${view.picks ? 'on' : ''}" id="kpicks" title="Parsing, graphs, state machines and data structures">${window.MODE === 'gamedev' ? 'Practice picks' : 'Interview picks'}</button></div>
       <div id="klist"></div>
       <p class="muted kcredit">Exercises from <a href="https://exercism.org" target="_blank" rel="noopener">Exercism</a> (MIT licence, authors credited on each kata).</p>`;
     const draw = () => {
@@ -145,7 +145,7 @@
         </div></section>
         <div class="kata-work">
           <div id="kcode"></div>
-          <details class="kother tc brk has-ask">${askBtn(`Code kata "${k.name}": ${k.blurb}\n\nGive me the approach to solve this well (not the code), the edge cases to test, and how you would explain the solution in an interview.`, 'Ask AI about the approach')}<summary>${ic('terminal', 16)} Practise it in another language</summary>
+          <details class="kother tc brk has-ask">${askBtn(`Code kata "${k.name}": ${k.blurb}\n\nGive me the approach to solve this well (not the code), the edge cases to test, and ${window.MODE === 'gamedev' ? 'a small game feature where this technique applies.' : 'how you would explain the solution in an interview.'}`, 'Ask AI about the approach')}<summary>${ic('terminal', 16)} Practise it in another language</summary>
             <p class="muted">Download the same exercise with the <a href="https://exercism.org/cli-walkthrough" target="_blank" rel="noopener">Exercism CLI</a>, solve and test it locally, then paste your solution here for feedback.</p>
             <div class="cs-row"><select id="ktrack" class="inp" aria-label="Language">${TRACKS.map(([t, n]) => `<option value="${t}">${n}</option>`).join('')}</select>
               <a id="klink" class="btn ghost" target="_blank" rel="noopener">Open on exercism.org</a></div>

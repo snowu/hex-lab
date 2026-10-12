@@ -140,6 +140,14 @@ for (const d of DESIGNS) {
   if (!d.followups?.length || !d.tradeoffs?.length) fail(`design ${d.id}: needs follow-ups and trade-offs`);
 }
 for (const e of ESTIMATES) for (let i = 0; i < 200; i++) { const g = e.gen(Math.random); if (!(g.answer > 0 && Number.isFinite(g.answer)) || !g.q || !g.steps?.length) { fail(`estimate ${e.id}: bad generated scenario ${JSON.stringify(g)}`); break; } }
+// Validate learning designs as well as the default interview content.
+ctx.MODE = 'gamedev';
+vm.runInContext(fs.readFileSync(path.join(root, 'content/dev-design.js'), 'utf8'), ctx);
+for (const d of ctx.DESIGNS) {
+  for (const step of ctx.DESIGN_STEPS) if (!d.ref?.[step.id] || d.ref[step.id].length < 80) fail(`game design ${d.id}: missing reference for ${step.id}`);
+  if (!d.id.startsWith('gd-') || !d.prompt || !(d.minutes > 0) || d.rubric?.length < 6 || d.hints?.length < 2 || !d.followups?.length || !d.tradeoffs?.length) fail(`game design ${d.id}: incomplete practice content`);
+}
+for (const e of ctx.ESTIMATES) for (let i = 0; i < 200; i++) { const g = e.gen(Math.random); if (!(g.answer > 0 && Number.isFinite(g.answer)) || !g.q || !g.steps?.length) fail(`game estimate ${e.id}: invalid scenario`); }
 CARDS.forEach((c, i) => { if (!c.q || !c.a || !c.track) fail('card ' + i + ' malformed'); });
 MOCK.forEach((m, i) => {
   if (!m.q || !m.kind || !m.rubric?.length || !m.minutes) fail('mock ' + i + ' malformed');

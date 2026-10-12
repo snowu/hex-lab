@@ -4,7 +4,8 @@
   H.routes.push([/^#\/plan$/, () => viewPlan()]);
 
   const dstr = (d) => d.toISOString().slice(0, 10);
-  const SELF = [['code', 'Writing code against the clock'], ['design', 'System design under pressure'], ['story', 'Behavioral stories'], ['data', 'Databases and SQL'], ['domain', 'Open banking / payments domain']];
+  const GAME = window.MODE === 'gamedev';
+  const SELF = GAME ? [['code', 'Game programming'], ['design', 'Game architecture'], ['art', 'Pixel art and animation'], ['math', 'Game math and simulation']] : [['code', 'Writing code against the clock'], ['design', 'System design under pressure'], ['story', 'Behavioral stories'], ['data', 'Databases and SQL'], ['domain', 'Open banking / payments domain']];
   let diag = null; // running diagnostic
 
   /* ---------------- helpers ---------------- */
@@ -13,7 +14,7 @@
     const lp = trackPct(t), d = diagResult() && diagResult().tracks[t.id];
     return d ? Math.round(0.5 * lp + 0.5 * (d.right / d.total) * 100) : lp;
   };
-  const allExercises = () => TRACKS.flatMap((t) => t.lessons.flatMap((l) => l.sections.filter((s) => s.type === 'code').map((s) => ({ t, l, s }))));
+  const allExercises = () => TRACKS.flatMap((t) => t.lessons.flatMap((l) => l.sections.filter((s) => (s.type === 'code' || s.type === 'drill')).map((s) => ({ t, l, s }))));
   const seeded = (str) => { let h = 0; for (const c of str + dstr(new Date())) h = (h * 31 + c.charCodeAt(0)) | 0; return (h >>> 0) % 1000; };
   const weakestTrack = () => [...TRACKS].filter((t) => t.lessons.some((l) => lessonPct(l) < 100)).sort((a, b) => mastery(a) - mastery(b))[0];
 
@@ -37,6 +38,17 @@
     if (due) tasks.push({ icon: 'cards', title: `Review ${cardsTarget} flashcards`, detail: `${due} due. Say each answer out loud before flipping.`, href: '#/review', done: (act.cards || 0) >= cardsTarget, min: Math.ceil(cardsTarget / 3) });
     const kd = window.KATA_SR ? KATA_SR.due() : [];
     if (kd.length) tasks.push({ icon: 'terminal', title: `Kata review: ${kd[0].name}`, detail: `${kd.length} kata${kd.length === 1 ? '' : 's'} due for spaced review. Solve it again from scratch, no peeking.`, href: '#/kata/' + kd[0].slug, done: (act.kata || 0) >= 1, min: 15 });
+    if (GAME) {
+      const drill = allExercises().find((e) => lessonPct(e.l) < 100);
+      if (drill) tasks.push({ icon: 'terminal', title: `Practise: ${drill.s.title}`, detail: 'Download the Zig or C++ starter, run the tests locally, then mark it passed.', href: '#/lesson/' + drill.l.id, done: (act.drill || 0) >= 1, min: drill.s.minutes || 20 });
+      if (mins >= 30) { const ds = pickDesign(); tasks.push({ icon: 'design', title: `Design: ${ds.title}`, detail: 'Sketch an approach, compare with the reference, save what you learned.', href: '#/design/' + ds.id, done: (act.design || 0) >= 1, min: ds.minutes }); }
+      const wt = weakestTrack();
+      if (wt) { const l = wt.lessons.find((l) => lessonPct(l) < 100); tasks.push({ icon: wt.id, title: `Learn: ${l.title}`, detail: wt.title + ' · work through the checks and simulations.', href: '#/lesson/' + l.id, done: (act.practice || 0) >= 3, min: l.minutes }); }
+      if (mins >= 60) tasks.push({ icon: 'gdpixel', title: 'Make a 16×16 sprite', detail: 'Use four colours, check the silhouette at real size, export a PNG and test it in your game.', href: '#/forge', done: (act.art || 0) >= 1, min: 15 });
+      if (!kd.length) tasks.push({ icon: 'terminal', title: 'Practise a code kata', detail: 'Build fluency with a small exercise and real tests.', href: '#/katas', done: (act.kata || 0) >= 1, min: 15 });
+      let remaining = mins;
+      return tasks.filter((t) => { if (t.min > remaining) return false; remaining -= t.min; return true; });
+    }
     const drill = pickDrill(Math.min(mins, 30)), codeWeak = (self.code || 3) <= 2;
     if (drill) tasks.push({ icon: 'clock', title: `Timed drill: ${drill.s.title}`, detail: `${drill.t.title} · budget ${drill.s.minutes || 20} min. Press Timed and talk through your plan first.`, href: '#/lesson/' + drill.l.id, done: (act.drill || 0) >= 1, min: drill.s.minutes || 20 });
     if (codeWeak && mins >= 60) { const d2 = pickDrill(30); if (d2 && d2.s.id !== drill.s.id) tasks.push({ icon: 'clock', title: `Second timed drill: ${d2.s.title}`, detail: `${d2.t.title} · budget ${d2.s.minutes || 20} min`, href: '#/lesson/' + d2.l.id, done: (act.drill || 0) >= 2, min: d2.s.minutes || 20 }); }
@@ -54,17 +66,17 @@
 
   /* ---------------- main page ---------------- */
   function viewPlan() {
-    document.title = 'Plan · Senior Interview Lab';
+    document.title = GAME ? 'Learning plan · Game Dev Lab' : 'Plan · Senior Interview Lab';
     if (diag) return drawDiag();
     const mins = store.get('planMin', 30), goal = store.get('goalDate', ''), tasks = buildPlan(mins), done = tasks.filter((t) => t.done).length;
     const days = goal ? Math.ceil((new Date(goal) - new Date(dstr(new Date()))) / 864e5) : null;
     const dr = diagResult();
     if (tasks.length && done === tasks.length && store.get('plandone', '') !== dstr(new Date())) { store.set('plandone', dstr(new Date())); addXp(30, 'Daily plan complete'); }
     app.innerHTML = `
-      <div class="page-h"><h1>Plan</h1><p><span id="daysleft">${daysLeftHtml(days)}</span>A short, repeatable session that targets pressure skills: code against the clock, design reps, and out-loud practice. No interview date needed.</p></div>
+      <div class="page-h"><h1>Plan</h1><p><span id="daysleft">${GAME ? '' : daysLeftHtml(days)}</span>${GAME ? 'A repeatable learning session: review, practise, design and build. Use the diagnostic to find concepts to revisit.' : 'A short, repeatable session that targets pressure skills: code against the clock, design reps, and out-loud practice. No interview date needed.'}</p></div>
       <section class="pl-top">
         <div class="seg" role="group" aria-label="Session length">${[15, 30, 60].map((m) => `<button data-m="${m}" class="${m === mins ? 'on' : ''}">${m} min</button>`).join('')}</div>
-        <label class="lbl inl">interview date (optional) <input type="date" id="goal" value="${esc(goal)}"></label>
+        ${GAME ? '' : `<label class="lbl inl">interview date (optional) <input type="date" id="goal" value="${esc(goal)}"></label>`}
       </section>
       <section class="plan">
         <div class="ph"><h2>Today</h2><span class="muted">${done}/${tasks.length} done · about ${tasks.reduce((n, t) => n + t.min, 0)} min</span></div>
@@ -76,7 +88,7 @@
         ${dr ? diagResultsHtml(dr) : `<p class="muted">A ~20-question check across every track, with no feedback until the end. It shows where you are weakest and tunes the plan. Takes about 10 minutes.</p>`}
         <button class="btn primary" id="dgo">${ic('target', 15)} ${dr ? 'Retake the diagnostic' : 'Take the diagnostic'}</button>
       </section>
-      <section class="ready"><div class="ph"><h2>Readiness</h2><span class="muted">lessons + diagnostic</span></div>${readinessHtml()}${statsHtml()}${heatmapHtml()}</section>
+      <section class="ready"><div class="ph"><h2>${GAME ? 'Learning progress' : 'Readiness'}</h2><span class="muted">lessons + diagnostic</span></div>${readinessHtml()}${statsHtml()}${heatmapHtml()}</section>
       <section class="cloud"><div class="ph"><h2>Cloud sync</h2><span class="muted">optional · this device always wins unless you choose otherwise</span></div><div id="cloudpanel"></div></section>
       ${window.FEEDBACK && FEEDBACK.enabled() ? `<section class="usage"><div class="ph"><h2>AI usage</h2><span class="muted">estimated from token counts · kept on this device only</span></div><div id="aiusage"></div></section>` : ''}
       <section class="backup"><div class="ph"><h2>Backup</h2><span class="muted">your data lives only in this browser</span></div>
@@ -92,7 +104,7 @@
       store.set('goalDate', v);
       $('#daysleft').innerHTML = daysLeftHtml(Math.ceil((new Date(v) - new Date(dstr(new Date()))) / 864e5));
     };
-    goalEl.oninput = saveGoal; goalEl.onchange = saveGoal;
+    if (goalEl) { goalEl.oninput = saveGoal; goalEl.onchange = saveGoal; }
     $('#dgo').onclick = startDiag;
     $('#bexp').onclick = exportData; $('#bimp').onchange = importData;
     if (window.CLOUD) window.CLOUD.mount($('#cloudpanel'));
@@ -117,6 +129,7 @@
   const readinessHtml = () => `<div class="rdy">${TRACKS.map((t) => { const m = mastery(t), d = diagResult() && diagResult().tracks[t.id]; return `<div class="rrow tc" style="--h:${hueOf(t.id)}"><span class="rt">${esc(t.title)}</span><span class="rbar"><i style="width:${m}%"></i></span><span class="rv">${m}%${d ? ` <small>diag ${d.right}/${d.total}</small>` : ''}</span></div>`; }).join('')}</div>`;
 
   function statsHtml() {
+    if (GAME) return `<p class="muted">${TRACKS.reduce((n, t) => n + t.lessons.filter((l) => lessonPct(l) === 100).length, 0)} lessons complete · ${store.get('designhist', []).filter((x) => window.DESIGNS.some((d) => d.id === x.id)).length} game design reps saved</p>`;
     const att = store.get('attempts', []), okIds = new Set(att.filter((a) => a.ok).map((a) => a.id)), total = allExercises().length;
     const inBudget = att.filter((a) => a.ok && a.secs <= a.limit).length, dh = store.get('designhist', []), st = store.get('stories', []), mk = H.mockSummary();
     return `<div class="stats3"><div><b>${okIds.size}/${total}</b><span>exercises solved against the clock</span></div><div><b>${att.length ? Math.round((att.filter((a) => a.ok).length / att.length) * 100) + '%' : '–'}</b><span>timed attempts that succeeded</span></div><div><b>${dh.length}</b><span>design reps · avg ${dh.length ? Math.round((dh.reduce((n, x) => n + x.score / x.total, 0) / dh.length) * 100) : 0}%</span></div><div><b>${st.length}</b><span>STAR stories</span></div><div><b>${mk.h.length}</b><span>mock answers · avg ${mk.avg}%</span></div></div>`;
@@ -125,7 +138,7 @@
   function heatmapHtml() {
     const all = store.get('activity', {}), cells = [], today = new Date(); today.setHours(12);
     const start = new Date(today); start.setDate(today.getDate() - (12 * 7 - 1)); start.setDate(start.getDate() - start.getDay());
-    for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) { const a = all[dstr(d)] || {}, n = (a.practice || 0) + (a.cards || 0) / 3 + (a.drill || 0) * 3 + (a.design || 0) * 4 + (a.story || 0) * 2 + (a.mock || 0) * 2 + (a.est || 0) / 2; cells.push({ d: dstr(d), lv: n === 0 ? 0 : n < 3 ? 1 : n < 8 ? 2 : n < 16 ? 3 : 4, n }); }
+    for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) { const a = all[dstr(d)] || {}, n = (a.practice || 0) + (a.cards || 0) / 3 + (a.drill || 0) * 3 + (a.design || 0) * 4 + (a.story || 0) * 2 + (a.mock || 0) * 2 + (a.est || 0) / 2 + (a.kata || 0) * 3 + (a.art || 0) * 3; cells.push({ d: dstr(d), lv: n === 0 ? 0 : n < 3 ? 1 : n < 8 ? 2 : n < 16 ? 3 : 4, n }); }
     return `<h3>Activity, last 12 weeks</h3><div class="heat">${cells.map((c) => `<i class="lv${c.lv}" title="${c.d}: ${Math.round(c.n)} points"></i>`).join('')}</div>`;
   }
 
