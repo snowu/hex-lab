@@ -24,6 +24,7 @@
     $('.brand').setAttribute('aria-label', 'Game Dev Lab home');
     for (const k of ['stories', 'mock']) { const a = document.querySelector(`.top nav a[href="#/${k}"]`); if (a) a.remove(); }
     const forge = document.createElement('a'); forge.href = '#/forge'; forge.textContent = 'forge'; forge.dataset.nav = 'forge'; $('.top nav').append(forge);
+    const play = document.createElement('a'); play.href = '#/play'; play.textContent = 'play'; play.dataset.nav = 'play'; $('.top nav').append(play);
     const guard = () => { if (/^#\/(stories|mock)/.test(location.hash)) location.hash = '#/'; };
     addEventListener('hashchange', guard); guard();
   }

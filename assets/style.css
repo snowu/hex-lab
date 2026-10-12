@@ -846,3 +846,27 @@ button.tool{background:none;border:0;border-left:0;font:inherit;text-align:left;
 .dr-body>p{padding:0 20px}
 .dr-body .dhint,.dr-body .dsolbox .callout{margin:12px 20px}
 .dr-body .dsolbox>pre{margin-bottom:0}
+
+/* Game learning workspaces */
+.gl-layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:20px;align-items:start}
+.gl-stage,.gl-controls{padding:16px;min-width:0}
+.gl-stage canvas{display:block;width:100%;max-width:100%;height:auto;background:#100d1a;image-rendering:pixelated;touch-action:none;border:1px solid var(--line2);border-radius:8px}
+.gl-stage canvas:focus{outline:2px solid var(--accent);outline-offset:3px}
+.gl-stage output,.gl-controls output{display:block;margin:12px 0;overflow-wrap:anywhere}
+.gl-controls input:not([type=checkbox]),.gl-controls select,.gl-controls textarea{width:100%;max-width:100%}
+.gl-controls input[type=range]{accent-color:var(--accent)}
+.gl-controls select,.gl-stage select{background:var(--panel);color:var(--ink);border:1px solid var(--line2);padding:8px;border-radius:5px}
+.gl-code{font-family:var(--mono);font-size:14px;white-space:pre;overflow:auto;tab-size:2}
+.gl-touch{display:flex;gap:10px;margin:12px 0;flex-wrap:wrap}
+.gl-touch button{min-width:56px;min-height:44px;border:1px solid var(--line2);background:var(--panel2);color:var(--ink);border-radius:8px;touch-action:none;user-select:none}
+.gl-touch button:active{background:var(--accent);color:var(--bg)}
+.gl-note{padding:16px;margin:16px 0}.gl-note summary{cursor:pointer;font-weight:700}.gl-note summary small{display:block;color:var(--muted);font-weight:400}.gl-snapshot{width:100%;max-width:640px;image-rendering:pixelated;margin:16px 0}.gl-controls pre{white-space:pre-wrap;overflow-wrap:anywhere}.gl-layout table{font-size:.85rem;max-width:100%}.gl-layout .dbar{flex-wrap:wrap}.gl-controls .lbl{margin-top:12px}
+@media(max-width:900px){.gl-layout{grid-template-columns:1fr}.gl-controls{width:100%}.gl-stage{padding:10px}.gl-controls input,.gl-controls select,.gl-controls textarea{font-size:16px}}
+.gl-stage,.gl-controls,.gl-note{background:var(--panel);border:1px solid var(--line)}
+.gl-controls .inp,.gl-note .inp,.gl-code{display:block;width:100%;min-width:0;padding:10px 12px;border:1px solid var(--line2);background:var(--editor);color:var(--ink);font-family:var(--mono);resize:vertical}
+.gl-controls .inp:focus,.gl-note .inp:focus,.gl-code:focus{outline:1px solid var(--accent)}
+.gl-source{max-width:100%;overflow:auto;font-size:.75rem;max-height:440px}
+.gl-controls h2{margin-top:24px}.gl-controls h2:first-child{margin-top:0}
+.gl-controls details{margin-top:20px}.gl-controls summary{cursor:pointer;color:var(--ink);font-weight:700}
+@media(min-width:901px){.gl-stage{position:sticky;top:90px}}
+@media(max-width:760px){.xp>span:nth-child(2){display:none}.xp{gap:5px;padding-right:5px}.top-r{min-width:0}.gl-stage{position:static}}
