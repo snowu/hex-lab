@@ -36,7 +36,7 @@
     const act = actToday(), tasks = [], self = store.get('self', {}), due = dueCards().length;
     const cardsTarget = Math.min(due, mins <= 15 ? 10 : mins <= 30 ? 15 : 25);
     if (due) tasks.push({ icon: 'cards', title: `Review ${cardsTarget} flashcards`, detail: `${due} due. Say each answer out loud before flipping.`, href: '#/review', done: (act.cards || 0) >= cardsTarget, min: Math.ceil(cardsTarget / 3) });
-    const kd = [...(window.GAME_KATA_SR && GAME ? GAME_KATA_SR.due() : []), ...(window.KATA_SR ? KATA_SR.due() : [])];
+    const kd = [...(window.GAME_KATA_SR && GAME ? GAME_KATA_SR.due() : []), ...(!GAME && window.KATA_SR ? KATA_SR.due() : [])];
     if (kd.length) tasks.push({ icon: 'terminal', title: `Kata review: ${kd[0].name}`, detail: `${kd.length} kata${kd.length === 1 ? '' : 's'} due for spaced review. Solve it again from scratch, no peeking.`, href: kd[0].href || '#/kata/' + kd[0].slug, done: (act.kata || 0) >= 1, min: 15 });
     if (GAME) {
       const projects = store.get('gd:projects', {});

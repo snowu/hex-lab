@@ -618,7 +618,7 @@ window.GameProjectRuntime = function (canvas, kind, options = {}) {
               step.target === true
                 ? stats[step.metric] === true
                 : stats[step.metric] >= step.target;
-          const codeDone = !!store.get("gd:outcomes", {})["kata-" + step.kata],
+          const codeDone = !!store.get("gd:kataPasses", {})[step.kata],
             noteDone = !!$("#jlearn").value.trim();
           $("#jcomplete").disabled =
             !!saved.completed[stage] || !(reached && codeDone && noteDone);

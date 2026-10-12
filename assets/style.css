@@ -870,3 +870,5 @@ button.tool{background:none;border:0;border-left:0;font:inherit;text-align:left;
 .gl-controls details{margin-top:20px}.gl-controls summary{cursor:pointer;color:var(--ink);font-weight:700}
 @media(min-width:901px){.gl-stage{position:sticky;top:90px}}
 @media(max-width:760px){.xp>span:nth-child(2){display:none}.xp{gap:5px;padding-right:5px}.top-r{min-width:0}.gl-stage{position:static}}
+.gl-instructions{white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--font)}
+#gkref pre{max-width:100%;overflow:auto}#gklanguage,#gkfile,#gkgroup{background:var(--editor);color:var(--ink);border:1px solid var(--line2);padding:8px}#gkfilter{min-width:0;padding:8px;background:var(--editor);color:var(--ink);border:1px solid var(--line2)}

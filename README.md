@@ -128,8 +128,8 @@ A second section on the same site, for **learning game development** (it is not 
 
 - **11 tracks, 61 lessons** in a learning order: game loop and architecture, game math, **game programming patterns** (12 lessons: sequencing, command, observer and event queue, state, pool/flyweight/data locality, type object, dirty flag, component and service locator, spatial partitioning, bytecode, singletons and other traps, a worked architecture), simulation and physics, game design theory, graphics/UI/audio, game AI, multiplayer networking, techniques (procedural generation, noise and WFC, cameras, saves, a Godot field guide, Zig for games, C++ for games, a practice ladder), production and tooling, and pixel art.
 - **16 interactive simulations** (timestep, tunneling, easing, juice, event queue, integrators, raycasting, transforms, flocking, netcode prediction and interpolation, caves, noise, and a pixel editor, colour ramps, dithering, animation).
-- **33 coding drills in Zig and C++** (no Python). Neither language compiles in the browser, so each drill shows the prompt, starter, tests, hint and reference solution, gives you the single file to download, and you run it locally (`zig test x.zig`, `g++ -std=c++20 x.cpp`). The same files live in `drills/zig` and `drills/cpp`. You can paste your solution for AI feedback and tick the drill off yourself. Zig drills target **Zig 0.17.0**.
-- **Everything is compiled in CI.** `node scripts/validate-drills.mjs` compiles every reference solution (C++ with AddressSanitizer and UBSan) and checks every starter fails its tests. `node scripts/validate-snippets.mjs` compiles and runs the complete code samples embedded in lessons (marked `data-check`). Both need Zig 0.17.0 and g++ (`ZIG=/path/to/zig`). After editing `content/drills-*.js` run `node scripts/gen-drills.mjs` (`--check` fails when `drills/` is stale). `node scripts/validate.mjs` also checks that lesson HTML tags are balanced.
+- **33 coding drills in C, Zig and C++** (no Python). Native languages compile locally, so each drill shows the prompt, starter, tests, hint and reference solution, gives you the single file to download, and you run it locally (`cc -std=c17 x.c -lm`, `zig test x.zig`, `g++ -std=c++20 x.cpp`). The same files live in `drills/c`, `drills/zig` and `drills/cpp`. You can paste your solution for AI feedback and tick the drill off yourself. Zig drills target **Zig 0.17.0**.
+- **Everything is compiled in CI.** `node scripts/validate-drills.mjs` compiles every reference solution (C and C++ with AddressSanitizer and UBSan) and checks every starter fails its tests. `node scripts/validate-snippets.mjs` compiles and runs the complete code samples embedded in lessons (marked `data-check`). Both need Zig 0.17.0, a C compiler and g++ (`ZIG=/path/to/zig`). After editing `content/drills-*.js` run `node scripts/gen-drills.mjs` (`--check` fails when `drills/` is stale). `node scripts/validate.mjs` also checks that lesson HTML tags are balanced.
 - The pixel art track points to **spritewright**, a reusable editor that lives in its own project: usable by itself in a browser (open a GitHub repo or a local folder) or as a dependency of a game repository.
 
 ## Dev Lab learning tools
@@ -143,14 +143,14 @@ The Design lab has three game architecture exercises: a platformer controller, a
 Open **play** in the game-dev navigation or use the home toolkit. All workspaces run on the static site:
 
 - **Mechanics lab:** a playable platformer with acceleration, braking, jump impulse, gravity, coyote time, input buffering and camera tuning. Pause, single-step, slow down, change the rendering cap/interpolation, inspect contacts and velocity, record/replay tick inputs, and compare saved A/B controller presets.
-- **Debug playground:** reproduce and repair render-dependent simulation, repeated jumps, tunneling and moving-platform problems. Three isolated code-repair exercises demonstrate duplicate damage, enemies stuck behind walls, and old/corrupted saves.
+- **Debug playground:** reproduce and repair render-dependent simulation, repeated jumps, tunneling and moving-platform problems. Three native code-repair exercises in C, Zig and C++ cover duplicate damage, enemies stuck behind walls, and old/corrupted saves.
 - **Art to game:** import a PNG from spritewright, configure sheet frames, frame rate and pivots, and test it in the controller. Saved art can also appear in the platformer and arena projects.
 - **Level sandbox:** paint solid tiles, enemies, pickups, a spawn and a goal; switch directly to play. Fall/contact locations appear on the map and can be saved with the experiment.
 - **Pathfinding workbench:** paint walls and weighted terrain, step through search expansion, and compare BFS, Dijkstra and A* by visited cells, path length and terrain cost.
 - **AI workbench:** edit a small state machine's thresholds or a priority behaviour tree's condition/action branches. Drag the target and change health while inspecting active decisions.
 - **Shader playground:** edit real GLSL fragment shaders, adjust uniforms, pause time and see compiler errors while the previous working effect keeps rendering. WebGL is required for rendering; unsupported devices can still edit and save source.
 - **Performance playground:** measure collision time and candidate pairs for naive all-pairs and a spatial grid. Compare the same snapshot, change object count/cell size, and inspect clustered worst cases and recent timing samples. Measurements depend on the device.
-- **Game katas:** eight original JavaScript mechanics exercises with browser Worker tests, hints, references, saved drafts and spaced reviews. Infinite loops are terminated after two seconds. General Exercism katas remain available.
+- **Game katas:** eight original mechanics exercises and three repair exercises in C, Zig and C++, with a visible language selector, separate drafts, downloadable single-file starters/tests, references and spaced reviews. Compile and run locally, then record that your tests pass. Zig targets 0.17.0. All 139 Exercism exercises also have C, Zig and C++ starters, tests and references, downloadable as complete project ZIPs. Game Dev Lab routes use this native catalog; Interview Lab retains its Python catalog.
 - **Build-along games:** Pong → Breakout → a platformer room → a wave arena, each with three playable checkpoints, linked code exercises, tuning and learning notes. A checkpoint requires its playable target, a solved linked kata and a note. Export a standalone, editable HTML game that runs locally without a server or external dependencies; the runtime source is available in the workspace.
 - **Project notebook:** saved experiments, screenshots, predictions, observations, decisions, bugs and next attempts; restore workbench settings, review demonstrated outcomes, or export the notebook. Up to 40 entries, subject to browser storage capacity. Normal progress backup and cloud sync include the notebook, project checkpoints, art and game-kata reviews.
 
@@ -159,9 +159,13 @@ Game-specific kata reviews and the next unfinished project appear in the learnin
 Verification:
 
 ```sh
-node scripts/test-game.mjs               # deterministic simulation, collision/search, project runtime and kata harness
-node tests/e2e/run.mjs playgrounds       # real browser interactions, Worker timeouts, mobile controls and standalone export
+node scripts/test-game.mjs               # deterministic simulation, collision/search, project runtime
+node tests/e2e/run.mjs playgrounds       # real browser interactions, native kata downloads, mobile controls and standalone export
 node tests/e2e/run.mjs shaders           # requires a browser with working WebGL
 ```
 
 For software WebGL browser tests, set `LAB_SOFTWARE_GL=1`; `LAB_BROWSER_PATH=/path/to/chrome` selects a different installed Chromium executable if needed. The existing test dependency setup still applies.
+
+Native kata checks: `node scripts/validate-native-katas.mjs --require` compiles all eleven mechanics/repair starters and references in all three languages; references must pass and starters must compile but fail. Set `CC`, `CXX` or `ZIG` to select a compiler.
+
+Full native catalog checks: `node scripts/native/validate.mjs --require-all` checks all 417 language variants against their tests and rejects already-passing starters. Imported upstream skeletons may require implementation before they link; original ports compile before their failing tests run. Set `TMPDIR` to a disk-backed directory when checking the full catalog.

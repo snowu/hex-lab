@@ -1,0 +1,101 @@
+{
+  "fixed_steps": {
+    "title": "Fixed timestep with an accumulator"
+  },
+  "jumper": {
+    "title": "Coyote time and jump buffering"
+  },
+  "fsm": {
+    "title": "A state machine you cannot misuse"
+  },
+  "sparse_set": {
+    "title": "Sparse set: the heart of a fast ECS"
+  },
+  "spatial_hash": {
+    "title": "Spatial hash grid for neighbour queries"
+  },
+  "accel_clamp": {
+    "title": "Acceleration with a speed cap"
+  },
+  "aabb": {
+    "title": "AABB overlap and push-out"
+  },
+  "sweep_hit": {
+    "title": "Swept collision time (no tunneling)"
+  },
+  "damp": {
+    "title": "Frame-rate independent smoothing"
+  },
+  "grid_path": {
+    "title": "Shortest path on a tile map"
+  },
+  "pity": {
+    "title": "Drop rates with a pity timer"
+  },
+  "upgrade_cost": {
+    "title": "Exponential upgrade costs"
+  },
+  "rng_lcg": {
+    "title": "A seeded random number generator"
+  },
+  "ca_smooth": {
+    "title": "Cave generation: one smoothing step"
+  },
+  "save_codec": {
+    "title": "A versioned binary save format"
+  },
+  "autotile": {
+    "title": "Autotile bitmask"
+  },
+  "quantize": {
+    "title": "Snap an image to a palette"
+  },
+  "integer_scale": {
+    "title": "Pixel-perfect integer scaling"
+  },
+  "command_undo": {
+    "title": "Command pattern: undo and redo"
+  },
+  "event_queue": {
+    "title": "Event queue: a fixed-size ring buffer"
+  },
+  "dirty_flag": {
+    "title": "Dirty flag: lazy world transforms"
+  },
+  "type_object": {
+    "title": "Type object: data-driven monsters with inheritance"
+  },
+  "free_list_pool": {
+    "title": "Object pool with an O(1) free list"
+  },
+  "state_stack": {
+    "title": "Pushdown automaton: a stack of states"
+  },
+  "stack_vm": {
+    "title": "Bytecode: a tiny stack virtual machine"
+  },
+  "behavior_tree": {
+    "title": "A behaviour tree tick"
+  },
+  "utility_pick": {
+    "title": "Utility AI: scoring and not flip-flopping"
+  },
+  "spring_integrator": {
+    "title": "Integrators: why the order of two lines matters"
+  },
+  "impulse_1d": {
+    "title": "Collision response with impulses"
+  },
+  "grid_raycast": {
+    "title": "Raycast on a grid (DDA)"
+  },
+  "transform2d": {
+    "title": "2D transforms: matrices and the order of operations"
+  },
+  "net_reconcile": {
+    "title": "Client-side prediction and reconciliation"
+  },
+  "snapshot_interp": {
+    "title": "Snapshot interpolation for remote players"
+  }
+}

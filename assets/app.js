@@ -527,7 +527,7 @@ function rCode(el, s, l, idx, sync, hue, disposers) {
    then you tick it off. You can paste your solution for AI feedback. Progress is self-reported. */
 function rDrill(el, s, l, idx, sync) {
   const key = keysOf(l)[idx], solved = () => !!(progress[l.id] || {})[key];
-  const LANGS = { zig: { name: 'Zig', ext: 'zig', cmd: (id) => `zig test ${id}.zig`, repo: (id) => `zig test drills/zig/${id}.zig` }, cpp: { name: 'C++', ext: 'cpp', cmd: (id) => `g++ -std=c++20 -Wall -o ${id} ${id}.cpp && ./${id}`, repo: (id) => `g++ -std=c++20 -Wall -o /tmp/${id} drills/cpp/${id}.cpp && /tmp/${id}` } };
+  const LANGS = { c: { name: 'C', ext: 'c', cmd: (id) => `cc -std=c17 -Wall ${id}.c -lm -o ${id} && ./${id}`, repo: (id) => `cc -std=c17 -Wall drills/c/${id}.c -lm -o /tmp/${id} && /tmp/${id}` }, zig: { name: 'Zig', ext: 'zig', cmd: (id) => `zig test ${id}.zig`, repo: (id) => `zig test drills/zig/${id}.zig` }, cpp: { name: 'C++', ext: 'cpp', cmd: (id) => `g++ -std=c++20 -Wall -o ${id} ${id}.cpp && ./${id}`, repo: (id) => `g++ -std=c++20 -Wall -o /tmp/${id} drills/cpp/${id}.cpp && /tmp/${id}` } };
   let lang = store.get('drilllang', 'zig'); if (!s[lang]) lang = 'zig';
   el.innerHTML = `${label('terminal', 'Drill')}<div class="ex tc brk has-ask">${askBtn(`I am working on the ${s.title} drill. I will paste my code. Give me a hint first, not the full solution, unless I ask for it.`, 'Ask AI')}
     <div class="ex-head"><div class="ex-title">${esc(s.title)}</div><span class="chip">${esc(s.level || '')} · ${s.minutes || 20} min</span><span class="chip st ${solved() ? 'good' : ''}">${solved() ? ic('check', 12, 3) + ' Passed' : 'Not yet'}</span></div>
@@ -859,14 +859,14 @@ function buildIndex() {
   if (GAME) {
     const tools = [['mechanics', 'Mechanics lab', 'Controller tuning, replay, slow motion and A/B comparison'], ['debug', 'Debug playground', 'Reproduce and repair game bugs'], ['level', 'Level sandbox', 'Tiles, enemies, pickups and playtesting'], ['art', 'Art to game', 'Import sprites and animation sheets'], ['path', 'Pathfinding workbench', 'BFS, Dijkstra and A*'], ['ai', 'AI workbench', 'State machines and behaviour trees'], ['shader', 'Shader playground', 'Live GLSL effects and uniforms'], ['performance', 'Performance playground', 'Collision strategies, profiling and frame costs']];
     tools.forEach(([id, title, sub]) => index.push({ kind: 'Workbench', icon: 'play', title, sub, href: '#/play/' + id, text: (title + ' ' + sub).toLowerCase() }));
-    (window.GAME_KATAS || []).forEach((k) => index.push({ kind: 'Game kata', icon: 'terminal', title: k.title, sub: k.prompt, href: '#/game-kata/' + k.id, text: (k.title + ' ' + k.prompt).toLowerCase() }));
+    [...(window.GAME_KATAS || []), ...(window.NATIVE_KATAS?.items || [])].forEach((k) => index.push({ kind: 'Game kata', icon: 'terminal', title: k.title, sub: k.prompt, href: '#/game-kata/' + k.id, text: (k.title + ' ' + k.prompt).toLowerCase() }));
   }
 }
 const QUICK = () => [
   { kind: 'Go to', icon: 'home', title: 'Learn', sub: 'All tracks', href: '#/' }, { kind: 'Go to', icon: 'cards', title: 'Flashcards', sub: 'Spaced repetition', href: '#/review' },
   ...(!GAME ? [{ kind: 'Go to', icon: 'mic', title: 'Mock interview', sub: 'Random question + timer', href: '#/mock' }] : []),
   { kind: 'Go to', icon: 'target', title: GAME ? 'Learning plan' : 'Daily plan', sub: 'Diagnostic, progress and backup', href: '#/plan' },
-  { kind: 'Go to', icon: 'terminal', title: 'Code katas', sub: 'Exercises and spaced reviews', href: '#/katas' },
+  { kind: 'Go to', icon: 'terminal', title: 'Code katas', sub: 'Exercises and spaced reviews', href: GAME ? '#/game-katas' : '#/katas' },
   { kind: 'Go to', icon: 'design', title: 'Design lab', sub: 'Architecture practice', href: '#/design' },
   ...(GAME ? [{ kind: 'Go to', icon: 'play', title: 'Build & play', sub: 'Playable learning workbenches', href: '#/play' }, { kind: 'Go to', icon: 'terminal', title: 'Build-along games', sub: 'Playable checkpoints and exports', href: '#/projects' }, { kind: 'Go to', icon: 'book', title: 'Project notebook', sub: 'Experiments and outcomes', href: '#/notebook' }, { kind: 'Go to', icon: 'terminal', title: 'Game katas', sub: 'Mechanics with real tests', href: '#/game-katas' }, { kind: 'Go to', icon: 'gdpixel', title: 'Pixel Forge', sub: 'Open spritewright for your project', href: '#/forge' }] : []),
   { kind: 'Go to', icon: 'link', title: 'Free resources', sub: 'Curated links', href: '#/resources' },

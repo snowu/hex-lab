@@ -1,6 +1,6 @@
-import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
+import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url),
   C = require("../assets/game/core.js");
@@ -202,53 +202,4 @@ for (const kind of ["pong", "breakout"])
     assert.equal(game.stats.won, true, JSON.stringify(game.stats));
     game.dispose();
   });
-const context = vm.createContext({ window: {} });
-vm.runInContext(
-  fs.readFileSync(new URL("../content/game-katas.js", import.meta.url), "utf8"),
-  context,
-);
-const workerSource = fs.readFileSync(
-  new URL("../assets/game/kata-worker.js", import.meta.url),
-  "utf8",
-);
-const debugContext = vm.createContext({
-  window: { MODE: "gamedev", LAB_VIEWS: [] },
-});
-vm.runInContext(
-  fs.readFileSync(new URL("../assets/game/debug.js", import.meta.url), "utf8"),
-  debugContext,
-);
-debugContext.window.LAB_VIEWS[0]({ routes: [] });
-for (const k of [
-  ...context.window.GAME_KATAS,
-  ...Object.entries(debugContext.window.GAME_DEBUG_CASES).map(
-    ([id, value]) => ({ id: "debug-" + id, ...value }),
-  ),
-]) {
-  function run(code) {
-    let result;
-    const worker = vm.createContext({
-      self: {
-        postMessage(v) {
-          result = v;
-        },
-      },
-      structuredClone,
-    });
-    vm.runInContext(workerSource, worker);
-    worker.self.onmessage({
-      data: { name: k.name, code, tests: structuredClone(k.tests) },
-    });
-    return result;
-  }
-  check(k.id + " reference passes and starter fails real harness", () => {
-    const solution = run(k.solution),
-      starter = run(k.starter);
-    assert.ok(
-      !solution.error && solution.results.every((r) => r.pass),
-      JSON.stringify(solution),
-    );
-    assert.ok(starter.error || starter.results.some((r) => !r.pass));
-  });
-}
 console.log(`${checks} game checks passed`);

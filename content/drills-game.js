@@ -2518,7 +2518,7 @@ Fit integer_scale(int win_w, int win_h, int base_w, int base_h) {
 
 /* The single file a learner edits: header, starter (or solution), tests. Shared by the lab UI and scripts/lib-drills.mjs. */
 window.drillFile = function (id, d, lang, which) {
-  const head = lang === 'zig'
+  const head = lang === 'c' ? `// ${d.title}\n// Run: cc -std=c17 -Wall ${id}.c -lm -o ${id} && ./${id}\n\n` : lang === 'zig'
     ? `// ${d.title}\n// Run: zig test ${id}.zig   (written against Zig 0.17)\n\n`
     : `// ${d.title}\n// Run: g++ -std=c++20 -Wall -o ${id} ${id}.cpp && ./${id}\n\n`;
   return head + d[lang][which || 'starter'] + '\n// ---- tests: do not edit below this line ----\n' + d[lang].tests;

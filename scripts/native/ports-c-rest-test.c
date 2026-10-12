@@ -1,0 +1,11 @@
+rest_api a;assert(rest_init(&a,NULL));
+char*s=rest_get(&a,"/users",NULL);assert(!strcmp(s,"{\"users\":[]}"));free(s);
+s=rest_post(&a,"/add","{\"user\":\"Bob\"}");assert(!strcmp(s,"{\"name\":\"Bob\",\"owes\":{},\"owed_by\":{},\"balance\":0}"));free(s);
+s=rest_post(&a,"/add","{\"user\":\"Adam\"}");free(s);
+s=rest_post(&a,"/iou","{\"lender\":\"Adam\",\"borrower\":\"Bob\",\"amount\":3}");
+assert(!strcmp(s,"{\"users\":[{\"name\":\"Adam\",\"owes\":{},\"owed_by\":{\"Bob\":3},\"balance\":3},{\"name\":\"Bob\",\"owes\":{\"Adam\":3},\"owed_by\":{},\"balance\":-3}]}"));free(s);
+s=rest_post(&a,"/iou","{\"lender\":\"Bob\",\"borrower\":\"Adam\",\"amount\":4}");assert(strstr(s,"\"owes\":{\"Bob\":1}"));free(s);
+s=rest_post(&a,"/iou","{\"lender\":\"Adam\",\"borrower\":\"Bob\",\"amount\":1}");assert(strstr(s,"\"owes\":{},\"owed_by\":{},\"balance\":0"));free(s);
+s=rest_get(&a,"/users","{\"users\":[\"Bob\"]}");assert(strstr(s,"Bob")&&!strstr(s,"Adam"));free(s);rest_free(&a);
+assert(rest_init(&a,"{\"users\":[{\"name\":\"Adam\",\"owes\":{\"Bob\":3},\"owed_by\":{}},{\"name\":\"Bob\",\"owes\":{},\"owed_by\":{\"Adam\":3}}]}"));
+s=rest_get(&a,"/users",NULL);assert(strstr(s,"\"balance\":-3"));free(s);rest_free(&a);

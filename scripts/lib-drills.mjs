@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 export const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-export const EXT = { zig: 'zig', cpp: 'cpp' };
+export const EXT = { c: 'c', zig: 'zig', cpp: 'cpp' };
 
 export function loadDrills() {
   const ctx = vm.createContext({});

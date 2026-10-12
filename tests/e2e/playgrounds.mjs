@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import {spawnSync} from "node:child_process";
 import { newPage } from "./helpers.mjs";
 export default async function ({ url, browser, ok, section }) {
   const page = await newPage(browser);
@@ -248,57 +249,62 @@ export default async function ({ url, browser, ok, section }) {
     (await page.locator("#fresults tr").count()) === 3,
     "measured benchmark compares strategies",
   );
-  section("code repair scenarios");
+  section("native repair scenarios");
   for (const id of ["damage", "stuck", "saves"]) {
     await page.go(url, "#/debug/" + id);
-    await page.locator("#debugrepro").click();
-    await page.waitForTimeout(200);
-    ok(
-      /✗/.test(await page.locator("#debugresult").innerText()),
-      id + " broken version reproduced",
-    );
-    const source = await page.evaluate(
-      (id) => GAME_DEBUG_CASES[id].solution,
-      id,
-    );
-    await page.locator("#debugcode").fill(source);
-    await page.locator("#debugrun").click();
-    await page.waitForTimeout(200);
-    ok(
-      /Repair verified/.test(await page.locator("#debugresult").innerText()),
-      id + " repair verified and saved",
-    );
+    await page.locator('#gklanguage').waitFor();
+    ok(await page.evaluate(id => location.hash === '#/game-kata/debug-' + id, id), id + ' repair opens native exercise');
+    ok(await page.locator('#debugcode').count() === 0, id + ' repair uses native code editor');
+    await page.locator('#gksolution').click();
+    ok(await page.locator('#gkref').isVisible(), id + ' native repair reference available');
   }
-  section("real game kata harness and timeout");
+  section("native game katas");
   for (const id of await page.evaluate(() => GAME_KATAS.map((k) => k.id))) {
-    await page.go(url, "#/game-kata/" + id, 100);
-    await page.locator("#gkrun").click();
-    await page.waitForTimeout(150);
-    ok(
-      !/All tests passed/.test(await page.locator("#gkresult").innerText()),
-      id + " starter fails",
-    );
-    const solution = await page.evaluate(
-      (id) => GAME_KATAS.find((k) => k.id === id).solution,
-      id,
-    );
-    await page.locator("#gkcode").fill(solution);
-    await page.locator("#gkrun").click();
-    await page.waitForTimeout(200);
-    ok(
-      /All tests passed/.test(await page.locator("#gkresult").innerText()),
-      id + " reference passes browser worker",
-    );
+    await page.go(url, '#/game-kata/' + id, 100);
+    for (const lang of ['c','zig','cpp']) {
+      await page.locator('#gklanguage').selectOption(lang);
+      await page.waitForTimeout(400);
+      const download = page.waitForEvent('download'); await page.locator('#gkdownload').click(); const file = await download;
+      ok(file.suggestedFilename() === id + '.' + (lang === 'cpp' ? 'cpp' : lang), id + '/' + lang + ' file downloadable');
+      const text = fs.readFileSync(await file.path(), 'utf8'); ok(text.includes('Tests') && (lang === 'zig' ? text.includes('std.testing') : text.includes('int main')), id + '/' + lang + ' download contains real tests');
+    }
+    await page.locator('#gkpass').click();
+    ok((await page.locator('#gkresult').textContent()).includes('local pass recorded'), id + ' local completion recorded');
   }
-  await page
-    .locator("#gkcode")
-    .fill("function smoothCamera(){ while(true){} }");
-  await page.locator("#gkrun").click();
-  await page.waitForTimeout(2200);
-  ok(
-    /Stopped after 2 seconds/.test(await page.locator("#gkresult").innerText()),
-    "infinite loop worker terminates",
-  );
+  await page.go(url, '#/katas'); ok(await page.locator('#gklanguage').count() === 0 && /Game katas/.test(await page.locator('h1').textContent()), 'Dev Lab katas entry opens native catalog');
+  section("full native catalog");
+  await page.locator('#gkgroup').selectOption('catalog');
+  ok(await page.locator('#gklist .dcard').count() === 139, 'all 139 catalog exercises listed');
+  await page.locator('#gkfilter').fill('Alphametics');
+  ok(await page.locator('#gklist .dcard').count() === 1, 'catalog search narrows exercises');
+  await page.go(url, '#/kata/alphametics');
+  await page.locator('#gklanguage').waitFor();
+  ok(await page.locator('h1').textContent() === 'Alphametics', 'legacy kata links open native exercises');
+  const nativeRequests = [];
+  page.on('request', request => nativeRequests.push(request.url()));
+  for (const lang of ['c', 'zig', 'cpp']) {
+    await page.locator('#gklanguage').selectOption(lang);
+    await page.waitForFunction(lang => document.querySelector('#gklanguage')?.value === lang && document.querySelector('#gkcode'), lang);
+    await page.locator('#gkcode').fill('// draft for ' + lang);
+    await page.waitForTimeout(400);
+    const pending = page.waitForEvent('download');
+    await page.locator('#gkdownload').click();
+    const download = await pending;
+    ok(download.suggestedFilename() === 'alphametics-' + lang + '.zip', lang + ' full project ZIP downloadable');
+    const result = spawnSync('python3', ['-c', 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); assert z.testzip() is None; names=z.namelist(); assert "LICENSE" in names and "README.md" in names and "INSTRUCTIONS.md" in names; assert any("test" in n for n in names); assert any("draft for " in z.read(n).decode() for n in names); assert "Alphametics" in z.read("README.md").decode()', await download.path()], {encoding:'utf8'});
+    ok(result.status === 0, lang + ' ZIP contains edited source, tests, instructions and license');
+  }
+  await page.locator('#gklanguage').selectOption('c');
+  await page.waitForFunction(() => document.querySelector('#gkcode')?.value === '// draft for c');
+  ok(await page.locator('#gkcode').inputValue() === '// draft for c', 'language-specific drafts restored');
+  ok(!nativeRequests.some(url => url.includes('/katas/python/')), 'native exercises load native source bundles');
+  await page.locator('#gkfile').selectOption('exercise.h');
+  const header = await page.locator('#gkcode').inputValue();
+  await page.locator('#gkcode').fill(header + '\n// header draft');
+  await page.locator('#gkfile').selectOption('exercise.c');
+  ok(await page.locator('#gkcode').inputValue() === '// draft for c', 'switching files preserves source draft');
+  await page.locator('#gkfile').selectOption('exercise.h');
+  ok((await page.locator('#gkcode').inputValue()).endsWith('// header draft'), 'switching files preserves header draft');
   section("projects and standalone export");
   for (const id of ["pong", "breakout", "platformer", "arena"]) {
     await page.go(url, "#/project/" + id);

@@ -1,0 +1,2503 @@
+{
+  "required": [
+    "anagram",
+    "armstrong-numbers",
+    "binary-search",
+    "bob",
+    "collatz-conjecture",
+    "darts",
+    "difference-of-squares",
+    "etl",
+    "flatten-array",
+    "gigasecond",
+    "grains",
+    "hamming",
+    "hello-world",
+    "house",
+    "isbn-verifier",
+    "isogram",
+    "leap",
+    "line-up",
+    "list-ops",
+    "pangram",
+    "perfect-numbers",
+    "raindrops",
+    "resistor-color",
+    "resistor-color-duo",
+    "resistor-color-expert",
+    "resistor-color-trio",
+    "reverse-string",
+    "rna-transcription",
+    "rotational-cipher",
+    "secret-handshake",
+    "space-age",
+    "sum-of-multiples",
+    "triangle",
+    "two-fer",
+    "accumulate",
+    "acronym",
+    "atbash-cipher",
+    "dnd-character",
+    "diamond",
+    "eliuds-eggs",
+    "luhn",
+    "matching-brackets",
+    "nth-prime",
+    "nucleotide-count",
+    "phone-number",
+    "pig-latin",
+    "prime-factors",
+    "protein-translation",
+    "proverb",
+    "queen-attack",
+    "robot-name",
+    "roman-numerals",
+    "run-length-encoding",
+    "say",
+    "scrabble-score",
+    "series",
+    "square-root",
+    "sublist",
+    "transpose",
+    "twelve-days",
+    "word-count",
+    "yacht",
+    "allergies",
+    "beer-song",
+    "binary",
+    "bottle-song",
+    "circular-buffer",
+    "clock",
+    "connect",
+    "game-of-life",
+    "crypto-square",
+    "diffie-hellman",
+    "grade-school",
+    "hexadecimal",
+    "high-scores",
+    "kindergarten-garden",
+    "matrix",
+    "ocr-numbers",
+    "octal",
+    "point-mutations",
+    "poker",
+    "pythagorean-triplet",
+    "rectangles",
+    "robot-simulator",
+    "saddle-points",
+    "sieve",
+    "simple-cipher",
+    "simple-linked-list",
+    "state-of-tic-tac-toe",
+    "strain",
+    "tree-building",
+    "wordy",
+    "all-your-base",
+    "change",
+    "complex-numbers",
+    "flower-field",
+    "food-chain",
+    "go-counting",
+    "grep",
+    "hangman",
+    "killer-sudoku-helper",
+    "largest-series-product",
+    "ledger",
+    "linked-list",
+    "markdown",
+    "meetup",
+    "minesweeper",
+    "palindrome-products",
+    "pascals-triangle",
+    "rail-fence-cipher",
+    "scale-generator",
+    "spiral-matrix",
+    "swift-scheduling",
+    "tournament",
+    "trinary",
+    "variable-length-quantity",
+    "binary-search-tree",
+    "bowling",
+    "camicia",
+    "custom-set",
+    "dot-dsl",
+    "forth",
+    "knapsack",
+    "rational-numbers",
+    "relative-distance",
+    "zebra-puzzle",
+    "affine-cipher",
+    "alphametics",
+    "bank-account",
+    "react",
+    "two-bucket",
+    "word-search",
+    "zipper",
+    "book-store",
+    "dominoes",
+    "satellite",
+    "sgf-parsing",
+    "rest-api",
+    "pov"
+  ],
+  "languages": [
+    "c",
+    "zig",
+    "cpp"
+  ],
+  "variants": [
+    {
+      "slug": "anagram",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "armstrong-numbers",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "binary-search",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "bob",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "collatz-conjecture",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "darts",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "difference-of-squares",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "etl",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "flatten-array",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "gigasecond",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "grains",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "hamming",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "hello-world",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "house",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "isbn-verifier",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "isogram",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "leap",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "line-up",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "list-ops",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "pangram",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "perfect-numbers",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "raindrops",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "resistor-color",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "resistor-color-duo",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "resistor-color-expert",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "resistor-color-trio",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "reverse-string",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "rna-transcription",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "rotational-cipher",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "secret-handshake",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "space-age",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "sum-of-multiples",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "triangle",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "two-fer",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "accumulate",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "acronym",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "atbash-cipher",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "dnd-character",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "diamond",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "eliuds-eggs",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "luhn",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "matching-brackets",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "nth-prime",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "nucleotide-count",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "phone-number",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "pig-latin",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "prime-factors",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "protein-translation",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "proverb",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "queen-attack",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "robot-name",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "roman-numerals",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "run-length-encoding",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "say",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "scrabble-score",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "series",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "square-root",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "sublist",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "transpose",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "twelve-days",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "word-count",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "yacht",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "allergies",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "beer-song",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "binary",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "bottle-song",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "circular-buffer",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "clock",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "connect",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "game-of-life",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "crypto-square",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "diffie-hellman",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "grade-school",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "hexadecimal",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "high-scores",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "kindergarten-garden",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "matrix",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "ocr-numbers",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "octal",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "point-mutations",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "poker",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "pythagorean-triplet",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "rectangles",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "robot-simulator",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "saddle-points",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "sieve",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "simple-cipher",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "simple-linked-list",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "state-of-tic-tac-toe",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "strain",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "tree-building",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "wordy",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "all-your-base",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "change",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "complex-numbers",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "flower-field",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "food-chain",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "go-counting",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "grep",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "hangman",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "killer-sudoku-helper",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "largest-series-product",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "ledger",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "linked-list",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "markdown",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "meetup",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "minesweeper",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "palindrome-products",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "pascals-triangle",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "rail-fence-cipher",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "scale-generator",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "spiral-matrix",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "swift-scheduling",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "tournament",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "trinary",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "variable-length-quantity",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "binary-search-tree",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "bowling",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "camicia",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "custom-set",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "dot-dsl",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "forth",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "knapsack",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "rational-numbers",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "relative-distance",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "zebra-puzzle",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "affine-cipher",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "alphametics",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "bank-account",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "react",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "two-bucket",
+      "language": "c",
+      "status": "imported",
+      "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe"
+    },
+    {
+      "slug": "word-search",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "zipper",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "book-store",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "dominoes",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "satellite",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "sgf-parsing",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "rest-api",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "pov",
+      "language": "c",
+      "status": "ported"
+    },
+    {
+      "slug": "anagram",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "armstrong-numbers",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "binary-search",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "bob",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "collatz-conjecture",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "darts",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "difference-of-squares",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "etl",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "flatten-array",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "gigasecond",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "grains",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "hamming",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "hello-world",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "house",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "isbn-verifier",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "isogram",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "leap",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "line-up",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "list-ops",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "pangram",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "perfect-numbers",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "raindrops",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "resistor-color",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "resistor-color-duo",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "resistor-color-expert",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "resistor-color-trio",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "reverse-string",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "rna-transcription",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "rotational-cipher",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "secret-handshake",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "space-age",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "sum-of-multiples",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "triangle",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "two-fer",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "accumulate",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "acronym",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "atbash-cipher",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "dnd-character",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "diamond",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "eliuds-eggs",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "luhn",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "matching-brackets",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "nth-prime",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "nucleotide-count",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "phone-number",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "pig-latin",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "prime-factors",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "protein-translation",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "proverb",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "queen-attack",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "robot-name",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "roman-numerals",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "run-length-encoding",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "say",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "scrabble-score",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "series",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "square-root",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "sublist",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "transpose",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "twelve-days",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "word-count",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "yacht",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "allergies",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "beer-song",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "binary",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "bottle-song",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "circular-buffer",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "clock",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "connect",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "game-of-life",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "crypto-square",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "diffie-hellman",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "grade-school",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "hexadecimal",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "high-scores",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "kindergarten-garden",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "matrix",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "ocr-numbers",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "octal",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "point-mutations",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "poker",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "pythagorean-triplet",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "rectangles",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "robot-simulator",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "saddle-points",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "sieve",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "simple-cipher",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "simple-linked-list",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "state-of-tic-tac-toe",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "strain",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "tree-building",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "wordy",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "all-your-base",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "change",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "complex-numbers",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "flower-field",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "food-chain",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "go-counting",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "grep",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "hangman",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "killer-sudoku-helper",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "largest-series-product",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "ledger",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "linked-list",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "markdown",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "meetup",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "minesweeper",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "palindrome-products",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "pascals-triangle",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "rail-fence-cipher",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "scale-generator",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "spiral-matrix",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "swift-scheduling",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "tournament",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "trinary",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "variable-length-quantity",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "binary-search-tree",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "bowling",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "camicia",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "custom-set",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "dot-dsl",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "forth",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "knapsack",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "rational-numbers",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "relative-distance",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "zebra-puzzle",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "affine-cipher",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "alphametics",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "bank-account",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "react",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "two-bucket",
+      "language": "cpp",
+      "status": "imported",
+      "ref": "e6e47e11fb47e561d0eca71c6197163695b44caf"
+    },
+    {
+      "slug": "word-search",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "zipper",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "book-store",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "dominoes",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "satellite",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "sgf-parsing",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "rest-api",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "pov",
+      "language": "cpp",
+      "status": "ported"
+    },
+    {
+      "slug": "anagram",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "armstrong-numbers",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "binary-search",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "bob",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "collatz-conjecture",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "darts",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "difference-of-squares",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "etl",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "flatten-array",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "gigasecond",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "grains",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "hamming",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "hello-world",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "house",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "isbn-verifier",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "isogram",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "leap",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "line-up",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "list-ops",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "pangram",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "perfect-numbers",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "raindrops",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "resistor-color",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "resistor-color-duo",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "resistor-color-expert",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "resistor-color-trio",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "reverse-string",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "rna-transcription",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "rotational-cipher",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "secret-handshake",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "space-age",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "sum-of-multiples",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "triangle",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "two-fer",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "accumulate",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "acronym",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "atbash-cipher",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "dnd-character",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "diamond",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "eliuds-eggs",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "luhn",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "matching-brackets",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "nth-prime",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "nucleotide-count",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "phone-number",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "pig-latin",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "prime-factors",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "protein-translation",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "proverb",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "queen-attack",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "robot-name",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "roman-numerals",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "run-length-encoding",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "say",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "scrabble-score",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "series",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "square-root",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "sublist",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "transpose",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "twelve-days",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "word-count",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "yacht",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "allergies",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "beer-song",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "binary",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "bottle-song",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "circular-buffer",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "clock",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "connect",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "game-of-life",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "crypto-square",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "diffie-hellman",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "grade-school",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "hexadecimal",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "high-scores",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "kindergarten-garden",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "matrix",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "ocr-numbers",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "octal",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "point-mutations",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "poker",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "pythagorean-triplet",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "rectangles",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "robot-simulator",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "saddle-points",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "sieve",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "simple-cipher",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "simple-linked-list",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "state-of-tic-tac-toe",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "strain",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "tree-building",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "wordy",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "all-your-base",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "change",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "complex-numbers",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "flower-field",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "food-chain",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "go-counting",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "grep",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "hangman",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "killer-sudoku-helper",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "largest-series-product",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "ledger",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "linked-list",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "markdown",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "meetup",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "minesweeper",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "palindrome-products",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "pascals-triangle",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "rail-fence-cipher",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "scale-generator",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "spiral-matrix",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "swift-scheduling",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "tournament",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "trinary",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "variable-length-quantity",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "binary-search-tree",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "bowling",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "camicia",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "custom-set",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "dot-dsl",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "forth",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "knapsack",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "rational-numbers",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "relative-distance",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "zebra-puzzle",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "affine-cipher",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "alphametics",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "bank-account",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "react",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "two-bucket",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "word-search",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "zipper",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "book-store",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "dominoes",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "satellite",
+      "language": "zig",
+      "status": "imported",
+      "ref": "e7a2df12f3a215a44c940fcaf6d110f152f015ff"
+    },
+    {
+      "slug": "sgf-parsing",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "rest-api",
+      "language": "zig",
+      "status": "ported"
+    },
+    {
+      "slug": "pov",
+      "language": "zig",
+      "status": "ported"
+    }
+  ]
+}

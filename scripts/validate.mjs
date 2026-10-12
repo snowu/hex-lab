@@ -80,7 +80,7 @@ for (const t of TRACKS) for (const l of t.lessons) {
       if (s.ref) fail(where + ' unresolved drill ref ' + s.ref);
       if (!s.pid) fail(where + ' drill needs a pid');
       for (const f of ['title', 'prompt', 'hint', 'notes']) if (!s[f]) fail(`${where} drill missing "${f}"`);
-      for (const lang of ['zig', 'cpp']) for (const f of ['starter', 'tests', 'solution']) if (!s[lang]?.[f]) fail(`${where} drill missing ${lang}.${f}`);
+      for (const lang of ['c', 'zig', 'cpp']) for (const f of ['starter', 'tests', 'solution']) if (!s[lang]?.[f]) fail(`${where} drill missing ${lang}.${f}`);
     }
     if (s.type === 'sim') {
       if (!s.pid) fail(where + ' sim section needs a pid');
@@ -155,6 +155,6 @@ MOCK.forEach((m, i) => {
   for (const id of m.lessons || []) if (!ids.has(id)) fail('mock ' + i + ' links to unknown lesson ' + id);
 });
 RESOURCES.forEach((r, i) => { if (!/^https:\/\//.test(r.url) || !r.title || !r.cat || !r.note) fail('resource ' + i + ' malformed'); });
-console.log(`${TRACKS.length} tracks, ${ids.size} lessons, ${exercises} python exercises, ${bugs} bug hunts, ${predicts} predicts, ${sims} sims, ${drills} Zig/C++ drills, ${DESIGNS.length} design reps, ${ESTIMATES.length} estimation types, ${quizzes} quizzes, ${CARDS.length} cards, ${MOCK.length} mock questions, ${RESOURCES.length} resources`);
+console.log(`${TRACKS.length} tracks, ${ids.size} lessons, ${exercises} python exercises, ${bugs} bug hunts, ${predicts} predicts, ${sims} sims, ${drills} C/Zig/C++ drills, ${DESIGNS.length} design reps, ${ESTIMATES.length} estimation types, ${quizzes} quizzes, ${CARDS.length} cards, ${MOCK.length} mock questions, ${RESOURCES.length} resources`);
 if (bad) { console.error(bad + ' problem(s)'); process.exit(1); }
 console.log('All content valid ✓');
