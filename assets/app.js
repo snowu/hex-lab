@@ -169,8 +169,9 @@ function route() {
   app.innerHTML = '<h1>Not found</h1><p><a href="#/">Back home</a></p>';
 }
 function setNav(h) {
-  const key = ['review', 'mock', 'resources', 'plan', 'design', 'stories', 'data', 'kata', 'forge'].find((k) => h.startsWith('#/' + k)) || 'home';
-  $$('.top nav a').forEach((a) => a.classList.toggle('on', a.dataset.nav === key));
+  const key = ['review', 'mock', 'resources', 'plan', 'design', 'stories', 'data', 'kata', 'forge', 'play', 'project', 'notebook', 'game-kata'].find((k) => h.startsWith('#/' + k)) || 'home';
+  $$('.top nav a').forEach((a) => a.classList.toggle('on', a.dataset.nav === (GAME && ['project', 'notebook', 'game-kata'].includes(key) ? 'play' : key)));
+  if (matchMedia('(max-width:760px)').matches) $('.top nav a.on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 addEventListener('hashchange', route);
 
@@ -243,7 +244,7 @@ function viewHome() {
       <a class="tool" href="#/plan"><span class="si">${ic('target', 22)}</span><div><b>${GAME ? 'Learning plan' : 'Daily plan'}</b><span>diagnostic · progress · sync · backup</span></div></a>
       <a class="tool" href="#/katas"><span class="si">${ic('terminal', 22)}</span><div><b>Code katas</b><span>practice · tests · spaced reviews</span></div></a>
       <a class="tool" href="#/design"><span class="si">${ic('design', 22)}</span><div><b>Design lab</b><span>${GAME ? 'game architecture · references · self review' : 'design reps · estimation'}</span></div></a>
-      ${GAME ? `<a class="tool" href="#/forge"><span class="si">${ic('gdpixel', 22)}</span><div><b>Pixel Forge</b><span>open spritewright · make art for your game</span></div></a>` : ''}
+      ${GAME ? `<a class="tool" href="#/play"><span class="si">${ic('play', 22)}</span><div><b>Build &amp; play</b><span>mechanics · debugging · interactive workbenches</span></div></a><a class="tool" href="#/projects"><span class="si">${ic('terminal', 22)}</span><div><b>Build-along games</b><span>Pong · Breakout · platformer · arena</span></div></a><a class="tool" href="#/game-katas"><span class="si">${ic('terminal', 22)}</span><div><b>Game katas</b><span>write mechanics · run tests · review</span></div></a><a class="tool" href="#/notebook"><span class="si">${ic('book', 22)}</span><div><b>Project notebook</b><span>experiments · screenshots · outcomes</span></div></a><a class="tool" href="#/forge"><span class="si">${ic('gdpixel', 22)}</span><div><b>Pixel Forge</b><span>open spritewright · make art for your game</span></div></a>` : ''}
       <a class="tool" href="#/review"><span class="si">${ic('cards', 22)}</span><div><b>Flashcards</b><span>${CARDS.length} cards · spaced repetition</span></div></a>
       ${GAME ? '' : `<a class="tool" href="#/mock"><span class="si">${ic('mic', 22)}</span><div><b>Mock interview</b><span>${MOCK.length} questions · timer · rubric</span></div></a>`}
       ${window.FEEDBACK && FEEDBACK.enabled() && !GAME ? `<a class="tool" href="#/mock/ai"><span class="si">${ic('chat', 22)}</span><div><b>AI interviewer</b><span>follow-ups, then graded</span></div></a>` : ''}
@@ -854,6 +855,12 @@ function buildIndex() {
   CARDS.forEach((c) => index.push({ kind: 'Flashcard', icon: 'cards', hue: trackHue(c.track), title: strip(c.q), sub: strip(c.a).slice(0, 120), href: '#/review', text: (strip(c.q) + ' ' + strip(c.a)).toLowerCase() }));
   MOCK.forEach((m) => index.push({ kind: 'Mock', icon: 'mic', hue: 255, title: strip(m.q), sub: m.kind, href: '#/mock', text: (strip(m.q) + ' ' + m.rubric.join(' ')).toLowerCase() }));
   RES.forEach((r) => index.push({ kind: 'Resource', icon: 'link', hue: catHue(r.cat), title: r.title, sub: r.note, href: r.url, ext: true, text: (r.title + ' ' + r.note + ' ' + r.cat).toLowerCase() }));
+  QUICK().filter((d) => d.kind === 'Go to').forEach((d) => index.push({ ...d, text: (d.title + ' ' + d.sub).toLowerCase() }));
+  if (GAME) {
+    const tools = [['mechanics', 'Mechanics lab', 'Controller tuning, replay, slow motion and A/B comparison'], ['debug', 'Debug playground', 'Reproduce and repair game bugs'], ['level', 'Level sandbox', 'Tiles, enemies, pickups and playtesting'], ['art', 'Art to game', 'Import sprites and animation sheets'], ['path', 'Pathfinding workbench', 'BFS, Dijkstra and A*'], ['ai', 'AI workbench', 'State machines and behaviour trees'], ['shader', 'Shader playground', 'Live GLSL effects and uniforms'], ['performance', 'Performance playground', 'Collision strategies, profiling and frame costs']];
+    tools.forEach(([id, title, sub]) => index.push({ kind: 'Workbench', icon: 'play', title, sub, href: '#/play/' + id, text: (title + ' ' + sub).toLowerCase() }));
+    (window.GAME_KATAS || []).forEach((k) => index.push({ kind: 'Game kata', icon: 'terminal', title: k.title, sub: k.prompt, href: '#/game-kata/' + k.id, text: (k.title + ' ' + k.prompt).toLowerCase() }));
+  }
 }
 const QUICK = () => [
   { kind: 'Go to', icon: 'home', title: 'Learn', sub: 'All tracks', href: '#/' }, { kind: 'Go to', icon: 'cards', title: 'Flashcards', sub: 'Spaced repetition', href: '#/review' },
@@ -861,7 +868,7 @@ const QUICK = () => [
   { kind: 'Go to', icon: 'target', title: GAME ? 'Learning plan' : 'Daily plan', sub: 'Diagnostic, progress and backup', href: '#/plan' },
   { kind: 'Go to', icon: 'terminal', title: 'Code katas', sub: 'Exercises and spaced reviews', href: '#/katas' },
   { kind: 'Go to', icon: 'design', title: 'Design lab', sub: 'Architecture practice', href: '#/design' },
-  ...(GAME ? [{ kind: 'Go to', icon: 'gdpixel', title: 'Pixel Forge', sub: 'Open spritewright for your project', href: '#/forge' }] : []),
+  ...(GAME ? [{ kind: 'Go to', icon: 'play', title: 'Build & play', sub: 'Playable learning workbenches', href: '#/play' }, { kind: 'Go to', icon: 'terminal', title: 'Build-along games', sub: 'Playable checkpoints and exports', href: '#/projects' }, { kind: 'Go to', icon: 'book', title: 'Project notebook', sub: 'Experiments and outcomes', href: '#/notebook' }, { kind: 'Go to', icon: 'terminal', title: 'Game katas', sub: 'Mechanics with real tests', href: '#/game-katas' }, { kind: 'Go to', icon: 'gdpixel', title: 'Pixel Forge', sub: 'Open spritewright for your project', href: '#/forge' }] : []),
   { kind: 'Go to', icon: 'link', title: 'Free resources', sub: 'Curated links', href: '#/resources' },
   ...TRACKS.map((t) => ({ kind: 'Tracks', icon: t.id, hue: hueOf(t.id), title: t.title, sub: `${t.lessons.length} lessons`, href: '#/track/' + t.id })),
 ];

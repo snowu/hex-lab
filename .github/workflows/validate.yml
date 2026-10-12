@@ -10,6 +10,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
       - run: node scripts/validate.mjs
+      - run: node scripts/test-game.mjs
       - run: node scripts/test-sync.mjs
       - run: node scripts/test-worker.mjs
       - run: node scripts/validate-katas.mjs

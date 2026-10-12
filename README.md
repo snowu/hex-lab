@@ -137,3 +137,31 @@ A second section on the same site, for **learning game development** (it is not 
 Game Dev Lab includes a learning plan with 15/30/60-minute sessions, game-specific diagnostics and self ratings, learning progress, activity history, backup, cloud sync and AI usage. Its assessment and session settings are separate from interview prep. Katas and their spaced reviews are available in both sections.
 
 The Design lab has three game architecture exercises: a platformer controller, a sprite/save pipeline and a wave arena. Game estimation practice covers frame budgets, texture memory and collision pairs. Each design exercise supports saved drafts, optional timing, hints, reference comparisons, rubric self review and a learning note. Pixel Forge is available from the header and home toolkit: open spritewright, try the teaching editor, or follow the pixel-art workflow and asset-pipeline exercise.
+
+## Build & play (Game Dev Lab)
+
+Open **play** in the game-dev navigation or use the home toolkit. All workspaces run on the static site:
+
+- **Mechanics lab:** a playable platformer with acceleration, braking, jump impulse, gravity, coyote time, input buffering and camera tuning. Pause, single-step, slow down, change the rendering cap/interpolation, inspect contacts and velocity, record/replay tick inputs, and compare saved A/B controller presets.
+- **Debug playground:** reproduce and repair render-dependent simulation, repeated jumps, tunneling and moving-platform problems. Three isolated code-repair exercises demonstrate duplicate damage, enemies stuck behind walls, and old/corrupted saves.
+- **Art to game:** import a PNG from spritewright, configure sheet frames, frame rate and pivots, and test it in the controller. Saved art can also appear in the platformer and arena projects.
+- **Level sandbox:** paint solid tiles, enemies, pickups, a spawn and a goal; switch directly to play. Fall/contact locations appear on the map and can be saved with the experiment.
+- **Pathfinding workbench:** paint walls and weighted terrain, step through search expansion, and compare BFS, Dijkstra and A* by visited cells, path length and terrain cost.
+- **AI workbench:** edit a small state machine's thresholds or a priority behaviour tree's condition/action branches. Drag the target and change health while inspecting active decisions.
+- **Shader playground:** edit real GLSL fragment shaders, adjust uniforms, pause time and see compiler errors while the previous working effect keeps rendering. WebGL is required for rendering; unsupported devices can still edit and save source.
+- **Performance playground:** measure collision time and candidate pairs for naive all-pairs and a spatial grid. Compare the same snapshot, change object count/cell size, and inspect clustered worst cases and recent timing samples. Measurements depend on the device.
+- **Game katas:** eight original JavaScript mechanics exercises with browser Worker tests, hints, references, saved drafts and spaced reviews. Infinite loops are terminated after two seconds. General Exercism katas remain available.
+- **Build-along games:** Pong → Breakout → a platformer room → a wave arena, each with three playable checkpoints, linked code exercises, tuning and learning notes. A checkpoint requires its playable target, a solved linked kata and a note. Export a standalone, editable HTML game that runs locally without a server or external dependencies; the runtime source is available in the workspace.
+- **Project notebook:** saved experiments, screenshots, predictions, observations, decisions, bugs and next attempts; restore workbench settings, review demonstrated outcomes, or export the notebook. Up to 40 entries, subject to browser storage capacity. Normal progress backup and cloud sync include the notebook, project checkpoints, art and game-kata reviews.
+
+Game-specific kata reviews and the next unfinished project appear in the learning plan. Progress is still local first.
+
+Verification:
+
+```sh
+node scripts/test-game.mjs               # deterministic simulation, collision/search, project runtime and kata harness
+node tests/e2e/run.mjs playgrounds       # real browser interactions, Worker timeouts, mobile controls and standalone export
+node tests/e2e/run.mjs shaders           # requires a browser with working WebGL
+```
+
+For software WebGL browser tests, set `LAB_SOFTWARE_GL=1`; `LAB_BROWSER_PATH=/path/to/chrome` selects a different installed Chromium executable if needed. The existing test dependency setup still applies.

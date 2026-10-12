@@ -36,16 +36,19 @@
     const act = actToday(), tasks = [], self = store.get('self', {}), due = dueCards().length;
     const cardsTarget = Math.min(due, mins <= 15 ? 10 : mins <= 30 ? 15 : 25);
     if (due) tasks.push({ icon: 'cards', title: `Review ${cardsTarget} flashcards`, detail: `${due} due. Say each answer out loud before flipping.`, href: '#/review', done: (act.cards || 0) >= cardsTarget, min: Math.ceil(cardsTarget / 3) });
-    const kd = window.KATA_SR ? KATA_SR.due() : [];
-    if (kd.length) tasks.push({ icon: 'terminal', title: `Kata review: ${kd[0].name}`, detail: `${kd.length} kata${kd.length === 1 ? '' : 's'} due for spaced review. Solve it again from scratch, no peeking.`, href: '#/kata/' + kd[0].slug, done: (act.kata || 0) >= 1, min: 15 });
+    const kd = [...(window.GAME_KATA_SR && GAME ? GAME_KATA_SR.due() : []), ...(window.KATA_SR ? KATA_SR.due() : [])];
+    if (kd.length) tasks.push({ icon: 'terminal', title: `Kata review: ${kd[0].name}`, detail: `${kd.length} kata${kd.length === 1 ? '' : 's'} due for spaced review. Solve it again from scratch, no peeking.`, href: kd[0].href || '#/kata/' + kd[0].slug, done: (act.kata || 0) >= 1, min: 15 });
     if (GAME) {
+      const projects = store.get('gd:projects', {});
+      const nextProject = ['pong', 'breakout', 'platformer', 'arena'].find((id) => Object.keys(projects[id]?.completed || {}).length < 3);
+      if (nextProject) tasks.push({ icon: 'play', title: 'Build: ' + nextProject, detail: 'Complete a playable checkpoint and save what you learned.', href: '#/project/' + nextProject, done: (act.build || 0) >= 1, min: 15 });
       const drill = allExercises().find((e) => lessonPct(e.l) < 100);
       if (drill) tasks.push({ icon: 'terminal', title: `Practise: ${drill.s.title}`, detail: 'Download the Zig or C++ starter, run the tests locally, then mark it passed.', href: '#/lesson/' + drill.l.id, done: (act.drill || 0) >= 1, min: drill.s.minutes || 20 });
       if (mins >= 30) { const ds = pickDesign(); tasks.push({ icon: 'design', title: `Design: ${ds.title}`, detail: 'Sketch an approach, compare with the reference, save what you learned.', href: '#/design/' + ds.id, done: (act.design || 0) >= 1, min: ds.minutes }); }
       const wt = weakestTrack();
       if (wt) { const l = wt.lessons.find((l) => lessonPct(l) < 100); tasks.push({ icon: wt.id, title: `Learn: ${l.title}`, detail: wt.title + ' · work through the checks and simulations.', href: '#/lesson/' + l.id, done: (act.practice || 0) >= 3, min: l.minutes }); }
       if (mins >= 60) tasks.push({ icon: 'gdpixel', title: 'Make a 16×16 sprite', detail: 'Use four colours, check the silhouette at real size, export a PNG and test it in your game.', href: '#/forge', done: (act.art || 0) >= 1, min: 15 });
-      if (!kd.length) tasks.push({ icon: 'terminal', title: 'Practise a code kata', detail: 'Build fluency with a small exercise and real tests.', href: '#/katas', done: (act.kata || 0) >= 1, min: 15 });
+      if (!kd.length) tasks.push({ icon: 'terminal', title: 'Practise a code kata', detail: 'Build fluency with a small exercise and real tests.', href: '#/game-katas', done: (act.kata || 0) >= 1, min: 15 });
       let remaining = mins;
       return tasks.filter((t) => { if (t.min > remaining) return false; remaining -= t.min; return true; });
     }
@@ -138,7 +141,7 @@
   function heatmapHtml() {
     const all = store.get('activity', {}), cells = [], today = new Date(); today.setHours(12);
     const start = new Date(today); start.setDate(today.getDate() - (12 * 7 - 1)); start.setDate(start.getDate() - start.getDay());
-    for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) { const a = all[dstr(d)] || {}, n = (a.practice || 0) + (a.cards || 0) / 3 + (a.drill || 0) * 3 + (a.design || 0) * 4 + (a.story || 0) * 2 + (a.mock || 0) * 2 + (a.est || 0) / 2 + (a.kata || 0) * 3 + (a.art || 0) * 3; cells.push({ d: dstr(d), lv: n === 0 ? 0 : n < 3 ? 1 : n < 8 ? 2 : n < 16 ? 3 : 4, n }); }
+    for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) { const a = all[dstr(d)] || {}, n = (a.practice || 0) + (a.cards || 0) / 3 + (a.drill || 0) * 3 + (a.design || 0) * 4 + (a.story || 0) * 2 + (a.mock || 0) * 2 + (a.est || 0) / 2 + (a.kata || 0) * 3 + (a.art || 0) * 3 + (a.build || 0) * 3; cells.push({ d: dstr(d), lv: n === 0 ? 0 : n < 3 ? 1 : n < 8 ? 2 : n < 16 ? 3 : 4, n }); }
     return `<h3>Activity, last 12 weeks</h3><div class="heat">${cells.map((c) => `<i class="lv${c.lv}" title="${c.d}: ${Math.round(c.n)} points"></i>`).join('')}</div>`;
   }
 

@@ -28,7 +28,7 @@ export async function launch() {
     if (fs.existsSync(path.join(deps, 'fonts.conf'))) process.env.FONTCONFIG_FILE = path.join(deps, 'fonts.conf');
   }
   const { chromium } = await import('playwright');
-  return chromium.launch();
+  return chromium.launch({ executablePath: process.env.LAB_BROWSER_PATH || undefined, channel: process.env.LAB_SOFTWARE_GL ? 'chromium' : undefined, args: process.env.LAB_SOFTWARE_GL ? ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : [] });
 }
 
 /** A page that records uncaught errors and console errors (network failures from CDNs are ignored). */
