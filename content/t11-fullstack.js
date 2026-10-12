@@ -7,6 +7,14 @@ TRACKS.splice(5, 0, {
     {
       id: 'fs-web-basics', title: 'HTTP, caching, CORS and cookies', minutes: 40,
       summary: 'What the browser, the CDN and your server each decide.',
+      checks: [
+        { q: 'A static host serves app JS with a long max-age and each deploy leaves yesterday’s script on phones. What is the standard fix?',
+          options: ['Set no-store on everything and accept slower loads', 'Put a version or content hash in the URL so each deploy is a new cache key, served with long max-age plus immutable', 'Reflect the Origin header back to every requester', 'Store the script in localStorage instead of the HTTP cache'],
+          answer: 1, explain: 'Cache busting by URL makes new code unmissable by old caches while keeping long lifetimes for hashed assets.' },
+        { q: 'An API echoes the request Origin into Access-Control-Allow-Origin together with Allow-Credentials true. Why is this a hole?',
+          options: ['Because any website can then read authenticated responses in the victim’s browser, so allow-list exact origins instead of reflecting', 'Because OPTIONS preflights become slightly slower', 'Because ETags stop working once CORS is enabled', 'Because browsers cache the response for too long'],
+          answer: 0, explain: 'Reflecting arbitrary origins with credentials turns CORS into allow-everyone; credentials require an explicit allow-listed origin.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>A request, end to end</h3>
@@ -71,6 +79,14 @@ TRACKS.splice(5, 0, {
     {
       id: 'fs-auth', title: 'Auth: sessions, JWTs, OAuth and row-level security', minutes: 45,
       summary: 'Authentication vs authorisation, verifying tokens correctly, and letting the database enforce tenancy.',
+      checks: [
+        { q: 'A code path verifies a JWT signature using the alg named in the token header, then reads sub without checking exp or aud. What is wrong?',
+          options: ['Nothing, the header always tells the truth', 'JWTs do not need expiry once they are signed', 'The server must choose the algorithm itself and verify exp, nbf, iss, and aud before trusting sub', 'The token should be moved to localStorage before verification'],
+          answer: 2, explain: 'Trusting the header enables none and algorithm-confusion attacks, and skipping claims accepts expired or foreign tokens.' },
+        { q: 'A magic link with PKCE works on the requesting phone but fails when the user opens the email on a laptop. What should the team use instead?',
+          options: ['A typed one-time code that works on whichever device the user has, with rate limits and a short lifetime', 'The legacy implicit OAuth flow', 'A longer-lived access token embedded in the link', 'The service-role key embedded in the link'],
+          answer: 0, explain: 'PKCE binds the flow to the browser holding the verifier, so cross-device handoff fails; a typed code avoids that coupling.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p><b>Authentication</b> answers “who are you?”; <b>authorisation</b> answers “what may you do?”. Most real breaches are authorisation bugs (the BOLA/IDOR from the code-review lesson), not broken login.</p>
@@ -129,6 +145,14 @@ create policy "own rows" on notes
     {
       id: 'fs-api-design', title: 'API design that survives its clients', minutes: 35,
       summary: 'Pagination, idempotency, errors, versioning, and the backend-for-frontend pattern.',
+      checks: [
+        { q: 'A client retries POST /payments after a timeout and risks charging twice. What is the intended design?',
+          options: ['Tell clients never to retry POST requests', 'Accept an Idempotency-Key so a retried request with the same key executes once', 'Switch the charge to a GET request', 'Return 500 so the client gives up'],
+          answer: 1, explain: 'PUT and DELETE are naturally idempotent but POST is not, so the key makes a retry safe against double execution.' },
+        { q: 'Version 2 renames a widely used response field and old mobile clients break. Which rule was violated?',
+          options: ['That every API change requires a new major version', 'That GraphQL is always safer than REST', 'That additive changes are safe while renames are breaking, so version, keep old clients working, and deprecate with dates and metrics', 'That status codes should be hidden from clients'],
+          answer: 2, explain: 'Clients tolerate unknown fields but not renamed ones; evolve additively and version breaking changes explicitly.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Resources and verbs</h3>
@@ -159,6 +183,14 @@ create policy "own rows" on notes
     {
       id: 'fs-edge', title: 'Edge and serverless: Cloudflare Workers, KV, Durable Objects', minutes: 45,
       summary: 'What runs where, which storage to pick, and how to protect an upstream with caching and coalescing.',
+      checks: [
+        { q: 'You need a per-API-key counter shared across edge locations that stays correct under concurrency. Why is KV the wrong pick?',
+          options: ['KV is too expensive for counters', 'KV is eventually consistent so concurrent requests read stale counts; route each key through one single-threaded Durable Object with strongly consistent storage', 'The Cache API cannot store counters at all', 'Isolate memory is strongly consistent across the globe'],
+          answer: 1, explain: 'Counters need serialization; only the single-writer Durable Object gives a correct global count, while KV suits read-heavy lookups.' },
+        { q: 'A Queue consumer charges a user per message. The queue promises at-least-once delivery. What must the consumer be?',
+          options: ['Exactly-once by default, so no extra work is needed', 'Faster than the producer on every message', 'Idempotent, so redelivered messages do not double-charge', 'Synchronous with the open browser tab'],
+          answer: 2, explain: 'At-least-once means retries and duplicates happen; the consumer must handle the same message twice safely.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>How Workers run</h3>
@@ -202,6 +234,14 @@ create policy "own rows" on notes
     {
       id: 'fs-offline-sync', title: 'Local-first apps and cross-device sync', minutes: 45,
       summary: 'Save locally first, sync with compare-and-swap, never silently overwrite.',
+      checks: [
+        { q: 'Device clocks disagree by minutes. How should the server order uploads from offline devices?',
+          options: ['Compare updated_at timestamps across devices and keep the newest', 'Let the last device to finish always win', 'Use a server-side monotonic generation with compare-and-swap, telling stale devices of conflicts instead of overwriting', 'Merge numeric fields by picking the larger value'],
+          answer: 2, explain: 'Wall clocks cannot order events across devices; only the server generation gives a single comparable order.' },
+        { q: 'An old app version with a previous data format syncs after a newer client upgraded the cloud snapshot. What prevents corruption?',
+          options: ['A format version check enforced server-side that rejects writes from stale formats', 'A faster network on newer clients', 'Longer debounce intervals before uploading', 'Storing data in localStorage instead of IndexedDB'],
+          answer: 0, explain: 'Format versions checked by the server stop outdated clients from overwriting newer shapes they do not understand.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p><b>Local-first</b> means the app works fully offline, writes to local storage immediately, and treats the cloud as optional sync. It is faster, more resilient, and the user never loses progress to a network error.</p>
@@ -259,6 +299,14 @@ create policy "own rows" on notes
     {
       id: 'fs-frontend', title: 'Frontend fundamentals for backend engineers', minutes: 40,
       summary: 'Rendering models, Core Web Vitals, state, accessibility and the security basics.',
+      checks: [
+        { q: 'Search results include server-provided titles. Which rendering choice avoids XSS?',
+          options: ['Build HTML with innerHTML for speed', 'Concatenate titles into the request URL instead', 'Build elements with textContent or an escaping framework plus sanitisation and a Content-Security-Policy', 'Trust titles because they come from your own API'],
+          answer: 2, explain: 'Untrusted strings in innerHTML execute as markup; textContent keeps them as text and CSP limits script sources.' },
+        { q: 'The UI applies an edit immediately before the server confirms it. What must the endpoint and UI provide?',
+          options: ['An idempotent endpoint so retries are safe, with rollback on failure', 'A larger JavaScript bundle for faster rendering', 'A WebSocket per keystroke', 'Server-side rendering for every interaction'],
+          answer: 0, explain: 'Optimistic UI bets the request succeeds; idempotency makes retries safe and rollback covers rejection.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Rendering models</h3>

@@ -6,6 +6,14 @@ TRACKS.push({
     {
       id: 'gfx-pipeline', title: 'From sprite to screen', minutes: 35,
       summary: 'Coordinate spaces, draw order, draw calls and batching, blending, filtering and the costs you can actually control.',
+      checks: [
+        { q: 'In a top-down game with y-sorting enabled, the hero always draws above a tree even when standing behind it. The hero has z_index 5 and the tree sprite is centred. What two fixes apply?',
+          options: ['Keep z_index equal for things that sort by y, and put the sort origin at the trunk base with an offset instead of the image middle', 'Raise the hero z_index even higher and shrink the tree texture', 'Disable y_sort and sort by name', 'Draw the tree in the UI layer'],
+          answer: 0, explain: 'A fixed z overrides y order, and the node origin is the sort key. Feet-based pivots make behind and in-front correct.' },
+        { q: 'A mobile level with big soft smoke puffs runs slowly while the triangle count is tiny. What is the likely cost and fix?',
+          options: ['Too many draw calls, so add more textures', 'Overdraw and fill rate: stacked translucent pixels are shaded many times, so trim transparent sprite borders, prefer opaque backgrounds and budget full-screen transparency', 'The audio bus is too loud', 'The camera zoom is wrong'],
+          answer: 1, explain: 'Transparent pixels cost as much as opaque ones. Layered soft sprites exhaust fill rate first.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>The journey of one sprite</h3>
@@ -61,6 +69,14 @@ func _ready():
     {
       id: 'gfx-transforms', title: 'Transforms, matrices and hierarchies', minutes: 35,
       summary: 'Position, rotation and scale as matrices, why order matters, parent-child hierarchies, pivots, and a first look at 3D.',
+      checks: [
+        { q: 'A parent node has scale (2, 1) and its child rotates. The child sprite skews instead of rotating cleanly. What is the rule?',
+          options: ['This is gimbal lock and needs quaternions', 'The pivot is too accurate', 'Non-uniform parent scale plus a rotating child produces shear; avoid non-uniform scale on nodes that have rotating children', 'Matrices cannot represent scale'],
+          answer: 2, explain: 'Scaled axes are no longer perpendicular, so child rotation shears. Keep ancestor scale uniform or apply it at the leaf.' },
+        { q: 'Why does 2D use 3x3 matrices with points written as (x, y, 1)?',
+          options: ['To use more memory per sprite', 'The extra 1 turns translation into a multiplication so translation, rotation and scale combine with plain matrix multiplication', 'To make the shader compile faster', 'Because the GPU only accepts three numbers'],
+          answer: 1, explain: 'Homogeneous coordinates unify addition and multiplication into one operation that composes and inverts cleanly.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Why matrices</h3>
@@ -96,6 +112,14 @@ func _ready():
     {
       id: 'gfx-shaders', title: 'Shaders, effects and 2D lighting', minutes: 40,
       summary: 'What a shader is, the handful of tricks behind most 2D effects, and how to light a flat world.',
+      checks: [
+        { q: 'You need a crisp dark outline around a sprite. How does the classic fragment-shader version work, and what art requirement comes with it?',
+          options: ['Blur the whole sprite and call the halo an outline', 'If this pixel is transparent but one of its four alpha neighbours is opaque, output the outline colour; pad the sprite texture by one pixel so the rim has room', 'Draw the sprite twice at different resolutions', 'Increase the mesh triangle count'],
+          answer: 1, explain: 'Outlines detect the alpha edge by sampling neighbours. Without padding the rim is clipped at the texture border.' },
+        { q: 'Every enemy has its own shader with a per-sprite flash_amount parameter, and draw calls exploded even though all enemies share one texture. What is the fix?',
+          options: ['Keep shader parameters per material rather than per sprite, or batching breaks: unique state per sprite forces a new call', 'Give each sprite even more unique parameters', 'Switch to uncompressed audio', 'Disable the fragment shader entirely forever'],
+          answer: 0, explain: 'Batching merges sprites sharing texture, material and blend mode. Per-sprite state splits every batch.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>What a shader is</h3>
@@ -142,6 +166,14 @@ void fragment() {
     {
       id: 'gfx-ui', title: 'UI, HUD and text', minutes: 30,
       summary: 'Layout that survives every screen size, text that stays readable, and interfaces usable with a pad, a thumb or a screen reader.',
+      checks: [
+        { q: 'A HUD laid out in absolute pixels looks fine at 16:9 but breaks on ultrawide and phones with notches. What is the structural fix?',
+          options: ['Ship only one supported resolution', 'Move every element a few pixels to the right', 'Render the UI in world space under the camera', 'Anchor elements to edges and corners with margins, arrange with containers, and keep important UI inside the safe area'],
+          answer: 3, explain: 'Anchors and containers adapt to size and aspect instead of assuming one screen. Safe areas avoid notches and overscan.' },
+        { q: 'Zooming 3D nameplates must stay sharp at any distance, while tiny pixel-art dialogue must stay crisp. Which font technologies fit?',
+          options: ['Bitmap fonts for the scaling nameplates and vector fonts for the pixel dialogue', 'Signed distance field fonts for text that scales, and bitmap fonts at integer scale for the pixel-art dialogue', 'Images of text for everything', 'No fonts at all, only icons'],
+          answer: 1, explain: 'SDF reconstructs sharp edges at any scale with outlines and glows; bitmap is crisp only at its native integer size.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>UI is a different kind of rendering</h3>
@@ -171,6 +203,14 @@ void fragment() {
     {
       id: 'gfx-audio', title: 'Audio as a system', minutes: 30,
       summary: 'Playing a sound is easy; making a mix that works, adapts and does not fatigue is the craft.',
+      checks: [
+        { q: 'Footsteps need left-right position as the player runs past, and there is one looping music track. Which channel formats fit?',
+          options: ['Stereo footsteps and mono music', 'Mono footsteps so the engine can pan and attenuate them, and stereo for the non-positional music', 'Mono for everything to save disk space', '5.1 surround for the UI clicks only'],
+          answer: 1, explain: 'Positional sounds must be mono so panning works; stereo is for music and ambience that needs no position.' },
+        { q: 'The project has hundreds of short UI clicks and a 5-minute music track. How should they be stored and played?',
+          options: ['Keep short frequent effects uncompressed in memory for fast playback, and stream the long compressed music; route both through buses with volumes, ducking and limiting', 'Stream the clicks and load the whole music track decompressed into RAM', 'Convert everything to the highest sample rate available', 'Play all sounds at maximum volume with no buses'],
+          answer: 0, explain: 'Short effects need latency-free playback while long tracks need small size. Buses give per-category control and headroom.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Why audio gets neglected, and why it should not</h3>

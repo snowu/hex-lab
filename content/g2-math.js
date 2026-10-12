@@ -6,6 +6,14 @@ TRACKS.push({
     {
       id: 'gd-vectors', title: 'Vectors, movement and steering', minutes: 25,
       summary: 'Position, direction, speed, and the two operations (dot and cross) that answer most gameplay questions.',
+      checks: [
+        { q: 'Holding right and up feeds input (1, 1) into movement, and diagonal runs feel faster than straight runs. What is the fix?',
+          options: ['Scale speed down only on the x axis', 'Normalise or clamp the input length before scaling by speed, since (1, 1) has length 1.414', 'Multiply by dt twice on diagonals', 'Read the axes in separate frames'],
+          answer: 1, explain: 'The diagonal input vector is 41 percent longer, so cap by length before applying speed.' },
+        { q: 'Each frame an enemy compares its distance to the player against several ranges. Which comparison is cheapest and correct?',
+          options: ['Compare length_squared against the squared ranges to skip the square root', 'Take the square root first because squared values overflow', 'Normalise both positions and compare the dot product', 'Use atan2 on the distance and compare angles'],
+          answer: 0, explain: 'Squared distances order the same as distances, so length_squared answers nearer-or-farther with no square root.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>A <b>vector</b> is a pair (or triple) of numbers. It can mean a <i>position</i> (where), a <i>displacement</i> (from here to there) or a <i>velocity</i> (displacement per second). Most game maths is moving things with them.</p>
@@ -37,6 +45,14 @@ TRACKS.push({
     {
       id: 'gd-collision', title: 'Collision detection and response', minutes: 35,
       summary: 'AABB and circle tests, push-out, broad and narrow phase, and why fast things tunnel through walls.',
+      checks: [
+        { q: 'Two boxes overlap on the x axis but their y intervals do not touch. Do they collide, and why?',
+          options: ['No, an AABB overlap needs the intervals to overlap on both axes', 'Yes, one overlapping axis is enough for an AABB hit', 'Yes, unless both are tiles', 'No, boxes only collide on the y axis'],
+          answer: 0, explain: 'AABB collision requires overlap on every axis; a gap on any one axis means no contact.' },
+        { q: 'A fast bullet tunnels through thin walls at 60 Hz. The team cannot slow the bullet or thicken every wall. Which fix addresses the root cause?',
+          options: ['Increase the wall shape margin until ghosts overlap it', 'Test the whole path from old to new position with a swept test or raycast, or substep the physics', 'Move collision into the render callback so it runs more often', 'Check collision every other frame to halve the cost'],
+          answer: 1, explain: 'Tunneling happens because discrete steps jump over the wall; continuous tests find the time of first impact along the path.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Two phases</h3>
@@ -66,6 +82,14 @@ TRACKS.push({
     {
       id: 'gd-smoothing', title: 'Interpolation, easing and smoothing', minutes: 25,
       summary: 'Lerp, easing curves, and the classic “lerp smoothing is broken” bug that makes cameras feel different at every frame rate.',
+      checks: [
+        { q: 'A menu panel should slide in quickly and then settle gently into place. Which easing fits, and why?',
+          options: ['Ease-out, because it starts fast for immediate feedback then decelerates into the final value', 'Ease-in, because arrivals should accelerate', 'Linear, because menus must move at constant speed', 'Bounce, because every UI element should bounce'],
+          answer: 0, explain: 'Ease-out matches arriving motion: fast response up front, gentle landing at the target.' },
+        { q: 'A pickup needs to overshoot its scale and wobble back (a pop). Lerp toward the target never overshoots. What should you use instead?',
+          options: ['A larger fixed lerp factor such as 0.5', 'A damped spring that accelerates toward the target with stiffness minus damping, integrated in the fixed step', 'A longer linear lerp duration', 'Two lerps chained in the same frame'],
+          answer: 1, explain: 'Springs carry velocity through the target so they overshoot and settle; plain lerp can only approach monotonically.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Lerp, and what it is not</h3>
@@ -93,6 +117,14 @@ TRACKS.push({
     {
       id: 'gd-pathing', title: 'Grids, pathfinding and simple AI', minutes: 30,
       summary: 'Tile maps as graphs, BFS, Dijkstra and A*, plus the steering and state-based AI that makes enemies look alive.',
+      checks: [
+        { q: 'Every tile on your map costs the same to cross. Which search finds the shortest path, and why not reach for A* immediately?',
+          options: ['BFS: it finds the shortest path on uniform costs without needing a heuristic', 'Dijkstra with random weights: it looks smarter', 'Depth-first search: it uses the least memory', 'Greedy search on raw distance: it is always optimal'],
+          answer: 0, explain: 'BFS is the right tool for uniform costs; Dijkstra and A-star pay off once costs differ or a heuristic can guide the search.' },
+        { q: 'A teammate proposes an A* heuristic that sometimes estimates more than the true remaining distance because it explores fewer tiles. What is the trade-off?',
+          options: ['It will never terminate on a grid', 'It may return a non-shortest path: overestimating heuristics break admissibility and optimality', 'It turns A* back into exact BFS with no downside', 'It only affects memory, never the path returned'],
+          answer: 1, explain: 'An admissible heuristic never overestimates. Inflating it (weighted A-star) speeds up search but sacrifices the shortest-path guarantee.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>A map is a graph</h3>

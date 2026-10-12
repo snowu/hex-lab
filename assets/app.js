@@ -85,7 +85,8 @@ function keysOf(l) {
   l._keys = l.sections.map((s) => { const legacy = !s.pid, idx = legacy ? n++ : null; return KP[s.type] ? (legacy ? KP[s.type] + idx : 'x:' + s.pid) : null; });
   return l._keys;
 }
-const itemsOf = (l) => l.sections.map((s, i) => ({ s, k: keysOf(l)[i] })).filter((x) => x.k);
+const checkKeysOf = (l) => (l.checks || []).map((_, i) => 'h' + i);
+const itemsOf = (l) => [...l.sections.map((s, i) => ({ s, k: keysOf(l)[i] })), ...(l.checks || []).map((s, i) => ({ s, k: 'h' + i, check: i }))].filter((x) => x.k);
 const lessonPct = (l) => {
   const items = itemsOf(l), p = progress[l.id] || {};
   if (!items.length) return p.read ? 100 : 0;
@@ -296,15 +297,17 @@ function viewLesson(id) {
   VIM.eds = [];
   if (l.sections.some((x) => x.type === 'code' || x.type === 'predict') && mode !== 'read') warmPython();
   const metas = l.sections.map(secMeta);
-  const outline = metas.map((m, k) => m && `<li class="${cls(l.sections[k])}"><button data-t="s${k}" class="${m.act ? 'act' : ''}"><span class="ck">${ic('check', 10, 3.4)}</span><span>${esc(m.t)}</span></button></li>`).filter(Boolean).join('');
+  const outline = metas.map((m, k) => m && `<li class="${cls(l.sections[k])}"><button data-t="s${k}" class="${m.act ? 'act' : ''}"><span class="ck">${ic('check', 10, 3.4)}</span><span>${esc(m.t)}</span></button></li>`).filter(Boolean).join('') + ((l.checks || []).length ? `<li class="prac"><button data-t="schecks" class="act"><span class="ck">${ic('check', 10, 3.4)}</span><span>Check your understanding</span></button></li>` : '');
   const nxt = t.lessons[i + 1];
+  const srRec = lessonSrAll()[l.id], hasChecks = (l.checks || []).length > 0;
+  const srChip = !hasChecks ? '' : lessonIsDue(l.id) ? `<span class="chip hot" id="lsrchip">${ic('rotate', 12)} Review due</span>` : srRec ? `<span class="chip" id="lsrchip">${ic('check', 12)} Recall scheduled</span>` : '';
   app.innerHTML = `
     <div class="lesson tc m-${mode}" style="--h:${h}">
       <aside class="outline"><p class="oh">In this lesson</p><ol>${outline}</ol><div class="sm"><b id="lpct">${lessonPct(l)}%</b> complete<br>${nQuiz} quick check${nQuiz === 1 ? '' : 's'}${nCode ? ` · ${nCode} challenge${nCode === 1 ? '' : 's'}` : ''}${nSim ? ` · ${nSim} simulation${nSim === 1 ? '' : 's'}` : ''}</div></aside>
       <article>
         <div class="crumbs"><a href="#/">${ic('home', 14)}</a> ${ic('arrow', 12)} <a href="#/track/${t.id}">${esc(t.title)}</a> ${ic('arrow', 12)} <span>Lesson ${i + 1}</span></div>
         <header class="lhead has-ask">${askBtn(`I am reading the lesson "${l.title}". Summarise the key ideas in 5 bullets, then tell me ${GAME ? 'three small experiments I can build to practise this topic and the common mistakes.' : 'the 3 things interviewers most often probe on this topic and the classic mistakes.'}`, 'Ask AI about this lesson')}<span class="chip tc" style="--h:${h}">${ic(t.id, 13)} ${esc(t.title)}</span><h1>${esc(l.title)}</h1><p class="sum">${esc(l.summary || '')}</p>
-          <div class="metas"><span class="chip" title="${l.timeParts ? `about ${l.timeParts.read} min of reading + ${l.timeParts.practice} min of practice` : ''}">${ic('clock', 12)} ${l.minutes} min</span>${nQuiz ? `<span class="chip">${ic('target', 12)} ${nQuiz} quick check${nQuiz === 1 ? '' : 's'}</span>` : ''}${nCode ? `<span class="chip">${ic('terminal', 12)} ${nCode} challenge${nCode === 1 ? '' : 's'}</span>` : ''}${nSim ? `<span class="chip">${ic('sim', 12)} ${nSim} simulation${nSim === 1 ? '' : 's'}</span>` : ''}</div>
+          <div class="metas"><span class="chip" title="${l.timeParts ? `about ${l.timeParts.read} min of reading + ${l.timeParts.practice} min of practice` : ''}">${ic('clock', 12)} ${l.minutes} min</span>${srChip}${nQuiz ? `<span class="chip">${ic('target', 12)} ${nQuiz} quick check${nQuiz === 1 ? '' : 's'}</span>` : ''}${nCode ? `<span class="chip">${ic('terminal', 12)} ${nCode} challenge${nCode === 1 ? '' : 's'}</span>` : ''}${nSim ? `<span class="chip">${ic('sim', 12)} ${nSim} simulation${nSim === 1 ? '' : 's'}</span>` : ''}</div>
           <div class="seg" role="group" aria-label="Lesson view"><button data-m="all" class="${mode === 'all' ? 'on' : ''}">text + practice</button><button data-m="read" class="${mode === 'read' ? 'on' : ''}">read</button><button data-m="practice" class="${mode === 'practice' ? 'on' : ''}">practice</button></div></header>
         <div class="lbody" id="body"></div>
         <div class="endcard tc brk" style="--h:${h}">${nxt ? `<div class="tx"><div class="k">Up next</div><div class="tt">${esc(nxt.title)}</div></div><a class="btn primary" href="#/lesson/${nxt.id}">Next lesson ${ic('arrow', 16)}</a>` : `<div class="tx"><div class="k">Track end</div><div class="tt">That's the last lesson in ${esc(t.title)}.</div></div><a class="btn primary" href="#/">Pick another track ${ic('arrow', 16)}</a>`}
@@ -317,6 +320,15 @@ function viewLesson(id) {
     $('#lpct').textContent = lessonPct(l) + '%';
     const p = progress[l.id] || {};
     l.sections.forEach((s, k) => { const b = outBtns['s' + k], key = keysOf(l)[k]; if (b && key) b.parentElement.classList.toggle('okk', !!p[key]); });
+    if (outBtns.schecks) outBtns.schecks.parentElement.classList.toggle('okk', checkKeysOf(l).every((k) => !!p[k]));
+    const chip = $('#lsrchip');
+    if (hasChecks) {
+      const rec = lessonSrAll()[l.id];
+      const html = lessonIsDue(l.id) ? `${ic('rotate', 12)} Review due` : rec ? `${ic('check', 12)} Recall scheduled` : null;
+      const cls = lessonIsDue(l.id) ? 'chip hot' : 'chip';
+      if (html && chip) { chip.className = cls; chip.innerHTML = html; }
+      else if (html && !chip) { const metas = $('.metas'); if (metas) metas.insertAdjacentHTML('afterbegin', `<span class="${cls}" id="lsrchip">${html}</span>`); }
+    }
   };
   const disposers = [], redraws = [];
   l.sections.forEach((s, k) => {
@@ -324,6 +336,7 @@ function viewLesson(id) {
     const r = ({ text: rText, quiz: rQuiz, reveal: rReveal, steps: rSteps, code: rCode, drill: rDrill, bug: rBug, predict: rPredict, sim: rSim }[s.type] || rText)(el, s, l, k, sync, h, disposers);
     if (typeof r === 'function' && s.type === 'steps') redraws.push(r);
   });
+  if (hasChecks) { const el = document.createElement('section'); el.className = 'sec prac'; el.id = 'schecks'; body.appendChild(el); rChecks(el, l, sync); }
   $$('.seg button').forEach((b) => (b.onclick = () => {
     const m = b.dataset.m; store.set('lmode', m);
     $('.lesson').className = 'lesson tc m-' + m; $$('.seg button').forEach((x) => x.classList.toggle('on', x === b));
@@ -669,6 +682,49 @@ function rPredict(el, s, l, idx, sync) {
     const r = await runPython(s.code, '', { allowEmpty: true });
     out.innerHTML = r.fatal ? `<div class="res fail"><div class="nm">Error<small>${esc(r.fatal)}</small></div></div>` : `<div class="logs actual">${esc((r.logs || []).join('\n') || '(no output)')}</div>`;
   };
+}
+
+/* ---------- lesson checks: end-of-lesson retrieval practice, scheduled like kata reviews ---------- */
+const LESSON_SR_KEY = 'lessonChecks', LESSON_SR_DAYS = [2, 5, 14, 30, 60], LDAY = 864e5;
+const lessonSrAll = () => store.get(LESSON_SR_KEY, {});
+const lessonIsDue = (id) => { const r = lessonSrAll()[id]; return !!r && r.due <= Date.now(); };
+const lessonInDays = (ms) => { const d = Math.max(1, Math.round(ms / LDAY)); return d === 1 ? 'tomorrow' : `in ${d} days`; };
+const lessonDue = () => {
+  const out = [], all = lessonSrAll(), now = Date.now();
+  for (const t of TRACKS) for (const l of t.lessons) { const r = all[l.id]; if ((l.checks || []).length && r && r.due <= now) out.push({ id: l.id, title: l.title, track: t.title, href: '#/lesson/' + l.id, due: r.due }); }
+  return out.sort((a, b) => a.due - b.due);
+};
+/** called when every end-of-lesson check is answered correctly; returns what happened so the page can say it */
+function recordLessonCheck(id) {
+  const all = lessonSrAll(), r = all[id], now = Date.now();
+  if (!r) { all[id] = { box: 0, due: now + LESSON_SR_DAYS[0] * LDAY, last: now, n: 1 }; store.set(LESSON_SR_KEY, all); logAct('review'); return { kind: 'new', text: `Recall complete. Review scheduled ${lessonInDays(LESSON_SR_DAYS[0] * LDAY)}.` }; }
+  if (r.due <= now) { r.box = Math.min(LESSON_SR_DAYS.length - 1, r.box + 1); r.due = now + LESSON_SR_DAYS[r.box] * LDAY; r.last = now; r.n = (r.n || 1) + 1; store.set(LESSON_SR_KEY, all); logAct('review'); return { kind: 'advanced', text: `Review done. Next one ${lessonInDays(LESSON_SR_DAYS[r.box] * LDAY)}.` }; }
+  return { kind: 'early', text: `Already recalled. Your next review is ${lessonInDays(r.due - now)}.` };
+}
+window.LESSON_SR = { due: lessonDue, isDue: lessonIsDue, record: recordLessonCheck };
+function rChecks(el, l, sync) {
+  const checks = l.checks || []; if (!checks.length) return;
+  const shs = checks.map(shuffleOpts), keys = checkKeysOf(l), done = new Set();
+  const stored = progress[l.id] || {};
+  const retake = lessonIsDue(l.id) && keys.every((k) => stored[k]);
+  if (!retake) keys.forEach((k) => { if (stored[k]) done.add(k); });
+  const draw = () => {
+    const r = lessonSrAll()[l.id], review = retake && done.size < checks.length;
+    el.innerHTML = `${label('target', 'Check your understanding')}<p class="muted">Answer from memory, without scrolling back up. Recalling beats re-reading.</p>
+      ${review ? '<div class="callout warn"><b>Due for review.</b> Answer again from memory to push the next review further out.</div>' : r ? `<p class="muted">Recall scheduled: next review ${lessonInDays(r.due - Date.now())}.</p>` : ''}
+      ${checks.map((s, i) => `<div class="quiz has-ask" data-check="${i}">${askBtn(`End-of-lesson check: ${strip(s.q)}\nOptions: ${shs[i].options.map((o, k) => 'ABCD'[k] + ') ' + strip(o)).join(' | ')}\nThe correct option is ${'ABCD'[shs[i].answer]}.\n\nExplain in more depth why that is correct, why each other option is wrong, and ${GAME ? 'what I could build to practise this concept.' : 'what a senior interviewer might ask next.'}`, 'Ask AI why')}<div class="q">${s.q}</div>${shs[i].options.map((o, k) => `<button class="opt" data-i="${k}"><span class="l">${'ABCD'[k]}</span><span>${o}</span></button>`).join('')}<div class="explain" hidden></div></div>`).join('')}`;
+    checks.forEach((s, i) => {
+      const box = $(`[data-check="${i}"]`, el), ex = $('.explain', box);
+      const finish = (b) => { done.add(keys[i]); if (b) b.classList.add('right'); $$('.opt', box).forEach((x) => (x.disabled = true)); ex.hidden = false; ex.classList.add('ok'); ex.innerHTML = s.explain + cardBtn(strip(s.q), `${strip(shs[i].options[shs[i].answer])}\n\n${strip(s.explain)}`); };
+      if (done.has(keys[i])) finish($(`.opt[data-i="${shs[i].answer}"]`, box));
+      $$('.opt', box).forEach((b) => (b.onclick = () => {
+        if (done.has(keys[i])) return;
+        if (+b.dataset.i === shs[i].answer) { finish(b); mark(l.id, keys[i], 5, 'Recall'); sync(); if (done.size === checks.length) { const rc = recordLessonCheck(l.id); toast(rc.text); sync(); draw(); } }
+        else { b.classList.add('wrong'); b.disabled = true; ex.hidden = false; ex.classList.remove('ok'); ex.textContent = 'Not quite. Recall the key idea from the lesson and try another option.'; }
+      }));
+    });
+  };
+  draw();
 }
 
 /* ---------- flashcards ---------- */

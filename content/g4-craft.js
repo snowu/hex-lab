@@ -6,6 +6,14 @@ TRACKS.push({
     {
       id: 'gd-procgen', title: 'Procedural generation', minutes: 35,
       summary: 'Seeds, deterministic randomness, noise, cellular automata caves and the validation step everyone forgets.',
+      checks: [
+        { q: 'You want shareable seeds and reproducible bug reports for generated levels. What must be true of the random numbers?',
+          options: ['They must come from explicit per-concern generator state created from the seed, so cosmetics cannot advance gameplay numbers', 'They must come from the fastest global generator available', 'They must be reseeded from the wall clock every room', 'They must never be reused across seeds'],
+          answer: 0, explain: 'Determinism needs owned streams: one stream per concern keeps a particle effect from shifting every later level number.' },
+        { q: 'Cellular automata produced great-looking caves, but some runs trap the player away from the exit. What is the required next step?',
+          options: ['Run more smoothing steps until every map connects', 'Flood-fill between start, exit and key areas, then repair with a tunnel or reject and retry the next seed', 'Ship it: unreachable pockets add mystery', 'Convert the map to an image to inspect it visually'],
+          answer: 1, explain: 'The smoothing rule makes caves, not guarantees, so validation plus repair turns content into a fair level.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Seeds and determinism</h3>
@@ -29,6 +37,14 @@ TRACKS.push({
     {
       id: 'gd-noise', title: 'Noise, terrain and Wave Function Collapse', minutes: 35,
       summary: 'Smooth randomness for terrain and textures: value noise, octaves, domain warping, thresholds for caves and biomes, and constraint-based generation.',
+      checks: [
+        { q: 'Your value-noise terrain shows visible creases along the grid. The corners blend with plain linear interpolation. What is the fix?',
+          options: ['Shape the blend fraction with a smoothstep curve such as t times t times (3 minus 2t)', 'Sample fewer points so the grid is coarser', 'Round every sample to 0 or 1', 'Add more octaves at the same frequency'],
+          answer: 0, explain: 'Linear blends kink at lattice points; easing the fraction smooths the derivative across cell boundaries.' },
+        { q: 'Straight noise bands look too regular for marble and rivers. You try noise(p + k times noise2(p)). What does this do?',
+          options: ['It tiles the noise so textures repeat seamlessly', 'It warps the sampling domain with another noise, turning regular features into flowing organic ones', 'It doubles the octave count for extra detail', 'It converts value noise into white noise'],
+          answer: 1, explain: 'Domain warping distorts the input coordinates, so straight features inherit the organic flow of the warping field.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Why not just random numbers?</h3>
@@ -131,6 +147,14 @@ test "adding octaves adds detail but keeps the range" {
     {
       id: 'gd-camera', title: 'Cameras, screen shake and parallax', minutes: 20,
       summary: 'A 2D camera that follows well, shakes with “trauma”, and does not make pixel art shimmer.',
+      checks: [
+        { q: 'A camera locked exactly to the player jitters the whole screen on every micro-movement. Which follow technique calms it?',
+          options: ['A higher fixed lerp factor so it snaps harder', 'A larger look-ahead in every direction at once', 'A dead zone: the camera only moves once the player leaves a central box', 'Removing the map limits so the camera never clamps'],
+          answer: 2, explain: 'A dead zone absorbs small motion so idle shuffling does not swing the entire view.' },
+        { q: 'Distant mountains currently scroll at the same speed as the player layer, which looks flat. How should the parallax offsets work?',
+          options: ['Move every layer by the full camera offset so nothing drifts', 'Scale each layer by camera position times (1 minus depth), keeping far layers nearly stationary and snapping to whole pixels', 'Move far layers faster than the foreground for drama', 'Parent all layers to the player node directly'],
+          answer: 1, explain: 'Parallax sells depth by slowing far layers with depth; whole-pixel placement keeps pixel art from swimming.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Follow cameras</h3>
@@ -150,6 +174,14 @@ test "adding octaves adds detail but keeps the range" {
     {
       id: 'gd-data-saves', title: 'Data-driven design and save files', minutes: 30,
       summary: 'Keep tuning numbers out of code, and write saves that survive updates and corruption.',
+      checks: [
+        { q: 'Version 3 of your game must still load saves from versions 1 and 2. How should migrations be organised?',
+          options: ['Keep a version number from the first release plus one migration function per version step, never editing an old step', 'Edit the old migration steps so they jump straight to the newest format', 'Delete old saves on update and start fresh', 'Store the game code version inside each entity instead'],
+          answer: 0, explain: 'Immutable per-step migrations chain any old save forward without breaking saves that already migrated.' },
+        { q: 'Your simulation uses a fixed step and seeded RNG with no wall-clock reads. What is the cheapest correct replay format?',
+          options: ['A video capture of each session', 'The seed plus the inputs per frame, re-simulated deterministically', 'A full snapshot of every object every frame', 'The wall-clock timestamps of each frame'],
+          answer: 1, explain: 'Determinism makes seed plus inputs sufficient to rebuild the run, powering demos, bug reports and rollback.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Data-driven design</h3>
@@ -169,6 +201,14 @@ test "adding octaves adds detail but keeps the range" {
     {
       id: 'gd-godot', title: 'Godot field guide', minutes: 30,
       summary: 'The mental model: scenes, nodes, signals, resources, autoloads, physics layers and exporting.',
+      checks: [
+        { q: 'Where does a global audio manager or save system belong in a Godot project, and what is the caution?',
+          options: ['In a thin autoload singleton, kept few in number so global state stays manageable', 'Duplicated in every scene so each level owns its copy', 'Inside the player script, since the player is always present', 'In the export preset, so it only exists in release builds'],
+          answer: 0, explain: 'Autoloads suit truly global services, but each one is shared mutable state, so they stay few and thin.' },
+        { q: 'A newcomer puts player movement in _process and tunes speeds there, then reports different handling on high-refresh monitors. What is the fix?',
+          options: ['Multiply by a bigger constant in _process', 'Do movement in _physics_process at its fixed rate, reserving _process for visuals and UI', 'Cap the monitor refresh rate to 60 Hz', 'Move the tuning numbers into the export preset'],
+          answer: 1, explain: 'Gameplay movement belongs in the fixed-rate callback for stable simulation; per-frame visuals belong in _process.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>The mental model</h3>
@@ -202,6 +242,14 @@ func _physics_process(delta):
     {
       id: 'gd-zig', title: 'Zig for game programming', minutes: 40,
       summary: 'A fast tour of the Zig features games care about (explicit allocators, comptime, optionals, errors, packed data) and how to build a game with it.',
+      checks: [
+        { q: 'A Zig system needs scratch buffers every frame with zero per-frame leaks and one cheap reset. Which allocator pattern fits?',
+          options: ['Hand the system an arena for per-frame scratch and reset it once per frame', 'Call the page allocator for each buffer and free them one by one', 'Store scratch data in globals so nothing allocates', 'Leak the scratch buffers and restart the game hourly'],
+          answer: 0, explain: 'Arenas match frame lifetimes: many quick allocations, one reset, and the test allocator still catches real leaks.' },
+        { q: 'A function may or may not return a target entity. How should that be typed in Zig, and how does the caller unwrap it?',
+          options: ['As a raw nullable pointer checked against null with pointer casts', 'As an optional ?T, unwrapped with if (x) |v| or orelse, so absence is explicit in the type', 'As an error union, since missing data is always an error', 'As a global sentinel entity that means none'],
+          answer: 1, explain: 'Optionals make absence visible to the compiler with no null pointers by default, unlike hidden sentinel conventions.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Why Zig for games</h3>
@@ -283,6 +331,14 @@ var bullets = Pool(Bullet, 256){};</code></pre>
     {
       id: 'gd-cpp', title: 'C++ for games', minutes: 35,
       summary: 'The modern-C++ subset game programmers actually use, and the habits that keep it safe and fast.',
+      checks: [
+        { q: 'A loop erases dead enemies from a vector inside a range-for and intermittently crashes. What is the cause and the fix?',
+          options: ['Erasing invalidates the iterators being looped over; mark the dead and remove them after the loop, or use erase-remove or swap-remove by index', 'The vector is too small; reserve more capacity up front', 'Range-for is too slow; use a while loop instead', 'The enemies need virtual destructors'],
+          answer: 0, explain: 'Iterator invalidation makes in-loop erase undefined behaviour; separating marking from removal keeps iteration valid.' },
+        { q: 'A bullet manager needs exclusive ownership of a GPU buffer that must be released exactly once. Which smart pointer fits?',
+          options: ['std::shared_ptr, so every system can co-own the buffer', 'std::unique_ptr with RAII, avoiding raw new and delete in game code', 'A raw owning pointer with manual delete at shutdown', 'A global static object with a constructor'],
+          answer: 1, explain: 'Single ownership maps to unique_ptr: the destructor releases the resource on every path with no sharing overhead.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Why C++ is still everywhere in games</h3>
@@ -339,6 +395,14 @@ public:
     {
       id: 'gd-practice', title: 'The practice ladder', minutes: 15,
       summary: 'A sequence of small, finishable projects that each add one skill, and how to practise deliberately.',
+      checks: [
+        { q: 'You just cloned Pong to practise implementation. What is the recommended next design step?',
+          options: ['Start an original epic with all the ideas at once', 'Change one rule of the clone, so design risk stays low while the changed rule is the exercise', 'Rewrite the clone in three more engines first', 'Add online multiplayer before finishing'],
+          answer: 1, explain: 'Clone-then-change-one-rule removes design risk from the known game and isolates the new design decision.' },
+        { q: 'A friend claims their game is finished because the core loop is fun. Which checklist item most clearly shows it is not yet shippable?',
+          options: ['It has no pause, no restart under two seconds, and was never run as an export on a machine without the editor', 'It has placeholder art in one level', 'It was built in under a weekend', 'It only has three enemy types'],
+          answer: 0, explain: 'Finished means shippable: title screen, win or lose with fast restart, pause with settings, crash-free play, and a tested exported build.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>The way to get good is to finish many small games. Each rung below is a weekend or less and adds one new idea. Do them in your engine of choice (Godot) <i>and</i> at least the first few from scratch in Zig or C++ with raylib or SDL so you feel the loop you normally never see.</p>

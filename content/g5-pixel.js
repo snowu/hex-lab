@@ -6,6 +6,14 @@ TRACKS.push({
     {
       id: 'px-basics', title: 'Fundamentals: resolution, lines and shapes', minutes: 30,
       summary: 'What makes pixel art pixel art, how big to draw, and how to get clean lines. Draw in the built-in editor.',
+      checks: [
+        { q: 'A scene mixes a 16×16 character scaled up 2× next to a native 32×32 prop, and the character looks chunky and wrong. What is the problem?',
+          options: ['The canvas is too small', 'The palette is too large', 'Mixed pixel sizes (mixels): the two sprites have different on-screen pixel grids', 'The line runs are too even'],
+          answer: 2, explain: 'Pick one base resolution and scale; every sprite in a scene must share the same on-screen pixel grid size.' },
+        { q: 'A new sprite is shaded with the lightest colour in the middle and dark colours all around the edge, and it looks flat. What should you change?',
+          options: ['Pick one light direction and shade surfaces by how they face it instead of following the outline', 'Add more scattered single pixels', 'Zoom in further to judge it', 'Rotate the sprite 30 degrees in the engine'],
+          answer: 0, explain: 'Outline-following pillow shading ignores the light source; shading must come from a fixed light direction.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Every pixel is a decision</h3>
@@ -30,6 +38,14 @@ TRACKS.push({
     {
       id: 'px-color', title: 'Colour: palettes, ramps and hue shifting', minutes: 30,
       summary: 'Why limited palettes work, how to build a ramp, and the one trick that makes flat art look lit.',
+      checks: [
+        { q: 'A sprite shaded with pure black shadows and pure white highlights looks harsh and chalky. What is the usual fix?',
+          options: ['Add more ramp steps', 'Increase the canvas size', 'Draw bigger outlines', 'Use a very dark purple or navy instead of black and an off-white with a warm tint instead of white'],
+          answer: 3, explain: 'Extremes should be saved for outlines or sparkles; near-blacks and off-whites shade far more naturally.' },
+        { q: 'A bright red hero gets lost on a bright, saturated forest background. What does colour hierarchy say to do?',
+          options: ['Reserve the highest contrast and saturation for the focal object and mute the background', 'Make the background even more saturated', 'Give every object its own unrelated palette', 'Shift every ramp by 90 degrees'],
+          answer: 0, explain: 'The eye goes to contrast and vividness, so backgrounds stay quieter while the thing the player must notice stays loudest.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Limited palettes</h3>
@@ -55,6 +71,14 @@ TRACKS.push({
     {
       id: 'px-shading', title: 'Light, shading, dithering and outlines', minutes: 30,
       summary: 'Putting form into a sprite: a light source, banding, dithering and anti-aliasing by hand, and outline styles.',
+      checks: [
+        { q: 'Every object in a game is shaded as if lit from a different side, and the scene feels wrong. What rule was broken?',
+          options: ['Choose one light direction for the whole game and shade every object from it', 'Every object needs its own palette', 'Dither everything with noise', 'Remove all cast shadows'],
+          answer: 0, explain: 'One shared light direction is what makes separate sprites read as belonging to one world.' },
+        { q: 'A moving character has soft edge pixels sampled from a green field, and it shows a green halo over a dark cave. What is the fix?',
+          options: ['Add more anti-aliasing colours', 'Dither the whole sprite', 'Keep moving sprite edges hard or outlined, and save hand anti-aliasing for big static high-contrast shapes', 'Scale the sprite by 1.5×'],
+          answer: 2, explain: 'Edge pixels that match one background become a visible halo on another, so moving sprites stay hard-edged.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Pick one light source</h3>
@@ -83,6 +107,14 @@ TRACKS.push({
     {
       id: 'px-anim', title: 'Animation', minutes: 30,
       summary: 'Frame counts, timing, the animation principles that matter at small sizes, and walk cycles.',
+      checks: [
+        { q: 'A bouncing ball frame stretches it taller at speed but keeps the same width, so it looks like it gains volume. What is wrong?',
+          options: ['The fps is too low', 'Squash and stretch must preserve believable volume: taller means narrower, wider means shorter', 'The canvas is too small', 'It needs dithering'],
+          answer: 1, explain: 'Volume preservation is what sells squash and stretch; stretching one way must compress the other.' },
+        { q: 'A walk loop looks fine in the editor but the character glides like it is moonwalking in game. What do you check first?',
+          options: ['The palette size', 'The outline style', 'The number of idle frames', 'Whether stride length matches movement speed, and adjust one of them'],
+          answer: 3, explain: 'Animation and locomotion must agree; test in the engine at the real camera and speed, not just looping in the editor.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Fewer frames, better timing</h3>
@@ -105,6 +137,14 @@ TRACKS.push({
     {
       id: 'px-tiles-workflow', title: 'Tilesets, sprite sheets and the art pipeline', minutes: 40,
       summary: 'Tiles that connect, indexed colour and palette swaps, scaling rules, and keeping art in version control.',
+      checks: [
+        { q: 'A floor tile has one bright pebble and the finished room shows an obvious repeating grid of pebbles. What helps most?',
+          options: ['Draw 2 to 4 plain variants and place them randomly so the repetition breaks up', 'Make the tile bigger', 'Turn on texture filtering', 'Add more saturation'],
+          answer: 0, explain: 'A distinctive feature betrays the grid; variants plus random placement hide the repeat.' },
+        { q: 'You need day, night, and poisoned variants of the same enemy without redrawing it. Which workflow makes that trivial?',
+          options: ['Export three PNGs by hand', 'Redraw the silhouette each time', 'Store art as indexed colour against a fixed palette so swapping the palette recolours everything', 'Scale by non-integer factors'],
+          answer: 2, explain: 'Indexed pixels are palette references, so one art set yields many recolours from palette swaps.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Tilesets</h3>
@@ -130,6 +170,14 @@ TRACKS.push({
     {
       id: 'px-practice', title: 'A practice routine and a reusable editor', minutes: 20,
       summary: 'Daily drills that build skill quickly, and the design of a pixel editor you can drop into any game project.',
+      checks: [
+        { q: 'You want to learn how a favourite game places its pixels. Which practice does the lesson recommend?',
+          options: ['Trace it with a large brush', 'Copy a sprite pixel by pixel, then close it and redraw from memory', 'Upscale it with smoothing', 'Recolour it randomly'],
+          answer: 1, explain: 'Copying teaches placement, and redrawing from memory reveals what you actually retained.' },
+        { q: 'An artist with no git setup must fix one sprite in a game repo and get it reviewed. What is the lightest path with spritewright?',
+          options: ['Open the hosted editor in a browser, pick the GitHub repo, edit, and Propose PR, which forks first if needed', 'Email a screenshot of the fix', 'Rewrite the game in a new engine', 'Edit the exported PNG bytes by hand'],
+          answer: 0, explain: 'The standalone browser flow lists repo sprites and opens a pull request through the API with nothing to install.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Twenty minutes a day beats a weekend a month</h3>

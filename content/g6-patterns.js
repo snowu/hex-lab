@@ -8,6 +8,14 @@ TRACKS.push({
     {
       id: 'pat-thinking', title: 'Thinking in patterns: sequencing', minutes: 30,
       summary: 'What a pattern is and costs, then the three that organise time in every game: the game loop, update methods and double buffering.',
+      checks: [
+        { q: 'During the enemy update loop a dying enemy removes itself from the array and a shooter appends a new bullet to that same array. Some enemies get skipped and the game sometimes crashes. What is the correct fix?',
+          options: ['Iterate the array faster so the mutant elements are visited in time', 'Copy the whole game state every frame before updating', 'Queue spawns and removals during the pass and apply them afterwards (Godot queue_free and call_deferred exist for this)', 'Update bullets before enemies so the list never changes'],
+          answer: 2, explain: 'Mutating a list while walking it skips or repeats elements. Deferred add/remove keeps the iteration stable.' },
+        { q: 'A grid simulation where each cell reads its neighbours gives different results depending on the order cells are visited. Which change removes the order dependence?',
+          options: ['Keep two buffers: every cell reads from the current copy and writes into the next one, then swap their roles', 'Update the cells in reverse order on alternate frames', 'Use smaller floating point steps for the update', 'Run the update twice per frame and average the results'],
+          answer: 0, explain: 'Double buffering separates deciding from applying, so no cell sees a half-updated neighbour. Swapping is just exchanging roles.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>What a pattern is (and is not)</h3>
@@ -88,6 +96,14 @@ test "a blinker flips between horizontal and vertical, whatever the update order
     {
       id: 'pat-command', title: 'Command: actions as data', minutes: 30,
       summary: 'Turn "do this" into an object you can store, send, undo and replay. Input mapping, undo/redo and replays.',
+      checks: [
+        { q: 'You undid two moves in a level editor, then the player issues a brand-new move. What should happen to the redo stack and why?',
+          options: ['Keep it, so the player can redo the undone moves later', 'Merge it with the new move to save memory', 'Append the new move to the redo stack without clearing', 'Clear it, because the old future no longer exists once a new command is executed'],
+          answer: 3, explain: 'Redo re-applies an undone past. A new command replaces that future, so the stack must be discarded.' },
+        { q: 'Your prototype uses closures like func(): actor.move(dir) for input, and now you need save-to-disk replays and network play. What is the problem and the fix?',
+          options: ['Closures are data that can be saved and sent over the network, so nothing needs to change', 'Closures cannot be inspected or serialised; switch to data commands such as a tagged union so a replay is just seed plus a list of frame and command', 'Replays need faster closures, so inline every closure by hand', 'Networking only needs larger closures, so capture the whole world in each one'],
+          answer: 1, explain: 'Commands as data are trivially serialisable and sendable. Closures capture code that cannot be stored or transmitted.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>The problem</h3>
@@ -159,6 +175,14 @@ test "a recorded list of commands replays to the same state" {
     {
       id: 'pat-observer', title: 'Observer and event queue', minutes: 35,
       summary: 'Let things react to each other without knowing each other: signals, callbacks, and queues that decouple in time.',
+      checks: [
+        { q: 'An enemy subscribes to a global event hub and is later destroyed, but the next event crashes on freed memory. What is the robust fix?',
+          options: ['Restart the game whenever an enemy is destroyed', 'Subscribe twice so one copy survives', 'Keep a way to unregister (a handle or id from subscribe) and always disconnect in the destructor or _exit_tree; prefer engines that auto-disconnect like Godot signals', 'Make every handler static so it never needs cleanup'],
+          answer: 2, explain: 'Observer lifetime must be managed. A dead subscriber left registered is called after it is gone.' },
+        { q: 'A physics callback wants to delete a projectile and play a sound, but deleting mid-step is unsafe and the sound load can stall the frame. Which structure fits and what must you decide up front?',
+          options: ['A direct call from the projectile to the audio and physics code, for lowest latency', 'Push the requests onto an event queue processed at a safe point, with an explicit when-full policy: audio may drop but a level-complete event must never be lost', 'A deeper inheritance hierarchy for projectiles', 'Poll every projectile from the audio system each frame'],
+          answer: 1, explain: 'Queues decouple in time so slow or unsafe work waits for a chosen point. The full-queue policy is the core design decision.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>The problem</h3>
@@ -215,6 +239,14 @@ Player(Hub& h) { h.subscribe([this](int v) { on_event(v); }); }
     {
       id: 'pat-state', title: 'State, hierarchies and stacks', minutes: 30,
       summary: 'From a switch statement to state objects, hierarchical machines and the pushdown automaton that remembers where you came from.',
+      checks: [
+        { q: 'Walking, running and idle all need the same rule: if not on the floor, go to Falling. Where should that rule live?',
+          options: ['Copied into each of the three states so each is self-contained', 'In a shared parent Grounded state that children inherit, with the child handling an event first and the parent getting what the child ignores', 'In the renderer, which already knows the animation', 'In a global singleton checked once per second'],
+          answer: 1, explain: 'Hierarchical machines factor shared reactions into a parent, stopping the every-state-times-every-reaction explosion.' },
+        { q: 'A codebase sets state = X from a dozen places and sometimes skips the old exit and new enter hooks. What is the prescribed discipline?',
+          options: ['Transitions happen in one place in the machine, the old exit always runs before the new enter, and a re-entered state starts fresh', 'Let each state assign the next state directly for speed', 'Skip exit and enter when the frame rate is low', 'Store the state in two variables so one is always correct'],
+          answer: 0, explain: 'Centralised transitions with paired exit and enter keep setup and teardown balanced and re-entry predictable.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Where state machines come from</h3>
@@ -254,6 +286,14 @@ func update(actor, delta):
     {
       id: 'pat-pool', title: 'Object pool, flyweight and data locality', minutes: 35,
       summary: 'Three optimisation patterns that all come from the same fact: memory access, not arithmetic, is the bottleneck.',
+      checks: [
+        { q: 'A recycled bullet keeps the previous owner damage and velocity, so a peashooter sometimes fires a cannonball. What process prevents these zombie objects?',
+          options: ['Allocate every bullet fresh with new so it can never be dirty', 'Have one reset function that fully re-initialises the object and call it on every acquire from the pool', 'Zero only the x and y position and leave the rest for speed', 'Make the pool bigger so recycling happens less often'],
+          answer: 1, explain: 'Pooled objects must be completely re-initialised on acquire. Partial resets leak the last user into the next one.' },
+        { q: 'Your forest has 10,000 trees sharing a handful of meshes, textures and stats. How do you store them without exploding memory?',
+          options: ['Split each tree into shared immutable data (the tree type, one copy) plus tiny per-instance data (position, age) referencing it, like a tile map storing small ids into a table', 'Give each tree its own copy of the mesh, texture and stats for simplicity', 'Store all trees as strings in a config file', 'Compress the whole forest into one image'],
+          answer: 0, explain: 'The flyweight pattern shares one copy of the heavy definition across many light instances.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Why memory layout matters</h3>
@@ -334,6 +374,14 @@ Bullet* BulletPool::spawn(float x, float y) {
     {
       id: 'pat-type-object', title: 'Type object, prototype and data-driven design', minutes: 30,
       summary: 'Make "kinds of thing" into data, let designers add content without code, and resolve inheritance once.',
+      checks: [
+        { q: 'Weapon definitions reference each other by array index, and inserting a new sword in the middle silently re-points every later weapon. What is the robust convention?',
+          options: ['Reference other things by stable string ids like iron_sword, and validate data on load, reporting the file and field', 'Keep array indices but never insert in the middle', 'Hard-code every weapon id in the engine', 'Store weapons only in code comments'],
+          answer: 0, explain: 'Stable ids survive reordering and let load-time validation catch typos with a clear error.' },
+        { q: 'Designers will tweak sword damage weekly, but the combat damage formula itself rarely changes. Which side of the data-versus-code boundary does each belong on?',
+          options: ['Both belong in code, since designers can read code', 'Damage numbers are data designers edit freely; how the engine applies them is code, because it changes how the engine works', 'Put the damage formula in each level file for flexibility', 'Delete the damage numbers and compute them randomly'],
+          answer: 1, explain: 'If a designer wants to change it weekly it is data; if it changes how the engine works it is code.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>The class explosion</h3>
@@ -370,6 +418,14 @@ func setup(t: EnemyType): type = t; hp = t.max_hp</code></pre>
     {
       id: 'pat-dirty', title: 'Dirty flag and caching', minutes: 25,
       summary: 'Do expensive work only when its inputs changed, and the cache-invalidation bugs that come with it.',
+      checks: [
+        { q: 'An inventory total is correct at first, then stays wrong after some operations until an unrelated action refreshes it. What is the most likely cause and fix?',
+          options: ['The cache is too small, so allocate a bigger one', 'A code path changes the inputs without setting the dirty flag; funnel all writes through one function or make the data private so only flag-setting code can modify it', 'The CPU cache is full, so buy faster RAM', 'Reading the value too often wears out the flag'],
+          answer: 1, explain: 'A cache is only correct if every input change invalidates it. One bypassing writer causes stale-until-coincidence bugs.' },
+        { q: 'A derived value is read every frame but its inputs change rarely, and occasionally a read hitches after a big change. You are cleaning lazily on read. What is the alternative and its trade-off?',
+          options: ['Clean in a batch once per frame at a known point: predictable cost, but you may compute things nobody reads and reads before the clean see stale data', 'Never mark anything dirty again', 'Recompute on every write even when nobody reads', 'Delete the derived value and ask the player'],
+          answer: 0, explain: 'Lazy pays only for what is used but can hitch; batching is predictable but may do wasted work or serve stale reads.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>The problem</h3>
@@ -432,6 +488,14 @@ func total() -> int:
     {
       id: 'pat-component', title: 'Component, subclass sandbox and service locator', minutes: 35,
       summary: 'Compose entities from parts, give subclasses a safe toolbox, and reach shared services without global state.',
+      checks: [
+        { q: 'A proposed Speedster component only works when Health, Mover, Renderer, Input and Sound components are all present. What does that tell you?',
+          options: ['It is a well-decoupled component because it uses many others', 'It is one component pretending to be several and should be merged or split differently, since a component needing half the entity signals a missing concept', 'It needs even more dependencies to be safe', 'It should be converted to a singleton'],
+          answer: 1, explain: 'Components should own one concern. A part that drags in half the entity is a hidden god object.' },
+        { q: 'Core combat logic takes its dependencies as constructor or setup parameters, while the audio and settings use a small registry with swappable implementations. Why this split?',
+          options: ['It happened by accident and should be unified into globals', 'Registries are faster than parameters', 'Parameters prevent the game from compiling', 'Injection makes core logic explicit and testable, while a locator suits cross-cutting services; locators hide dependencies and need setup before use, so a thin Godot autoload is fine only for services, never game state'],
+          answer: 3, explain: 'Passing dependencies shows what code needs; a locator with an interface and a null service keeps cross-cutting needs swappable.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Component: composition over inheritance</h3>
@@ -518,6 +582,14 @@ test "callers use the interface, tests plug in a counter" {
     {
       id: 'pat-spatial', title: 'Spatial partitioning', minutes: 30,
       summary: 'Grids, quadtrees and bounding volume hierarchies: finding what is near without looking at everything.',
+      checks: [
+        { q: 'You are tuning a uniform grid for similarly sized pickups with a 200-pixel pickup radius. How do you pick the cell size?',
+          options: ['One pixel, so nothing is ever missed', 'About the typical query radius or object size: too small touches many cells and splits objects, too large packs too many objects per cell', 'The size of the whole map, so there is exactly one cell', 'Random each frame to avoid bias'],
+          answer: 1, explain: 'Cell size balances cells visited against objects per cell. The query radius is the natural scale.' },
+        { q: 'A static forest with a dense village in one corner uses a uniform grid and wastes memory on empty cells, while a dogfight with thousands of movers thrashes a quadtree. What pair of choices fits?',
+          options: ['Quadtree for the static uneven forest since empty areas stay coarse, and a rebuilt grid or spatial hash for the many similar-sized movers', 'Grid for the static uneven forest, quadtree for the dogfight', 'Brute force for both because structures never help', 'Sort both by name instead'],
+          answer: 0, explain: 'Quadtrees adapt to uneven static density; grids with O(1) insert and per-frame rebuild suit dynamic crowds.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>The problem</h3>
@@ -640,6 +712,14 @@ test "a query only counts the points inside it" {
     {
       id: 'pat-bytecode', title: 'Bytecode, scripting and data languages', minutes: 35,
       summary: 'Why games embed interpreters, how a stack machine works, and where to draw the line between code and scripts.',
+      checks: [
+        { q: 'How does (2 + 3) * 4 compile for the stack machine in this lesson, and how do you get loops and conditions?',
+          options: ['push 2, push 3, add, push 4, mul, with jumps for control flow; the interpreter is a loop and a switch over PUSH, ADD, JZ and HALT', 'mul 4, add 3, push 2, with no jumps needed', 'One CALL instruction per whole expression', 'Compile to x86 machine code directly'],
+          answer: 0, explain: 'Operands are pushed and operators pop them and push results; jumps give branching and looping.' },
+        { q: 'A prototype embeds a brand-new scripting language for a few dialogue branches. What does the lesson advise?',
+          options: ['Invent the language anyway because every game needs one', 'Stay at the lowest behaviour-as-data level that works and budget for errors, debugging and docs, or embed an existing language like Lua or GDScript instead of inventing one', 'Move physics and pathfinding into scripts too for consistency', 'Let scripts call every native function with no boundary'],
+          answer: 1, explain: 'A language means tooling and a designed native-script boundary. Climb the ladder only as far as designers need.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Why not just write it in the engine language?</h3>
@@ -675,6 +755,14 @@ while true:
     {
       id: 'pat-antipatterns', title: 'Singletons, globals and other traps', minutes: 30,
       summary: 'Why the easy pattern hurts, what to do instead, and the other design smells that kill game codebases.',
+      checks: [
+        { q: 'A function reads Game.score, writes Game.player.hp and branches on Game.level without taking any parameters. Why is it hard to test?',
+          options: ['It has too many parameters', 'Its signature hides its dependencies in global mutable state, so tests must set up the whole world and leak state into each other', 'It uses too few globals', 'Testing games is impossible in principle'],
+          answer: 1, explain: 'Hidden dependencies through a singleton make behaviour depend on faraway writes and execution order.' },
+        { q: 'You decide to break up a GameManager that handles input, spawning, score, UI, save, music and pause. What is the prescribed first move?',
+          options: ['Rename it to GameManager2 to mark the new version', 'Add more responsibilities so the split is worth it later', 'Find its callers, group them by what they actually use, then split by responsibility so each piece has one reason to change', 'Move everything into static strings'],
+          answer: 2, explain: 'Refactoring starts from usage: caller groups reveal the real responsibilities and their owners.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>The singleton trap</h3>
@@ -716,6 +804,14 @@ func _ready():
     {
       id: 'pat-case-study', title: 'Putting it together: architecture of a small game', minutes: 40,
       summary: 'Design the architecture of Breakout from scratch, choosing patterns for reasons, and learn to read a codebase you did not write.',
+      checks: [
+        { q: 'Breakout has one ball, a paddle and about 200 bricks. A teammate proposes a spatial grid broadphase for ball-versus-brick collision. What is the lesson answer?',
+          options: ['Skip it: brute force is trivial at this scale, and the real issue is tunneling, so use a swept test and resolve the first hit by time of impact', 'Build the grid, since structures are always faster', 'Remove collision entirely', 'Use a grid only for the paddle'],
+          answer: 0, explain: 'Match the tool to the measured problem. At hundreds of objects clarity beats an unjustified accelerator.' },
+        { q: 'You just opened a codebase you have never seen. What is the recommended first sequence?',
+          options: ['Rewrite it in your favourite language', 'Find the loop and read down, find where kinds of things come from as data, then trace one event like the player shoots end to end before judging anything', 'Start with the audio mixer settings', 'Delete the singletons first'],
+          answer: 1, explain: 'The loop, the data sources and one end-to-end trace reveal the systems, ownership and global surprises.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>Patterns are tools, and the skill is knowing which problem calls for which. We design a game small enough to hold in your head: <b>Breakout</b> (paddle, ball, bricks, lives, levels from files, a pause menu, high scores), and decide at each step whether a pattern pays for itself.</p>

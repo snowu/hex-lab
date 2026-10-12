@@ -1,7 +1,7 @@
 // Runs every suite in order against one static server and one browser. Usage: node e2e/run.mjs [suite ...]
 import { serve, launch, reporter } from './helpers.mjs';
 
-const ALL = ['smoke', 'exercises', 'interactive', 'fullstack', 'cloud', 'feedback', 'gate', 'katas', 'cards', 'mobile', 'gamedev', 'playgrounds', 'native-highlighting', 'native-projects', 'learning-drafts', 'game-learning', 'interview-learning', 'interview-katas', 'design-learning', 'story-practice', 'kata-editor-layout', 'kata-resume', 'game-kata-resume'];
+const ALL = ['smoke', 'exercises', 'interactive', 'fullstack', 'cloud', 'feedback', 'gate', 'katas', 'cards', 'mobile', 'gamedev', 'playgrounds', 'native-highlighting', 'native-projects', 'learning-drafts', 'game-learning', 'interview-learning', 'interview-katas', 'design-learning', 'story-practice', 'kata-editor-layout', 'kata-resume', 'game-kata-resume', 'lesson-checks'];
 const wanted = process.argv.slice(2).length ? process.argv.slice(2) : ALL;
 const server = process.env.LAB_URL ? { url: process.env.LAB_URL, close() {} } : await serve();
 const browser = await launch();

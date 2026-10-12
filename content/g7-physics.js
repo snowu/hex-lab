@@ -6,6 +6,14 @@ TRACKS.push({
     {
       id: 'phy-integration', title: 'Integration and stability', minutes: 35,
       summary: 'How acceleration becomes motion, why the obvious method explodes, and which integrator to use.',
+      checks: [
+        { q: 'RK4 evaluates forces four times per step and is very accurate on smooth orbits. Why is it still not the default for most game bodies?',
+          options: ['It costs four force evaluations per step and is not symplectic, so energy slowly drifts; semi-implicit Euler or Verlet with a fixed step is the better trade', 'It is less accurate than explicit Euler', 'It cannot handle gravity', 'It only works on Tuesdays'],
+          answer: 0, explain: 'Accuracy per step is not the whole trade. Cost and bounded energy matter more for long game simulations.' },
+        { q: 'You suspect your integrator is gaining energy. What is the prescribed test?',
+          options: ['Ship it and watch player reviews', 'Simulate a frictionless spring or pendulum for 10,000 steps at a fixed timestep and check the motion stays bounded', 'Halve the gravity and see if it looks nicer', 'Count the frames per second'],
+          answer: 1, explain: 'A conservative system must oscillate forever with constant energy. Growth proves a bad method or step.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Simulating motion</h3>
@@ -47,6 +55,14 @@ velocity += 0.5 * (a_old + a_new) * dt</code></pre>
     {
       id: 'phy-impulses', title: 'Collision response with impulses', minutes: 35,
       summary: 'What happens after two bodies touch: impulses, restitution, friction, mass, and why stacks of boxes are hard.',
+      checks: [
+        { q: 'Two overlapping circles have a relative velocity along the contact normal pointing apart (v_n > 0). What should the solver do?',
+          options: ['Apply the full bounce impulse anyway so something happens', 'Do nothing for this contact: they are already separating, so no impulse is needed', 'Double gravity to pull them back together', 'Delete the lighter body'],
+          answer: 1, explain: 'Impulses only oppose approach. Separating contacts need no response, which also prevents jitter.' },
+        { q: 'Boxes resting in a pile micro-bounce forever instead of settling. Which fix addresses the cause?',
+          options: ['Raise restitution so they bounce higher', 'Remove friction from every material', 'Increase the render frame rate', 'Set restitution to zero below a small closing speed (a restitution threshold), and let sleeping bodies stop simulating until touched'],
+          answer: 3, explain: 'Tiny impacts should be perfectly inelastic, and idle bodies should sleep so stacks stay still.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>From "they overlap" to "they bounce"</h3>
@@ -121,6 +137,14 @@ test "momentum is conserved in an off-centre hit, and a wall (inverse mass 0) do
     {
       id: 'phy-constraints', title: 'Constraints, ropes and cloth', minutes: 30,
       summary: 'Position-based dynamics: keep points at distance by relaxing constraints, the trick behind ropes, chains and cloth.',
+      checks: [
+        { q: 'In a distance constraint between a pinned point and a free point, how is the length error corrected?',
+          options: ['Each point moves by half the error, including the pinned one', 'The pinned point does not move; the free point takes the whole correction along the line between them', 'Neither point moves and the error is ignored', 'Gravity is increased until the error disappears'],
+          answer: 1, explain: 'Anchors are infinitely heavy. Moving only the free end keeps the pin exactly in place.' },
+        { q: 'Your swinging grappling hook should go slack when the player moves toward the anchor but snap taut when they swing too far. Which constraint and setup fits?',
+          options: ['A max-length rope constraint that only pulls when overstretched, ideally with one gameplay distance constraint plus a separate cosmetic Verlet chain for the visual', 'A rod constraint that pushes and pulls in both directions at all times', 'No constraint, just animate the rope by hand', 'A rigid hinge welded to the camera'],
+          answer: 0, explain: 'Ropes constrain only over-length. Gameplay needs one reliable limit while looks can be a cheap visual chain.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>What a constraint is</h3>
@@ -215,6 +239,14 @@ test "the rope hangs under gravity, stays pinned, and keeps its segment lengths"
     {
       id: 'phy-queries', title: 'Raycasts, shape casts and spatial queries', minutes: 35,
       summary: 'Asking the world questions: what is in front of me, can I see it, what is inside this area, did the bullet hit.',
+      checks: [
+        { q: 'In the slab method for ray versus axis-aligned box, when does the ray hit?',
+          options: ['When the latest slab entry is before the earliest slab exit, with hits behind the origin ignored', 'When it enters any single slab on either axis', 'When the ray direction is normalised, regardless of geometry', 'Only when the ray starts inside the box'],
+          answer: 0, explain: 'The box is the intersection of its slabs. Overlapping entry-exit intervals mean the ray passes through all of them.' },
+        { q: 'You must choose between a hitscan rifle and a slow plasma projectile for a new weapon. What should drive the decision?',
+          options: ['Cost: hitscan is always better because it is one raycast', 'The gameplay you want: instant exact shots versus travel time, drop and dodgeability, plus online lag compensation for hitscan', 'Whichever needs fewer art assets', 'The weapon name length'],
+          answer: 1, explain: 'Both are cheap enough. Fairness, feel and networking decide, not performance alone.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Queries are different from simulation</h3>
@@ -287,6 +319,14 @@ test "ray against a box" {
     {
       id: 'phy-controllers', title: 'Character controllers and platformer physics', minutes: 35,
       summary: 'Why most player characters are not rigid bodies, how move-and-slide works, and the bugs everyone hits with slopes and platforms.',
+      checks: [
+        { q: 'A character standing still on flat ground slowly sinks, then tunnels through after a minute. The code adds gravity times delta every frame with no grounded check. What is the fix?',
+          options: ['Add even more gravity so it sticks harder', 'Zero or clamp the downward velocity on floor contact instead of accumulating it while grounded, and use a swept test plus capped fall speed', 'Remove the floor collision', 'Run rendering at a higher frame rate'],
+          answer: 1, explain: 'Gravity must not build while standing. Unbounded fall speed eventually defeats any discrete test.' },
+        { q: 'The hero can jump while sliding down a near-vertical cliff face. What is wrong with the grounded test?',
+          options: ['It treats any contact below as floor; it must check the contact normal angle against the maximum floor slope, so steep surfaces count as walls', 'The jump button is too sensitive', 'Coyote time is too generous', 'The cliff texture looks too much like a floor'],
+          answer: 0, explain: 'Floor is defined by the normal being close to up. Steep contacts are walls and must not grant jumps.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Kinematic, not dynamic</h3>

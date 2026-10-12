@@ -5,6 +5,14 @@ TRACKS.push({
     {
       id: 'idempotency', title: 'Idempotency & exactly-once effects', minutes: 18,
       summary: 'Make retries safe. Implement an idempotency-key store.',
+      checks: [
+        { q: 'A client retries "pay 100" with the same Idempotency-Key but a changed body (amount 200). How must the server respond?',
+          options: ['Charge 200; the latest body wins', 'Charge both and refund one later', 'Reject with 422/409, because same key with different payload is a client bug', 'Ignore the key and process it as a new payment'],
+          answer: 2, explain: 'The key binds one logical operation to one payload. Same key with a different body must be rejected, not executed twice.' },
+        { q: 'Two requests with the same Idempotency-Key arrive at once while the first is still being processed. What is correct?',
+          options: ['Run both and return both results', 'Return 409 or wait on the in-flight request; never run the effect twice', 'Delete the key so the second becomes a fresh request', 'Keep whichever finishes last'],
+          answer: 1, explain: 'Concurrent duplicates must not execute twice. Claim the key atomically (unique constraint in one transaction) and make the second waiter fail fast or wait.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>Networks fail <i>after</i> the server did the work. The client cannot tell, so it retries. Without idempotency a retried “pay €100” pays twice. The standard solution: the client sends an <b>Idempotency-Key</b> (UUID) per logical operation; the server stores the result under that key and returns it on repeats.</p>
@@ -25,6 +33,14 @@ TRACKS.push({
     {
       id: 'sagas-breakers', title: 'Sagas, circuit breakers, timeouts', minutes: 20,
       summary: 'Coordinating steps across services, and protecting yourself from slow dependencies.',
+      checks: [
+        { q: 'Your team debates saga styles for a checkout flow that must be easy to observe and reason about. Which do you pick and why?',
+          options: ['Choreography, because implicit event flows are easier to debug', 'A two-phase commit across all services for atomicity', 'Orchestration, where a coordinator drives the steps, because the flow is explicit and observable', 'No coordinator and no events; hope each service guesses correctly'],
+          answer: 2, explain: 'Orchestration centralises the flow in a coordinator, which is easier to reason about and observe; choreography is loosely coupled but the flow is implicit.' },
+        { q: 'The breaker for a slow bank dependency is open. A new payment request arrives. What happens, and what happens next?',
+          options: ['It queues behind the slow calls until a thread frees up', 'It fails fast without calling the bank, and after a cooldown one probe goes through half-open to test recovery', 'It bypasses the breaker for VIP customers', 'It retries the bank immediately ten times'],
+          answer: 1, explain: 'An open breaker fails fast so threads stop piling up against a dead dependency, then half-open lets one probe through; success closes it, failure re-opens it.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>Sagas</h3>
@@ -44,6 +60,14 @@ TRACKS.push({
     {
       id: 'observability-incidents', title: 'Observability & incident stories', minutes: 12,
       summary: 'What to measure, and how to narrate an incident like a senior.',
+      checks: [
+        { q: 'Which alert best catches a real user-facing problem before customers complain?',
+          options: ['CPU above 80% on one host', 'Disk usage trending up over a week', 'SLO burn rate: error rate and latency against the objective, such as 99.9% under 2s', 'Number of deploys per day'],
+          answer: 2, explain: 'Alert on symptoms (SLO burn rate), not causes (CPU). RED metrics for services and USE for resources keep the signal on what users feel.' },
+        { q: 'Your incident review draft says: "We diagnosed the bug, then rolled back, then told support." What is wrong with that order?',
+          options: ['Nothing; diagnosis must always come first', 'Mitigation comes first: roll back or flag off to restore service, then diagnose with data and narrate detect, mitigate, diagnose, fix, learn', 'Support should never be told about incidents', 'Rollbacks are too risky to do early'],
+          answer: 1, explain: 'Senior incident order is mitigate first, diagnose second. Rollback is cheap and reversible, and the story runs detect, mitigate, diagnose, fix, learn.' },
+      ],
       sections: [
         { type: 'text', html: `
 <h3>The three pillars, pragmatically</h3>

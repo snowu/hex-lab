@@ -5,6 +5,14 @@ TRACKS.push({
     {
       id: 'design-framework', title: 'A framework you can run under pressure', minutes: 12,
       summary: 'Requirements → estimates → API → data → architecture → deep dives → failure.',
+      checks: [
+        { q: 'You have five minutes left in a design round and jumped straight to boxes and a database choice. What did the framework say to do first?',
+          options: ['Pick the database first, since everything else follows from it', 'Clarify the 3-4 must-do functional requirements plus what is out of scope, then set numbers (availability, latency, rps, storage)', 'Draw as many boxes as possible to show breadth', 'Memorise a reference architecture and reproduce it'],
+          answer: 1, explain: 'The framework runs clarify-and-scope before architecture: must-do requirements, out-of-scope, then non-functionals and back-of-envelope numbers.' },
+        { q: 'Why does the framework ask you to state the read/write ratio before choosing storage and caching?',
+          options: ['Because interviewers like arithmetic', 'Because writes are always more important than reads', 'Because the ratio drives storage and caching choices, such as read replicas or denormalisation for read-heavy loads', 'Because it determines the programming language'],
+          answer: 2, explain: 'Read/write ratio is a design input, not trivia: it decides whether reads scale via replicas and caches or writes scale via sharding.' },
+      ],
       sections: [
         { type: 'text', html: `<p>Interviewers do not want your memorised architecture. They want to watch you <b>structure an open problem</b>. Step through the framework below, then practise it on the worked design in the next lessons.</p>` },
         { type: 'steps', steps: [
@@ -23,6 +31,14 @@ TRACKS.push({
     {
       id: 'building-blocks', title: 'Building blocks & their trade-offs', minutes: 15,
       summary: 'Caching, queues, partitioning, replication, consistency.',
+      checks: [
+        { q: 'A hot key expires and thousands of requests hit the database simultaneously. Which fix actually addresses this thundering herd?',
+          options: ['Delete the cache so every request goes to the database evenly', 'Single-flight request coalescing with jittered TTLs or serving stale while revalidating', 'Add more cache replicas with the same fixed TTL', 'Route all traffic to the primary database'],
+          answer: 1, explain: 'That collapse is a cache stampede. The mitigations are coalescing concurrent misses, jittered TTLs, early refresh, or stale-while-revalidate.' },
+        { q: 'During a network partition you must choose: show a possibly stale balance, or reject the request. What principle guides you?',
+          options: ['Always choose availability, because uptime beats everything', 'Always choose consistency, because partitions never happen', 'It depends on the operation: a balance display can be stale, but double-spending money cannot', 'Pick whichever is cheaper to implement'],
+          answer: 2, explain: 'During a partition you pick consistency or availability per operation (PACELC beyond that: latency vs consistency). Correctness requirements decide.' },
+      ],
       sections: [
         { type: 'text', html: `
 <table>
@@ -47,6 +63,14 @@ TRACKS.push({
     {
       id: 'consistent-hashing', title: 'Deep dive: consistent hashing', minutes: 20,
       summary: 'How to spread keys over nodes without reshuffling everything. Implement it.',
+      checks: [
+        { q: 'Your cache uses hash(key) % N. You add one node and nearly every key misses at once. Why?',
+          options: ['The hash function is too slow for the new size', 'Modulo-N remaps almost every key when N changes; consistent hashing moves only about 1/N of keys', 'Virtual nodes were missing from the client library version', 'Caches must be cleared whenever topology changes'],
+          answer: 1, explain: 'Modulo hashing couples every key to N, so a membership change reshuffles nearly everything. The ring assigns each key to the first node clockwise, so only neighbours of the change move.' },
+        { q: 'One node on the ring holds far more keys than the rest. What is the standard fix, and what bonus does it give?',
+          options: ['Add many virtual nodes per physical node to even out load, and weight bigger machines with more of them', 'Rehash every key with a stronger algorithm', 'Reduce the ring to a single node per machine', 'Disable hashing and assign keys round-robin'],
+          answer: 0, explain: 'Virtual nodes spread each physical node around the ring, evening out load and letting heavier machines carry proportionally more keys.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>With <code>hash(key) % N</code>, adding a node remaps almost every key, which is a cache disaster. <b>Consistent hashing</b> places nodes (and many <i>virtual nodes</i> per node) on a ring; a key belongs to the first node clockwise from its hash. Adding or removing a node moves only ~1/N of the keys.</p>
@@ -57,6 +81,14 @@ TRACKS.push({
     {
       id: 'design-webhooks', title: 'Worked design: webhook delivery platform', minutes: 15,
       summary: 'At-least-once delivery, retries, signing, ordering, and customer pain.',
+      checks: [
+        { q: 'A consumer receives the same webhook event_id twice. What must it do, and why is this expected?',
+          options: ['Alert on a bug; webhooks guarantee exactly-once', 'Dedupe on event_id and process once, because retries make at-least-once the only honest guarantee', 'Refund the customer for the duplicate', 'Switch delivery to exactly-once by adding a second queue'],
+          answer: 1, explain: 'Exactly-once over HTTP is impossible, so the design promises at-least-once with unique event_ids and pushes dedupe to the consumer.' },
+        { q: 'One customer endpoint gets slow and delivery workers pile up on it, delaying everyone else. What is the fix?',
+          options: ['Remove timeouts so the slow endpoint can finish', 'Give all endpoints one shared queue for fairness', 'Stop signing payloads to speed up delivery', 'Isolate per-endpoint queues and concurrency limits with short timeouts and a circuit breaker that pauses the failing endpoint'],
+          answer: 3, explain: 'Noisy neighbours need isolation: per-endpoint queues and limits, short timeouts, a breaker that pauses a failing endpoint, and autodisable after days of failure.' },
+      ],
       sections: [
         { type: 'text', html: `<p>Prompt: <i>“Design a system that notifies customers’ HTTP endpoints when events happen (e.g. a payment status changes).”</i> It is a favourite because it is small but full of real trade-offs, and it is exactly what a payments / open-banking platform ships.</p>` },
         { type: 'steps', steps: [

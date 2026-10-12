@@ -5,6 +5,14 @@ TRACKS.push({
     {
       id: 'llm-mental-model', title: 'LLMs: the mental model you need', minutes: 12,
       summary: 'Tokens, context, sampling, cost/latency, and where they fail.',
+      checks: [
+        { q: 'A demo chatbot “remembers” the user’s account tier across turns. Where does that memory actually live?',
+          options: ['In the model weights, which update themselves each turn', 'In a database row the model edits directly', 'In context you re-send every call, bounded by the context window', 'In the temperature setting'],
+          answer: 2, explain: 'LLMs are stateless. Memory is re-sent context, so noisy or overlong context degrades quality and raises cost.' },
+        { q: 'Your invoice extractor must return stable JSON with exact field names on every run. What is the best setup?',
+          options: ['Constrain the output with a schema, validate it like untrusted input, and use a low temperature', 'Raise the temperature for more variety and retry until it looks right', 'Send the full document archive on every call with no validation', 'Fine-tune a new model before trying anything else'],
+          answer: 0, explain: 'Structured output plus validation enforces the contract and low temperature favours determinism; fine-tuning is the last resort, not the first.' },
+      ],
       sections: [
         { type: 'text', html: `
 <ul>
@@ -28,6 +36,14 @@ TRACKS.push({
     {
       id: 'rag-evals', title: 'RAG & evaluation', minutes: 22,
       summary: 'Chunking, similarity search, and how you know it works.',
+      checks: [
+        { q: 'Your RAG bot misses key contract clauses even though the generator model is strong. Where should you investigate first?',
+          options: ['The GPU type serving the generator', 'The temperature slider in the demo UI', 'The system prompt font size', 'Chunking and retrieval: chunk boundaries, embeddings, and whether the right chunk is in the top-k'],
+          answer: 3, explain: 'RAG quality is mostly decided by chunking and retrieval, not by upgrading the generator.' },
+        { q: 'Your golden eval shows the right clause was retrieved but the answer contradicts it. Which half is broken and what does it mean?',
+          options: ['Generation: faithfulness to the retrieved context failed, so fix instructions, grounding, or validation', 'Retrieval: recall@k failed, so re-chunk everything immediately', 'The cosine formula failed and must be replaced', 'The chunk_text code sample failed and must be deleted'],
+          answer: 0, explain: 'Measure retrieval (recall@k) separately from generation (faithfulness). Right chunk plus wrong answer points at generation.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p><b>RAG</b> (retrieval-augmented generation): split documents into chunks → embed each into a vector → at question time embed the query, fetch the top-k most similar chunks, put them in the prompt. Quality is mostly decided by <b>chunking and retrieval</b>, not the generator.</p>
@@ -46,6 +62,14 @@ TRACKS.push({
     {
       id: 'agents-security', title: 'Agents, tools & prompt-injection security', minutes: 15,
       summary: 'Least privilege for LLM tools; never trust model output.',
+      checks: [
+        { q: 'A support agent can read private tickets, fetch arbitrary URLs, and POST to the open internet. Which change best breaks the “lethal trifecta”?',
+          options: ['Tell the model to be careful with private data', 'Remove the exfiltration leg: disable arbitrary outbound posts or confine them to an allowlisted endpoint', 'Give the agent a larger context window', 'Raise the temperature so outputs vary more'],
+          answer: 1, explain: 'The lethal trifecta is private data plus untrusted content plus an exfiltration channel. Removing one leg limits what an injection can achieve.' },
+        { q: 'The model asks your backend to run delete_workspace with an unexpected extra argument. What must happen before anything executes?',
+          options: ['Execute it immediately since the model chose it', 'Ask the model whether the arguments look safe', 'Log the call after executing it to save latency', 'Validate the tool arguments server-side against a schema and allowlist scoped to that user’s permissions'],
+          answer: 3, explain: 'Model output is untrusted input. Least privilege means validating every tool call and scoping tools to the end user, not a superuser.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>An <b>agent</b> is a loop: the model decides on a tool call, your code executes it, the result goes back into the context, repeat. The model is a <b>confused deputy</b>: anything in its context (web pages, emails, tickets, files) may contain instructions that steer it. That is <b>prompt injection</b>, and it cannot be fully “prompted away”.</p>
@@ -66,6 +90,14 @@ TRACKS.push({
     {
       id: 'review-ai-code', title: 'Reviewing AI-written code', minutes: 12,
       summary: 'Recurring failure patterns and a checklist.',
+      checks: [
+        { q: 'Generated code calls db.query_async_batched(), which you cannot find in the library docs for your installed version. What is the right move?',
+          options: ['Trust it: fluent generated code rarely invents APIs, so ship it', 'Treat it as a possible hallucinated API and verify against the installed version’s docs and CHANGELOG before keeping it', 'Add a retry loop so the missing method eventually appears', 'Suppress the linter warning and move on'],
+          answer: 1, explain: 'Hallucinated or version-wrong APIs are a classic generation failure. Verify every unfamiliar call against the version you actually run.' },
+        { q: 'The assistant writes tests that mock the pricing module and assert an internal helper was called once. Why should you reject these tests?',
+          options: ['Mocks are never allowed in any test', 'The tests run too fast to be meaningful', 'The tests assert the implementation instead of behaviour and mock away the thing under test; rewrite them to assert observable outcomes', 'The tests use too few abstractions'],
+          answer: 2, explain: 'Good tests pin behaviour, not internals. Mocking away the unit under test only proves the mock was called.' },
+      ],
       sections: [
         { type: 'text', html: `
 <p>Generated code is fluent and confident, so review fatigue is the risk. Patterns to hunt:</p>
