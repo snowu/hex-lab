@@ -675,8 +675,9 @@ body{--chat-w:min(100vw,clamp(440px,34vw,640px))}body.chat-wide{--chat-w:min(100
 .chat-ctx{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);margin-bottom:8px}
 .chat-row{display:flex;gap:8px;align-items:flex-end}
 .chat-row textarea{flex:1;resize:vertical;min-height:44px;max-height:180px;font:inherit;font-size:14px;padding:8px;background:var(--bg);color:var(--ink);border:1px solid var(--line2)}
-/* With the chat panel open the page is narrower: keep the single header row and let the nav scroll sideways instead of wrapping under the controls */
-@media(min-width:1100px){body.chat-open .top-in{flex-wrap:nowrap}body.chat-open .top nav{order:0;width:auto;flex:1;min-width:0;margin-left:6px;overflow-x:auto}body.chat-open .top nav a{padding:7px 10px}}
+/* With the chat panel open the page is narrower: keep the single header row and let the nav scroll sideways instead of wrapping under the controls.
+   The panel already has its own close control, so the header chat button hides while it is open; search stays one keypress away (Ctrl+K). */
+@media(min-width:1100px){body.chat-open .top-in{flex-wrap:nowrap;gap:12px}body.chat-open #chatBtn,body.chat-open #searchBtn{display:none}body.chat-open .top nav{order:0;width:auto;flex:1;min-width:0;margin-left:0;overflow-x:auto}body.chat-open .top nav a{padding:7px 8px}}
 
 .chat-msg.assistant h4{margin:10px 0 4px;font-size:14px;color:var(--accent)}
 .chat-msg.assistant ul,.chat-msg.assistant ol{margin:4px 0 8px;padding-left:20px}.chat-msg.assistant li{margin:2px 0}
