@@ -1,0 +1,213 @@
+{
+  "command": "node scripts/native/contract-regressions.mjs",
+  "results": [
+    {
+      "id": "c-bank-unlocked",
+      "slug": "bank-account",
+      "language": "c",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "tests: test_exercise.c:73: main: Assertion `account_balance(&shared, &b) && b == WORKERS * ITERATIONS' failed."
+    },
+    {
+      "id": "cpp-bank-unlocked",
+      "slug": "bank-account",
+      "language": "cpp",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "across tracks\n-------------------------------------------------------------------------------\nbank_account_test.cpp:171\n...............................................................................\n\nbank_account_test.cpp:192: FAILED:\n  REQUIRE( account.balance() == workers * iterations )\nwith expansion:\n  62519 (0xf437) == 160000 (0x27100)\n\n===============================================================================\ntest cases: 19 | 17 passed | 2 failed\nassertions: 20 | 18 passed | 2 failed"
+    },
+    {
+      "id": "zig-bank-unlocked",
+      "slug": "bank-account",
+      "language": "zig",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "ive-validation/contract-regressions-6UGjPT/zig-bank-unlocked-mutant/test_bank_account.zig:60:5: 0x1255227 in test.parallel deposits withdrawals and lifecycle have parity across tracks (test_bank_account.zig)\n    try t.expectEqual(@as(u32, 1), try contractPhase(&bank, 2));\n    ^\n1 passed; 0 skipped; 1 failed.\nerror: the following test command failed with exit code 1:\n/home/snow/.cache/native-validation/contract-regressions-6UGjPT/zig-cache/o/cc4f8f4e7dd3f4fe077e3b940fd00616/test --seed=0xf677f7f9"
+    },
+    {
+      "id": "c-robot-predictable-permutation",
+      "slug": "robot-name",
+      "language": "c",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "tests: test_exercise.c:52: main: Assertion `!constant_difference' failed."
+    },
+    {
+      "id": "c-zipper-shared-mutation",
+      "slug": "zipper",
+      "language": "c",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "tests: test_exercise.c:20: main: Assertion `clone.focus && clone.root != original.root && zipper_value(&clone) == 1' failed."
+    },
+    {
+      "id": "cpp-zipper-shared-mutation",
+      "slug": "zipper",
+      "language": "cpp",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "tests: test_exercise.cpp:21: int main(): Assertion `clone.focus && clone.root != original.root && zipper_value(&clone) == 1' failed."
+    },
+    {
+      "id": "c-wordsearch-missing-diagonal",
+      "slug": "word-search",
+      "language": "c",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "tests: test_exercise.c:25: main: Assertion `find_word(grid, 3, cases[i].word, &start, &end)' failed."
+    },
+    {
+      "id": "cpp-wordsearch-missing-diagonal",
+      "slug": "word-search",
+      "language": "cpp",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "tests: test_exercise.cpp:25: int main(): Assertion `find_word(grid, 3, cases[i].word, &start, &end)' failed."
+    },
+    {
+      "id": "zig-wordsearch-missing-diagonal",
+      "slug": "word-search",
+      "language": "zig",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "td.zig)\n    if (fn_info.param_types[0].? == std.process.Init.Minimal) return wrapMain(root.main(.{\n                                                                                       ^\n/tmp/native-zig/lib/std/start.zig:248:5: 0x1203d81 in _start (std.zig)\n    asm volatile (switch (native_arch) {\n    ^\nerror: the following test command terminated with signal ABRT:\n/home/snow/.cache/native-validation/contract-regressions-6UGjPT/zig-cache/o/b00e9eed9514d5a7f0dd1eaf23aeff99/test --seed=0xd0319e95"
+    },
+    {
+      "id": "c-wordsearch-ignores-case",
+      "slug": "word-search",
+      "language": "c",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "tests: test_exercise.c:30: main: Assertion `!find_word(grid, 3, \"ABC\", &start, &end)' failed."
+    },
+    {
+      "id": "cpp-wordsearch-ignores-case",
+      "slug": "word-search",
+      "language": "cpp",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "tests: test_exercise.cpp:30: int main(): Assertion `!find_word(grid, 3, \"ABC\", &start, &end)' failed."
+    },
+    {
+      "id": "zig-wordsearch-ignores-case",
+      "slug": "word-search",
+      "language": "zig",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "cache/native-validation/contract-regressions-6UGjPT/zig-wordsearch-ignores-case-mutant/test_word_search.zig:156:5: 0x1254654 in test.exact case ragged boundaries single character and no wrapping parity (test_word_search.zig)\n    try t.expect(m.search(&g, \"ABC\") == null);\n    ^\n25 passed; 0 skipped; 1 failed.\nerror: the following test command failed with exit code 1:\n/home/snow/.cache/native-validation/contract-regressions-6UGjPT/zig-cache/o/692005da7f489b3864fae85e025622b9/test --seed=0x76f26832"
+    },
+    {
+      "id": "c-scale-forces-tonic",
+      "slug": "scale-generator",
+      "language": "c",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "tests: test_exercise.c:15: main: Assertion `scale(\"C\", \"MMmMMMm\", o) == 8 && !strcmp(o[0], \"C\") && !strcmp(o[3], \"F\") && !strcmp(o[7], \"C\")' failed."
+    },
+    {
+      "id": "cpp-scale-forces-tonic",
+      "slug": "scale-generator",
+      "language": "cpp",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "tests: test_exercise.cpp:15: int main(): Assertion `scale(\"C\", \"MMmMMMm\", o) == 8 && !strcmp(o[0], \"C\") && !strcmp(o[3], \"F\") && !strcmp(o[7], \"C\")' failed."
+    },
+    {
+      "id": "zig-poker-loses-five-of-a-kind",
+      "slug": "poker",
+      "language": "zig",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "-of-a-kind-mutant/test_poker.zig:135:5: 0x1283518 in test.five of a kind from multiple decks outranks a straight flush (test_poker.zig)\n    try t.expectEqualStrings(hands[0], winners[0]);\n    ^\n41/41 test_poker.test.invalid suits and nonstandard numeric faces are rejected...OK\n40 passed; 0 skipped; 1 failed.\nerror: the following test command failed with exit code 1:\n/home/snow/.cache/native-validation/contract-regressions-6UGjPT/zig-cache/o/8cb358fa096e2acc15d06b3fa29ec9b4/test --seed=0x3272eb52"
+    },
+    {
+      "id": "zig-sgf-duplicate-and-borrowed-identifier",
+      "slug": "sgf-parsing",
+      "language": "zig",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "ation/contract-regressions-6UGjPT/zig-sgf-duplicate-and-borrowed-identifier-mutant/test_sgf_parsing.zig:125:5: 0x1255d40 in test.duplicate IDs merge values and tree owns the identifier (test_sgf_parsing.zig)\n    try t.expectEqual(@as(usize, 1), tree.root.properties.len);\n    ^\n23 passed; 0 skipped; 1 failed.\nerror: the following test command failed with exit code 1:\n/home/snow/.cache/native-validation/contract-regressions-6UGjPT/zig-cache/o/22442c6dbf751449210f37fa30dfaa44/test --seed=0xf8b3cd50"
+    },
+    {
+      "id": "c-react-old-repeated-input-ownership",
+      "slug": "react",
+      "language": "c",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "free(): double free detected in tcache 2"
+    },
+    {
+      "id": "cpp-react-old-repeated-input-ownership",
+      "slug": "react",
+      "language": "cpp",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "free(): double free detected in tcache 2"
+    },
+    {
+      "id": "c-wordy-old-semantic-boundary",
+      "slug": "wordy",
+      "language": "c",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "Runtime terminated with SIGFPE"
+    },
+    {
+      "id": "cpp-wordy-old-semantic-boundary",
+      "slug": "wordy",
+      "language": "cpp",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "Runtime terminated with SIGFPE"
+    },
+    {
+      "id": "c-variable-length-quantity-old-semantic-boundary",
+      "slug": "variable-length-quantity",
+      "language": "c",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "wo_bytes:PASS\ntest_variable_length_quantity.c:348:test_three_bytes:PASS\ntest_variable_length_quantity.c:349:test_four_bytes:PASS\ntest_variable_length_quantity.c:350:test_maximum_32_bit_integer:PASS\ntest_variable_length_quantity.c:351:test_incomplete_sequence_causes_error:PASS\ntest_variable_length_quantity.c:352:test_incomplete_sequence_causes_error_even_if_value_is_zero:PASS\ntest_variable_length_quantity.c:353:test_multiple_values:PASS\n\n-----------------------\n27 Tests 1 Failures 0 Ignored \nFAIL"
+    },
+    {
+      "id": "cpp-variable-length-quantity-old-semantic-boundary",
+      "slug": "variable-length-quantity",
+      "language": "cpp",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "S\ntest_variable_length_quantity.cpp:348:test_three_bytes:PASS\ntest_variable_length_quantity.cpp:349:test_four_bytes:PASS\ntest_variable_length_quantity.cpp:350:test_maximum_32_bit_integer:PASS\ntest_variable_length_quantity.cpp:351:test_incomplete_sequence_causes_error:PASS\ntest_variable_length_quantity.cpp:352:test_incomplete_sequence_causes_error_even_if_value_is_zero:PASS\ntest_variable_length_quantity.cpp:353:test_multiple_values:PASS\n\n-----------------------\n27 Tests 1 Failures 0 Ignored \nFAIL"
+    },
+    {
+      "id": "c-resistor-color-trio-old-semantic-boundary",
+      "slug": "resistor-color-trio",
+      "language": "c",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "est_red_black_red:PASS\ntest_resistor_color_trio.c:92:test_green_brown_orange:PASS\ntest_resistor_color_trio.c:93:test_yellow_violet_yellow:PASS\ntest_resistor_color_trio.c:94:test_blue_violet_blue:PASS\ntest_resistor_color_trio.c:95:test_minimum_possible_value:PASS\ntest_resistor_color_trio.c:96:test_maximum_possible_value:PASS\ntest_resistor_color_trio.c:97:test_invalid_octal:PASS\ntest_resistor_color_trio.c:98:test_ignore_extra_colors:PASS\n\n-----------------------\n11 Tests 1 Failures 0 Ignored \nFAIL"
+    },
+    {
+      "id": "cpp-resistor-color-trio-old-semantic-boundary",
+      "slug": "resistor-color-trio",
+      "language": "cpp",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "red:PASS\ntest_resistor_color_trio.cpp:93:test_green_brown_orange:PASS\ntest_resistor_color_trio.cpp:94:test_yellow_violet_yellow:PASS\ntest_resistor_color_trio.cpp:95:test_blue_violet_blue:PASS\ntest_resistor_color_trio.cpp:96:test_minimum_possible_value:PASS\ntest_resistor_color_trio.cpp:97:test_maximum_possible_value:PASS\ntest_resistor_color_trio.cpp:98:test_invalid_octal:PASS\ntest_resistor_color_trio.cpp:99:test_ignore_extra_colors:PASS\n\n-----------------------\n11 Tests 1 Failures 0 Ignored \nFAIL"
+    },
+    {
+      "id": "c-satellite-unchecked-lengths",
+      "slug": "satellite",
+      "language": "c",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "tests: test_exercise.c:24: main: Assertion `!tree_from_traversals_checked(p, 4, i, 3, &r) && !r' failed."
+    },
+    {
+      "id": "cpp-satellite-unchecked-lengths",
+      "slug": "satellite",
+      "language": "cpp",
+      "reference": "pass",
+      "mutant": "rejected",
+      "evidence": "tests: test_exercise.cpp:24: int main(): Assertion `!tree_from_traversals_checked(p, 4, i, 3, &r) && !r' failed."
+    }
+  ]
+}

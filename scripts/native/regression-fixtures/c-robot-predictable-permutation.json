@@ -1,0 +1,24 @@
+{
+  "description": "Deliberately buggy previous reference retained only as a semantic regression fixture.",
+  "source": "local/ports-from-exercism-python",
+  "ref": "original-c17-port",
+  "license": "MIT",
+  "authors": [],
+  "contributors": [
+    "ariso353",
+    "behrtam",
+    "cmccandless",
+    "Dog",
+    "kytrinyx",
+    "lowks",
+    "N-Parsons",
+    "pheanex",
+    "rootulp",
+    "sjakobi",
+    "tqa236",
+    "tstirrat15"
+  ],
+  "files": {
+    "exercise.c": "#include \"exercise.h\"\n#include <ctype.h>\n#include <math.h>\n#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\nstatic bool used[676000];\nstatic unsigned next_name = 0;\nbool robot_create(robot *r) {\n    for (unsigned i = 0; i < 676000; i++) {\n        unsigned n = (unsigned)(((uint64_t)next_name++ * 104729 + 7919) % 676000);\n        if (used[n])\n            continue;\n        used[n] = true;\n        r->name[0] = (char)('A' + n / 26000);\n        r->name[1] = (char)('A' + n / 1000 % 26);\n        snprintf(r->name + 2, 4, \"%03u\", n % 1000);\n        return true;\n    }\n    return false;\n}\nbool robot_reset(robot *r) { return robot_create(r); }"
+  }
+}

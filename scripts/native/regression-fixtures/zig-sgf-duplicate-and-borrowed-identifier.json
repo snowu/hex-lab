@@ -1,0 +1,23 @@
+{
+  "description": "Deliberately buggy previous reference retained only as a semantic regression fixture.",
+  "source": "native-port",
+  "ref": "local",
+  "license": "MIT",
+  "authors": [
+    "Dev Lab",
+    "cmccandless"
+  ],
+  "contributors": [
+    "BethanyG",
+    "crsmi",
+    "Dog",
+    "elyashiv",
+    "IsaacG",
+    "thomasjpfan",
+    "tqa236",
+    "yawpitch"
+  ],
+  "files": {
+    "sgf_parsing.zig": "const std = @import(\"std\");\npub const Property = struct { id: []const u8, values: []const []const u8 };\npub const Node = struct { properties: []const Property = &.{}, children: []const *const Node = &.{} };\npub const Tree = struct {\n    arena: std.heap.ArenaAllocator,\n    root: *const Node,\n    pub fn deinit(tree: *Tree) void {\n        tree.arena.deinit();\n    }\n};\nconst Parser = struct {\n    a: std.mem.Allocator,\n    s: []const u8,\n    i: usize = 0,\n    fn skip(p: *Parser) void {\n        while (p.i < p.s.len and std.ascii.isWhitespace(p.s[p.i])) p.i += 1;\n    }\n    fn peek(p: *Parser) u8 {\n        p.skip();\n        return if (p.i < p.s.len) p.s[p.i] else 0;\n    }\n    fn value(p: *Parser) ![]const u8 {\n        p.i += 1;\n        var out = std.array_list.Managed(u8).init(p.a);\n        while (p.i < p.s.len) {\n            var c = p.s[p.i];\n            p.i += 1;\n            if (c == ']') return out.toOwnedSlice();\n            if (c == '\\\\') {\n                if (p.i == p.s.len) return error.PropertiesWithoutDelimiter;\n                c = p.s[p.i];\n                p.i += 1;\n                if (c == '\\n') continue;\n                if (c == '\\r') {\n                    if (p.i < p.s.len and p.s[p.i] == '\\n') p.i += 1;\n                    continue;\n                }\n            }\n            if (c == '\\t' or c == '\\r' or c == 11 or c == 12) c = ' ';\n            try out.append(c);\n        }\n        return error.PropertiesWithoutDelimiter;\n    }\n    fn node(p: *Parser) anyerror!*Node {\n        if (p.peek() != ';') return error.TreeWithNoNodes;\n        p.i += 1;\n        var props = std.array_list.Managed(Property).init(p.a);\n        while (std.ascii.isAlphabetic(p.peek())) {\n            const start = p.i;\n            while (p.i < p.s.len and std.ascii.isAlphabetic(p.s[p.i])) {\n                if (!std.ascii.isUpper(p.s[p.i])) return error.PropertyMustBeUppercase;\n                p.i += 1;\n            }\n            const id = p.s[start..p.i];\n            if (p.peek() != '[') return error.PropertiesWithoutDelimiter;\n            var values = std.array_list.Managed([]const u8).init(p.a);\n            while (p.peek() == '[') try values.append(try p.value());\n            try props.append(.{ .id = id, .values = try values.toOwnedSlice() });\n        }\n        const n = try p.a.create(Node);\n        n.* = .{ .properties = try props.toOwnedSlice() };\n        return n;\n    }\n    fn tree(p: *Parser) anyerror!*const Node {\n        if (p.peek() != '(') return error.TreeMissing;\n        p.i += 1;\n        if (p.peek() != ';') return error.TreeWithNoNodes;\n        const root = try p.node();\n        var current = root;\n        while (p.peek() == ';') {\n            const next = try p.node();\n            const children = try p.a.alloc(*const Node, 1);\n            children[0] = next;\n            current.children = children;\n            current = next;\n        }\n        var children = std.array_list.Managed(*const Node).init(p.a);\n        while (p.peek() == '(') try children.append(try p.tree());\n        current.children = try children.toOwnedSlice();\n        if (p.peek() != ')') return error.TreeMissing;\n        p.i += 1;\n        return root;\n    }\n};\npub fn parse(a: std.mem.Allocator, input: []const u8) !Tree {\n    var arena = std.heap.ArenaAllocator.init(a);\n    errdefer arena.deinit();\n    var parser = Parser{ .a = arena.allocator(), .s = input };\n    const root = try parser.tree();\n    if (parser.peek() != 0) return error.TreeMissing;\n    return .{ .arena = arena, .root = root };\n}\n"
+  }
+}

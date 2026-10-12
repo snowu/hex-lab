@@ -528,17 +528,31 @@ function rCode(el, s, l, idx, sync, hue, disposers) {
 function rDrill(el, s, l, idx, sync, hue, disposers) {
   const key = keysOf(l)[idx], solved = () => !!(progress[l.id] || {})[key];
   const LANGS = { c: { name: 'C', ext: 'c', cmd: (id) => `cc -std=c17 -Wall ${id}.c -lm -o ${id} && ./${id}`, repo: (id) => `cc -std=c17 -Wall drills/c/${id}.c -lm -o /tmp/${id} && /tmp/${id}` }, zig: { name: 'Zig', ext: 'zig', cmd: (id) => `zig test ${id}.zig`, repo: (id) => `zig test drills/zig/${id}.zig` }, cpp: { name: 'C++', ext: 'cpp', cmd: (id) => `g++ -std=c++20 -Wall -o ${id} ${id}.cpp && ./${id}`, repo: (id) => `g++ -std=c++20 -Wall -o /tmp/${id} drills/cpp/${id}.cpp && /tmp/${id}` } };
-  let nativeEditor;
+  let nativeEditor, disposeResults;
   let lang = store.get('drilllang', 'zig'); if (!s[lang]) lang = 'zig';
   el.innerHTML = `${label('terminal', 'Drill')}<div class="ex tc brk has-ask">${askBtn(`I am working on the ${s.title} drill. I will paste my code. Give me a hint first, not the full solution, unless I ask for it.`, 'Ask AI')}
     <div class="ex-head"><div class="ex-title">${esc(s.title)}</div><span class="chip">${esc(s.level || '')} · ${s.minutes || 20} min</span><span class="chip st ${solved() ? 'good' : ''}">${solved() ? ic('check', 12, 3) + ' Passed' : 'Not yet'}</span></div>
     <div class="ex-prompt">${s.prompt}</div>
     <div class="ex-actions" style="padding-bottom:0"><span class="dseg" role="tablist" aria-label="Language">${Object.keys(LANGS).filter((k) => s[k]).map((k) => `<button type="button" data-lang="${k}">${LANGS[k].name}</button>`).join('')}</span></div>
     <div class="dr-body"></div></div>`;
-  const body = $('.dr-body', el), file = (which) => window.drillFile(s.id, s, lang, which);
+  const body = $('.dr-body', el);
+  const file = (which) => {
+    const draft = $('.dpaste', body)?.value;
+    const current = !which && draft !== undefined ? {...s, [lang]: {...s[lang], starter: draft.split('// ---- tests: do not edit below this line ----')[0].replace(/\s+$/, '')}} : s;
+    return window.drillFile(s.id, current, lang, which);
+  };
   const stripped = (t) => t.replace(/\s+$/, '');
+  const draftKey = (language) => 'gd:drillDraft:' + s.id + ':' + language;
+  let renderedLang;
+  const saveDraft = () => {
+    const textarea = $('.dpaste', body);
+    if (textarea && renderedLang) store.set(draftKey(renderedLang), textarea.value);
+  };
   function paint() {
+    saveDraft();
     nativeEditor?.destroy();
+    disposeResults?.();
+    renderedLang = lang;
     const L = LANGS[lang];
     $$('[data-lang]', el).forEach((b) => b.classList.toggle('on', b.dataset.lang === lang));
     body.innerHTML = `<p class="muted" style="margin:10px 0 6px">Save this as <code>${s.id}.${L.ext}</code>, edit the part above the tests marker, and run <code>${esc(L.cmd(s.id))}</code>. The same files are in the repo under <code>drills/${lang}/</code> (<code>${esc(L.repo(s.id))}</code>).</p>
@@ -547,9 +561,32 @@ function rDrill(el, s, l, idx, sync, hue, disposers) {
       <div class="callout tip dhint" hidden>${esc(s.hint)}</div>
       <details class="dtests"><summary>Show the tests</summary><pre data-native-code><code>${esc(stripped(s[lang].tests))}</code></pre></details>
       <div class="dsolbox" hidden><pre data-native-code><code>${esc(stripped(s[lang].solution))}</code></pre>${s.notes ? `<div class="callout">${esc(s.notes)}</div>` : ''}</div>
-      <details class="dfb"><summary>Get AI feedback on your solution</summary><textarea class="inp dpaste" rows="8" spellcheck="false" placeholder="Paste your ${L.name} solution here…"></textarea><div class="dfbk"></div></details>`;
+      <div class="dr-draft"><label class="lbl">Your editable ${L.name} solution<textarea class="inp dpaste" rows="12" spellcheck="false" aria-label="Your ${L.name} solution" placeholder="Write or paste your ${L.name} solution here…">${esc(store.get(draftKey(lang), s[lang].starter))}</textarea></label></div>
+      <details class="dfb"><summary>Get AI feedback on your solution</summary><div class="dfbk"></div></details>`;
     NativeCode.highlight(body, lang);
     nativeEditor = NativeCode.editor($('.dpaste', body), lang);
+    $('.dpaste', body).oninput = saveDraft;
+    if (window.NativePractice) {
+      const sourceName = s.id + '.' + L.ext, testName = 'test_' + sourceName;
+      const source = () => {
+        const pasted = $('.dpaste', body).value;
+        return { [sourceName]: pasted.trim() ? pasted.split('// ---- tests: do not edit below this line ----')[0].replace(/\s+$/, '') : s[lang].starter };
+      };
+      const tests = { [testName]: s[lang].tests };
+      const container = document.createElement('div'); body.append(container);
+      disposeResults = NativePractice.mountResults({
+        H: window.LAB, container, exerciseId: 'drill-' + s.id, language: lang, editor: $('.dpaste', body),
+        getFiles: source, testFiles: tests,
+        packageConfig: {files: {...source(), ...tests}, sourceNames: [sourceName], testNames: [testName], supportNames: [], combine: true},
+        setFiles(files) { nativeEditor.setValue(files[sourceName]); saveDraft(); },
+        markPass() {
+          if (mark(l.id, key, 40, 'Drill local tests imported')) { logAct('drill'); sync(); }
+          $('.dpass', body).disabled = true;
+          const chip = $('.st', el); chip.className = 'chip st good'; chip.innerHTML = ic('check', 12, 3) + ' Local pass imported';
+        },
+        isCurrent: () => body.isConnected && renderedLang === lang,
+      });
+    }
     $('.dcopy', body).onclick = async () => { try { await navigator.clipboard.writeText(file()); toast('File copied'); } catch { toast('Copy failed: select the code by hand'); } };
     $('.ddl', body).onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([file()], { type: 'text/plain' })); a.download = `${s.id}.${L.ext}`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
     $('.hint', body).onclick = () => { const h = $('.dhint', body); h.hidden = !h.hidden; };
@@ -558,7 +595,7 @@ function rDrill(el, s, l, idx, sync, hue, disposers) {
     if (window.FEEDBACK) FEEDBACK.mount($('.dfbk', body), { kind: 'code', prompt: `${L.name} drill "${s.title}": ${strip(s.prompt)}`, getAnswer: () => $('.dpaste', body).value });
   }
   $$('[data-lang]', el).forEach((b) => (b.onclick = () => { lang = b.dataset.lang; store.set('drilllang', lang); paint(); }));
-  if (disposers) disposers.push(() => nativeEditor?.destroy());
+  if (disposers) disposers.push(() => { saveDraft(); nativeEditor?.destroy(); disposeResults?.(); });
   paint();
 }
 
@@ -863,6 +900,7 @@ function buildIndex() {
   QUICK().filter((d) => d.kind === 'Go to').forEach((d) => index.push({ ...d, text: (d.title + ' ' + d.sub).toLowerCase() }));
   if (GAME) {
     const tools = [['mechanics', 'Mechanics lab', 'Controller tuning, replay, slow motion and A/B comparison'], ['debug', 'Debug playground', 'Reproduce and repair game bugs'], ['level', 'Level sandbox', 'Tiles, enemies, pickups and playtesting'], ['art', 'Art to game', 'Import sprites and animation sheets'], ['path', 'Pathfinding workbench', 'BFS, Dijkstra and A*'], ['ai', 'AI workbench', 'State machines and behaviour trees'], ['shader', 'Shader playground', 'Live GLSL effects and uniforms'], ['performance', 'Performance playground', 'Collision strategies, profiling and frame costs']];
+    (window.NATIVE_PROJECTS?.items || []).forEach(p => index.push({kind:'Native project',icon:'terminal',title:p.title,sub:p.blurb,href:'#/native-project/'+p.id,text:(p.title+' '+p.blurb).toLowerCase()}));
     tools.forEach(([id, title, sub]) => index.push({ kind: 'Workbench', icon: 'play', title, sub, href: '#/play/' + id, text: (title + ' ' + sub).toLowerCase() }));
     [...(window.GAME_KATAS || []), ...(window.NATIVE_KATAS?.items || [])].forEach((k) => index.push({ kind: 'Game kata', icon: 'terminal', title: k.title, sub: k.prompt, href: '#/game-kata/' + k.id, text: (k.title + ' ' + k.prompt).toLowerCase() }));
   }
@@ -873,7 +911,7 @@ const QUICK = () => [
   { kind: 'Go to', icon: 'target', title: GAME ? 'Learning plan' : 'Daily plan', sub: 'Diagnostic, progress and backup', href: '#/plan' },
   { kind: 'Go to', icon: 'terminal', title: 'Code katas', sub: 'Exercises and spaced reviews', href: GAME ? '#/game-katas' : '#/katas' },
   { kind: 'Go to', icon: 'design', title: 'Design lab', sub: 'Architecture practice', href: '#/design' },
-  ...(GAME ? [{ kind: 'Go to', icon: 'play', title: 'Build & play', sub: 'Playable learning workbenches', href: '#/play' }, { kind: 'Go to', icon: 'terminal', title: 'Build-along games', sub: 'Playable checkpoints and exports', href: '#/projects' }, { kind: 'Go to', icon: 'book', title: 'Project notebook', sub: 'Experiments and outcomes', href: '#/notebook' }, { kind: 'Go to', icon: 'terminal', title: 'Game katas', sub: 'Mechanics with real tests', href: '#/game-katas' }, { kind: 'Go to', icon: 'gdpixel', title: 'Pixel Forge', sub: 'Open spritewright for your project', href: '#/forge' }] : []),
+  ...(GAME ? [{ kind: 'Go to', icon: 'play', title: 'Build & play', sub: 'Playable learning workbenches', href: '#/play' }, { kind: 'Go to', icon: 'terminal', title: 'Build-along games', sub: 'Playable checkpoints and exports', href: '#/projects' }, { kind: 'Go to', icon: 'terminal', title: 'Playable native games', sub: 'Your C, Zig or C++ code drives the game', href: '#/native-projects' }, { kind: 'Go to', icon: 'book', title: 'Project notebook', sub: 'Experiments and outcomes', href: '#/notebook' }, { kind: 'Go to', icon: 'terminal', title: 'Game katas', sub: 'Mechanics with real tests', href: '#/game-katas' }, { kind: 'Go to', icon: 'gdpixel', title: 'Pixel Forge', sub: 'Open spritewright for your project', href: '#/forge' }] : []),
   { kind: 'Go to', icon: 'link', title: 'Free resources', sub: 'Curated links', href: '#/resources' },
   ...TRACKS.map((t) => ({ kind: 'Tracks', icon: t.id, hue: hueOf(t.id), title: t.title, sub: `${t.lessons.length} lessons`, href: '#/track/' + t.id })),
 ];

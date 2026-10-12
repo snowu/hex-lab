@@ -154,6 +154,12 @@ Open **play** in the game-dev navigation or use the home toolkit. All workspaces
 - **Build-along games:** Pong → Breakout → a platformer room → a wave arena, each with three playable checkpoints, linked code exercises, tuning and learning notes. A checkpoint requires its playable target, a solved linked kata and a note. Export a standalone, editable HTML game that runs locally without a server or external dependencies; the runtime source is available in the workspace.
 - **Project notebook:** saved experiments, screenshots, predictions, observations, decisions, bugs and next attempts; restore workbench settings, review demonstrated outcomes, or export the notebook. Up to 40 entries, subject to browser storage capacity. Normal progress backup and cloud sync include the notebook, project checkpoints, art and game-kata reviews.
 
+Seven guided paths connect the 150 native katas by topic and prerequisite, with progress tracked separately for C, Zig and C++. Every kata includes staged hints, game context and a reference explanation. Lesson-drill drafts also survive language changes, completion, navigation and reload.
+
+**Native mini-projects:** Tile runner and Wave arena provide editable mechanics, terminal keyboard play, regression tests and references in all three languages. Compile your downloaded project locally; export its native frames with `--replay ACTIONS > replay.ndjson` and import them into the app's replay viewer. The viewer displays the executable's output.
+
+**Local test feedback:** Download the test runner ZIP, install Node.js 22 and the selected native compiler, and run `node lab-test.mjs`. Import `lab-results.json` to inspect named failures and compiler diagnostics, load the exact tested source, and record an imported local pass. Reports bind editable source and supplied tests with hashes; changing the editor requires a fresh run. Imported local results and self-reported completion are displayed separately.
+
 Game-specific kata reviews and the next unfinished project appear in the learning plan. Progress is still local first.
 
 Verification:
@@ -171,3 +177,15 @@ Native kata checks: `node scripts/validate-native-katas.mjs --require` compiles 
 Full native catalog checks: `node scripts/native/validate.mjs --require-all` checks all 417 language variants against their tests and rejects already-passing starters. Imported upstream skeletons may require implementation before they link; original ports compile before their failing tests run. Set `TMPDIR` to a disk-backed directory when checking the full catalog.
 
 Native code highlighting uses pinned local Prism grammars for C, C++ and Zig, with the same colors as the existing editor theme. Browser checks: `node tests/e2e/run.mjs native-highlighting`.
+
+Learning and project checks:
+
+```sh
+node scripts/test-local-runner.mjs
+node scripts/validate-native-projects.mjs
+node tests/e2e/run.mjs game-learning native-projects learning-drafts
+```
+
+The learning and native-project browser suites compile downloaded packages and require C17, C++20 and Zig 0.17 compilers in `PATH` (or selected with `CC`, `CXX` and `ZIG`).
+
+The native contract review and regression evidence are documented in [docs/native-contract-matrix.md](docs/native-contract-matrix.md).

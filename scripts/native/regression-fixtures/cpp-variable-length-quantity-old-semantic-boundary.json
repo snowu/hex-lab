@@ -1,0 +1,13 @@
+{
+  "description": "Deliberately buggy previous reference retained only as a semantic regression fixture.",
+  "source": "exercism/c (portable C++20 port)",
+  "ref": "7cf6fe4098bc2e550e3877c54173eda3314a8bfe",
+  "license": "MIT",
+  "authors": [
+    "Wiguwbe"
+  ],
+  "contributors": [],
+  "files": {
+    "variable_length_quantity.cpp": "#include \"variable_length_quantity.h\"\n\nint encode(const uint32_t *integers, size_t integers_len, uint8_t *output) {\n    int output_index = 0;\n\n    for (size_t i = 0; i < integers_len; i++) {\n        uint32_t integer = integers[i];\n        uint8_t mask = 0;\n        uint8_t buf[5]; // lifo\n        int buf_idx = 0;\n        // push\n        do {\n            uint8_t part = (uint8_t)(integer & 0x7f);\n            integer >>= 7;\n            buf[buf_idx++] = part | mask;\n            mask |= 0x80;\n        } while (integer);\n        // pop\n        while (buf_idx--) {\n            output[output_index++] = buf[buf_idx];\n        }\n    }\n    return output_index;\n}\n\nint decode(const uint8_t *bytes, size_t bytes_len, uint32_t *output) {\n    int output_index = 0;\n    size_t bytes_index = 0;\n    uint32_t cur = 0;\n    int cur_count = 0;\n\n    while (bytes_index < bytes_len) {\n        uint8_t byte = bytes[bytes_index++];\n\n        cur_count++;\n        cur <<= 7;\n        cur |= byte & 0x7f;\n\n        if (!(byte & 0x80)) {\n            output[output_index++] = cur;\n            cur = 0;\n            cur_count = 0;\n            continue;\n        }\n    }\n\n    if (cur_count || cur)\n        return -1;\n    return output_index;\n}\n"
+  }
+}
