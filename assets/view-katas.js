@@ -7,6 +7,22 @@
   const ITEMS = DATA.items, BY = Object.fromEntries(ITEMS.map((k) => [k.slug, k]));
   const lid = (slug) => 'kata-' + slug;
   const solved = (slug) => !!((H.getProgress()[lid(slug)] || {}).c0);
+  const RECENT_KEY = 'kata-recent';
+  const recentRecords = () => { const records = store.get(RECENT_KEY, []); return Array.isArray(records) ? records.filter((r) => r && BY[r.slug] && Number.isFinite(r.at)) : []; };
+  const remember = (slug) => store.set(RECENT_KEY, [{ slug, at: Date.now() }, ...recentRecords().filter((r) => r.slug !== slug)].slice(0, ITEMS.length));
+  const hasDraft = (key) => { const value = store.get(key, ''); return typeof value === 'string' && !!value.trim(); };
+  const draftsOf = (slug) => ({ python: hasDraft('pydraft:' + lid(slug) + ':0'), local: hasDraft('kata-local-draft:' + slug) });
+  const workspaceOf = (slug) => { const drafts = draftsOf(slug); return store.get('kata-workspace:' + slug, drafts.local && !drafts.python ? 'local' : 'python'); };
+  const recentKatas = () => {
+    const records = recentRecords(), seen = new Set(records.map((r) => r.slug));
+    for (const k of ITEMS) { const draft = draftsOf(k.slug); if (!seen.has(k.slug) && (draft.python || draft.local)) records.push({ slug: k.slug, at: 0 }); }
+    return records.map((r) => ({ ...r, name: BY[r.slug].name, href: '#/kata/' + r.slug, solved: solved(r.slug), drafts: draftsOf(r.slug), workspace: workspaceOf(r.slug), language: store.get('kata-local-language:' + r.slug, '') })).sort((a, b) => Number(a.solved) - Number(b.solved));
+  };
+  const recentPanel = () => {
+    const recent = recentKatas();
+    if (!recent.length) return '';
+    return `<section class="ikrecent" aria-label="Continue working"><div class="sec-h"><h2>Continue working</h2><span>${recent.filter((r) => !r.solved).length} in progress</span></div><p class="muted">Your recent katas and saved drafts. Opening an exercise does not mark it solved.</p><div class="ikrecent-grid">${recent.slice(0, 6).map((r) => `<a class="ikrecent-card" data-recent-kata="${r.slug}" href="${r.href}"><b>${esc(r.name)}</b><span>${r.solved ? 'Solved · revisit' : r.drafts.python || r.drafts.local ? 'Draft saved · continue' : 'Opened · continue'}</span><small>${r.workspace === 'local' ? esc(TRACKS.find(([id]) => id === r.language)?.[1] || 'Local language') : 'Python'}${r.at ? ' · ' + esc(new Date(r.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })) : ' · earlier saved draft'}</small></a>`).join('')}</div></section>`;
+  };
   const band = (d) => (d <= 2 ? 'easy' : d <= 4 ? 'medium' : 'hard');
   const BANDS = [['all', 'All'], ['easy', 'Easy'], ['medium', 'Medium'], ['hard', 'Hard']];
   /* Classics that map well to backend interviews: parsing, graphs, state machines, data-structure design. */
@@ -57,7 +73,7 @@
   }
   const shaky = (slug) => { const all = srAll(); all[slug] = { box: 0, due: Date.now() + DAY, last: Date.now(), n: (all[slug] && all[slug].n) || 1 }; store.set(SR_KEY, all); };
   const srLine = (slug) => { const r = srAll()[slug]; return !r ? '' : r.due <= Date.now() ? 'Due for review now: solve it again from scratch to move it up.' : `Next review ${inDays(r.due - Date.now())}.`; };
-  window.KATA_SR = { due: dueKatas, isDue, recordPass };
+  window.KATA_SR = { due: dueKatas, isDue, recordPass, recent: recentKatas };
   H.routes.push([/^#\/katas$/, () => window.MODE === 'gamedev' ? (location.hash = '#/game-katas') : viewKatas()], [/^#\/kata\/([\w-]+)$/, (slug) => window.MODE === 'gamedev' ? (location.hash = '#/game-kata/exercism-' + slug) : viewKata(slug)]);
 
   /* ---------- small, safe markdown for the exercise instructions ---------- */
@@ -103,21 +119,23 @@
   const view = { q: '', band: 'all', status: 'all', picks: false, path: 'all' };
   function viewKatas() {
     const done = ITEMS.filter((k) => solved(k.slug)).length;
+    const started = new Set(recentKatas().filter((r) => !r.solved).map((r) => r.slug));
     const activePath = PATHS.find((p) => p.id === view.path);
     const dueNow = dueKatas(), next = (activePath && activePath.slugs.map((slug) => BY[slug]).find((k) => !solved(k.slug))) || dueNow[0] || ITEMS.find((k) => PICKS.has(k.slug) && !solved(k.slug)) || ITEMS.find((k) => !solved(k.slug));
     const rows = () => ITEMS.filter((k) =>
       (view.band === 'all' || band(k.difficulty) === view.band) &&
-      (view.status === 'all' || (view.status === 'due' ? isDue(k.slug) : (view.status === 'solved') === solved(k.slug))) &&
+      (view.status === 'all' || (view.status === 'started' ? started.has(k.slug) : view.status === 'due' ? isDue(k.slug) : (view.status === 'solved') === solved(k.slug))) &&
       (!view.picks || PICKS.has(k.slug)) &&
       (view.path === 'all' || PATHS.find((p) => p.id === view.path)?.slugs.includes(k.slug)) &&
       (!view.q || (k.slug + ' ' + k.name + ' ' + k.blurb).toLowerCase().includes(view.q)));
     app.innerHTML = `<div class="page-h"><h1>Code katas</h1><p>${ITEMS.length} practice exercises with real unit tests, run in your browser (Python). Build an approach, test edge cases, then explain complexity and tradeoffs. Python runs here; other languages run locally through Exercism.</p></div>
       <div class="kstats tc"><div><b>${done}</b><span>solved of ${ITEMS.length}${dueNow.length ? ` · <b class="kdue">${dueNow.length} due for review</b>` : ''}</span></div><span class="mbar"><i style="width:${Math.round((done / ITEMS.length) * 100)}%"></i></span>
         ${next ? `<a class="btn primary" href="#/kata/${next.slug}">${ic('play', 15)} ${isDue(next.slug) ? 'Review' : done ? 'Next' : 'Start'}: ${esc(next.name)}</a>` : ''}<button class="btn" id="krand">${ic('rotate', 15)} Random kata</button></div>
+      ${recentPanel()}
       <section class="ikpaths" aria-label="Interview practice paths"><div class="ikpaths-head"><h2>Practise a pattern</h2><button class="btn ghost sm" id="kallpaths" aria-pressed="${view.path === 'all'}">All exercises</button></div><div class="ikpath-grid">${PATHS.map((p) => `<button class="ikpath tc ${view.path === p.id ? 'on' : ''}" data-path="${p.id}" aria-pressed="${view.path === p.id}"><b>${esc(p.name)}</b><span>${esc(p.focus)}</span><small>${p.slugs.filter(solved).length}/${p.slugs.length} solved</small></button>`).join('')}</div></section>
       <div class="kfilters"><input id="kq" class="inp" type="search" placeholder="Search katas…" value="${esc(view.q)}" aria-label="Search katas">
         ${BANDS.map(([k, n]) => `<button class="fchip ${view.band === k ? 'on' : ''}" data-b="${k}" aria-pressed="${view.band === k}">${n}</button>`).join('')}<span class="ksep"></span>
-        ${[['all', 'Any status'], ['todo', 'To do'], ['solved', 'Solved'], ['due', 'Due']].map(([k, n]) => `<button class="fchip ${view.status === k ? 'on' : ''}" data-s="${k}" aria-pressed="${view.status === k}">${n}</button>`).join('')}<span class="ksep"></span>
+        ${[['all', 'Any status'], ['todo', 'To do'], ['started', 'In progress'], ['solved', 'Solved'], ['due', 'Due']].map(([k, n]) => `<button class="fchip ${view.status === k ? 'on' : ''}" data-s="${k}" aria-pressed="${view.status === k}">${n}</button>`).join('')}<span class="ksep"></span>
         <button class="fchip ${view.picks ? 'on' : ''}" id="kpicks" aria-pressed="${view.picks}" title="Parsing, graphs, state machines and data structures">${window.MODE === 'gamedev' ? 'Practice picks' : 'Interview picks'}</button></div>
       <div id="klist"></div>
       <p class="muted kcredit">Exercises from <a href="https://exercism.org" target="_blank" rel="noopener">Exercism</a> (MIT licence, authors credited on each kata).</p>`;
@@ -125,7 +143,7 @@
       const r = rows();
       if (view.path !== 'all') { const order = PATHS.find((p) => p.id === view.path).slugs; r.sort((a, b) => order.indexOf(a.slug) - order.indexOf(b.slug)); }
       $('#klist').innerHTML = r.length ? `<div class="klist">${r.map((k) => `<a class="krow tc ${solved(k.slug) ? 'done' : ''}" style="--h:${hueOf(band(k.difficulty))}" href="#/kata/${k.slug}">
-          <span class="kck">${solved(k.slug) ? ic('check', 14, 3) : ''}</span><span class="kn">${esc(k.name)}${PICKS.has(k.slug) ? ' <span class="chip">pick</span>' : ''}${isDue(k.slug) ? ' <span class="chip hot">due</span>' : ''}${k.refactor ? ' <span class="chip">refactor</span>' : ''}</span>
+          <span class="kck">${solved(k.slug) ? ic('check', 14, 3) : ''}</span><span class="kn">${esc(k.name)}${started.has(k.slug) ? ' <span class="chip">in progress</span>' : ''}${PICKS.has(k.slug) ? ' <span class="chip">pick</span>' : ''}${isDue(k.slug) ? ' <span class="chip hot">due</span>' : ''}${k.refactor ? ' <span class="chip">refactor</span>' : ''}</span>
           <span class="kb">${esc(k.blurb)}</span><span class="kd" title="Difficulty ${k.difficulty}/10">${'■'.repeat(Math.min(5, Math.ceil(k.difficulty / 2)))}${'□'.repeat(5 - Math.min(5, Math.ceil(k.difficulty / 2)))}</span></a>`).join('')}</div>` : '<div class="empty"><p class="muted">No katas match.</p></div>';
     };
     draw();
@@ -153,6 +171,7 @@
     let k;
     try { k = await loadKata(slug); } catch { app.innerHTML = `<div class="crumbs"><a href="#/katas">${ic('home', 14)} Katas</a></div><div class="callout warn">Could not load this kata. Check your connection and <a href="#/kata/${slug}">try again</a>.</div>`; return; }
     if (location.hash !== '#/kata/' + slug) return; /* navigated away while loading */
+    remember(slug);
     const disposers = [];
     H.setCleanup(() => disposers.forEach((f) => f()));
     const guide = coaching(k), path = pathFor(slug);
@@ -184,7 +203,7 @@
         <div class="kata-work">
           <div class="ikpractice tc"><b>Practice loop</b><span>Clarify the contract → trace an example → implement → test → explain</span><details><summary>Interview debrief</summary><p>${esc(guide[4])}</p><textarea class="inp" id="kreflection" rows="3" aria-label="Your interview debrief" placeholder="Approach, time/space cost, one edge case and a tradeoff…">${esc(store.get('kata-reflection:' + slug, ''))}</textarea><small>Saved on this device. A passing suite checks behavior; this explanation is your own assessment.</small></details></div>
           <div id="kcode"></div>
-          <details class="kother tc brk has-ask">${askBtn(`Code kata "${k.name}": ${k.blurb}\n\nGive me the approach to solve this well (not the code), the edge cases to test, and ${window.MODE === 'gamedev' ? 'a small game feature where this technique applies.' : 'how you would explain the solution in an interview.'}`, 'Ask AI about the approach')}<summary>${ic('terminal', 16)} Practise it in another language</summary>
+          <details class="kother tc brk has-ask" ${workspaceOf(slug) === 'local' ? 'open' : ''}>${askBtn(`Code kata "${k.name}": ${k.blurb}\n\nGive me the approach to solve this well (not the code), the edge cases to test, and ${window.MODE === 'gamedev' ? 'a small game feature where this technique applies.' : 'how you would explain the solution in an interview.'}`, 'Ask AI about the approach')}<summary>${ic('terminal', 16)} Practise it in another language</summary>
             <p class="muted">Download the same exercise with the <a href="https://exercism.org/cli-walkthrough" target="_blank" rel="noopener">Exercism CLI</a>, solve and test it locally, then paste your solution here for feedback. Language availability varies by exercise; local completion is self-reported and does not run browser tests.</p>
             <div class="cs-row"><select id="ktrack" class="inp" aria-label="Language">${TRACKS.map(([t, n]) => `<option value="${t}">${n}</option>`).join('')}</select>
               <a id="klink" class="btn ghost" target="_blank" rel="noopener">Open on exercism.org</a></div>
@@ -210,10 +229,17 @@
       $('#kcmd').textContent = `exercism download --track=${t} --exercise=${slug}\ncd <the folder it prints>\n# read README.md / HELP.md there to run the tests, then:\nexercism submit <your solution file>`;
       $('#klink').href = `https://exercism.org/tracks/${t}/exercises/${slug}`;
     };
-    $('#ktrack').value = store.get('kata-local-language', 'javascript');
-    $('#ktrack').onchange = () => { store.set('kata-local-language', $('#ktrack').value); cmd(); }; cmd();
+    $('#ktrack').value = store.get('kata-local-language:' + slug, store.get('kata-local-language', 'javascript'));
+    if (!$('#ktrack').value) $('#ktrack').value = 'javascript';
+    $('#ktrack').onchange = () => { store.set('kata-local-language', $('#ktrack').value); store.set('kata-local-language:' + slug, $('#ktrack').value); store.set('kata-workspace:' + slug, 'local'); remember(slug); cmd(); }; cmd();
     $('#kpaste').value = store.get('kata-local-draft:' + slug, '');
-    $('#kpaste').oninput = (e) => store.set('kata-local-draft:' + slug, e.target.value);
+    $('#kpaste').oninput = (e) => { store.set('kata-local-draft:' + slug, e.target.value); store.set('kata-local-language:' + slug, $('#ktrack').value); };
+    const workspace = $('.kata-work');
+    const activity = (event) => { if (event.target.closest('.editor')) store.set('kata-workspace:' + slug, 'python'); else if (event.target.id === 'kpaste') store.set('kata-workspace:' + slug, 'local'); remember(slug); };
+    workspace.addEventListener('input', activity);
+    disposers.push(() => workspace.removeEventListener('input', activity));
+    const local = $('.kother');
+    local.ontoggle = () => { if (!local.isConnected || location.hash !== '#/kata/' + slug) return; store.set('kata-workspace:' + slug, local.open ? 'local' : 'python'); if (local.open) store.set('kata-local-language:' + slug, $('#ktrack').value); };
     if (window.FEEDBACK) FEEDBACK.mount($('#kfb'), { kind: 'code', prompt: `Code kata "${k.name}": ${k.blurb}`, getAnswer: () => $('#kpaste').value });
     $('#kdone').onclick = () => { if (H.mark(lid(slug), 'c0', 50, 'Kata solved')) toast('Marked as solved'); const r = recordPass(slug); say(r.text); $('#kdone').textContent = 'Solved'; };
   }
