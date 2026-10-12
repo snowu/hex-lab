@@ -522,12 +522,13 @@ function rCode(el, s, l, idx, sync, hue, disposers) {
 }
 
 
-/* ---------- local drill (Zig / C++) ---------- */
+/* ---------- local drill (C / Zig / C++) ---------- */
 /* These languages cannot be compiled in the browser, so the lab hands you the file (starter + tests), you run it with the compiler on your own machine,
    then you tick it off. You can paste your solution for AI feedback. Progress is self-reported. */
-function rDrill(el, s, l, idx, sync) {
+function rDrill(el, s, l, idx, sync, hue, disposers) {
   const key = keysOf(l)[idx], solved = () => !!(progress[l.id] || {})[key];
   const LANGS = { c: { name: 'C', ext: 'c', cmd: (id) => `cc -std=c17 -Wall ${id}.c -lm -o ${id} && ./${id}`, repo: (id) => `cc -std=c17 -Wall drills/c/${id}.c -lm -o /tmp/${id} && /tmp/${id}` }, zig: { name: 'Zig', ext: 'zig', cmd: (id) => `zig test ${id}.zig`, repo: (id) => `zig test drills/zig/${id}.zig` }, cpp: { name: 'C++', ext: 'cpp', cmd: (id) => `g++ -std=c++20 -Wall -o ${id} ${id}.cpp && ./${id}`, repo: (id) => `g++ -std=c++20 -Wall -o /tmp/${id} drills/cpp/${id}.cpp && /tmp/${id}` } };
+  let nativeEditor;
   let lang = store.get('drilllang', 'zig'); if (!s[lang]) lang = 'zig';
   el.innerHTML = `${label('terminal', 'Drill')}<div class="ex tc brk has-ask">${askBtn(`I am working on the ${s.title} drill. I will paste my code. Give me a hint first, not the full solution, unless I ask for it.`, 'Ask AI')}
     <div class="ex-head"><div class="ex-title">${esc(s.title)}</div><span class="chip">${esc(s.level || '')} · ${s.minutes || 20} min</span><span class="chip st ${solved() ? 'good' : ''}">${solved() ? ic('check', 12, 3) + ' Passed' : 'Not yet'}</span></div>
@@ -537,15 +538,18 @@ function rDrill(el, s, l, idx, sync) {
   const body = $('.dr-body', el), file = (which) => window.drillFile(s.id, s, lang, which);
   const stripped = (t) => t.replace(/\s+$/, '');
   function paint() {
+    nativeEditor?.destroy();
     const L = LANGS[lang];
     $$('[data-lang]', el).forEach((b) => b.classList.toggle('on', b.dataset.lang === lang));
     body.innerHTML = `<p class="muted" style="margin:10px 0 6px">Save this as <code>${s.id}.${L.ext}</code>, edit the part above the tests marker, and run <code>${esc(L.cmd(s.id))}</code>. The same files are in the repo under <code>drills/${lang}/</code> (<code>${esc(L.repo(s.id))}</code>).</p>
-      <pre class="dr-code"><code>${esc(stripped(s[lang].starter))}</code></pre>
+      <pre class="dr-code" data-native-code><code>${esc(stripped(s[lang].starter))}</code></pre>
       <div class="ex-actions"><button class="btn dcopy">${ic('link', 15)} Copy file</button><button class="btn ddl">${ic('arrow', 15)} Download</button><button class="btn hint">${ic('bulb', 15)} Hint</button><button class="btn dsol">${ic('eye', 15)} Solution</button><span class="sp"></span><button class="btn primary dpass" ${solved() ? 'disabled' : ''}>${ic('check', 15)} ${solved() ? 'Marked passed' : 'My tests pass'}</button></div>
       <div class="callout tip dhint" hidden>${esc(s.hint)}</div>
-      <details class="dtests"><summary>Show the tests</summary><pre><code>${esc(stripped(s[lang].tests))}</code></pre></details>
-      <div class="dsolbox" hidden><pre><code>${esc(stripped(s[lang].solution))}</code></pre>${s.notes ? `<div class="callout">${esc(s.notes)}</div>` : ''}</div>
+      <details class="dtests"><summary>Show the tests</summary><pre data-native-code><code>${esc(stripped(s[lang].tests))}</code></pre></details>
+      <div class="dsolbox" hidden><pre data-native-code><code>${esc(stripped(s[lang].solution))}</code></pre>${s.notes ? `<div class="callout">${esc(s.notes)}</div>` : ''}</div>
       <details class="dfb"><summary>Get AI feedback on your solution</summary><textarea class="inp dpaste" rows="8" spellcheck="false" placeholder="Paste your ${L.name} solution here…"></textarea><div class="dfbk"></div></details>`;
+    NativeCode.highlight(body, lang);
+    nativeEditor = NativeCode.editor($('.dpaste', body), lang);
     $('.dcopy', body).onclick = async () => { try { await navigator.clipboard.writeText(file()); toast('File copied'); } catch { toast('Copy failed: select the code by hand'); } };
     $('.ddl', body).onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([file()], { type: 'text/plain' })); a.download = `${s.id}.${L.ext}`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
     $('.hint', body).onclick = () => { const h = $('.dhint', body); h.hidden = !h.hidden; };
@@ -554,6 +558,7 @@ function rDrill(el, s, l, idx, sync) {
     if (window.FEEDBACK) FEEDBACK.mount($('.dfbk', body), { kind: 'code', prompt: `${L.name} drill "${s.title}": ${strip(s.prompt)}`, getAnswer: () => $('.dpaste', body).value });
   }
   $$('[data-lang]', el).forEach((b) => (b.onclick = () => { lang = b.dataset.lang; store.set('drilllang', lang); paint(); }));
+  if (disposers) disposers.push(() => nativeEditor?.destroy());
   paint();
 }
 
