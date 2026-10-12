@@ -2,7 +2,7 @@
 (window.LAB_VIEWS = window.LAB_VIEWS || []).push((H) => {
   if (window.MODE !== 'gamedev') return;
   H.routes.push([/^#\/forge$/, () => {
-    document.title = 'Pixel Forge · Game Dev Lab';
+    document.title = 'Pixel Forge · Hex Lab';
     H.app.innerHTML = `<div class="page-h"><h1>Pixel Forge</h1><p>Make art for your game with spritewright, the standalone editor built around PixelForge.</p></div>
       <div class="dbar"><a class="btn primary" href="https://snowu.github.io/spritewright/" target="_blank" rel="noopener">Open spritewright ↗</a><a class="btn" href="#/lesson/px-basics">Try the teaching editor</a><a class="btn" href="#/track/gdpixel">Learn pixel art</a></div>
       <section class="tc brk"><h2>A first sprite</h2><p><a class="btn" href="#/play/art">Import your PNG and play with it →</a></p><p>Draw a 16×16 silhouette in four colours. Check it at actual size, choose one light direction, then export a PNG. Import it into your game with nearest-neighbour filtering and an integer scale.</p><p>Next, draw four walking frames on equal canvases with the same foot pivot. Preview the loop and test it at the character’s movement speed.</p></section>

@@ -13,7 +13,7 @@ export default async function ({ url, browser, ok, section }) {
   s = await page.evaluate(() => ({ mode: window.MODE, tracks: TRACKS.map((t) => t.id), cards: CARDS.every((c) => c.domain === 'gamedev') && CARDS.length > 40, mock: MOCK.length === 0, res: RESOURCES.every((r) => r.domain === 'gamedev') && RESOURCES.length >= 20, theme: document.documentElement.dataset.mode, title: document.title, brand: document.querySelector('.brand-t').textContent }));
   ok(s.mode === 'gamedev' && s.tracks.join() === 'gdloop,gdmath,gdpatterns,gdphysics,gddesign,gdgfx,gdai,gdnet,gdcraft,gdprod,gdpixel', 'the switch shows only the eleven game dev tracks ' + s.tracks.join());
   ok(s.cards && s.mock && s.res, 'cards and links are filtered, and there are no mock interview questions in this section');
-  ok(s.theme === 'gamedev' && s.brand.startsWith('gamedev') && s.title === 'Game Dev Lab', 'branding and theme attribute change');
+  ok(s.theme === 'gamedev' && s.brand.replace(/\s+/g, '') === 'hex_lab' && s.title === 'Hex Lab', 'section context comes from theme and page, the name stays Hex Lab');
   const accent = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim());
   ok(accent === '#b98cff', 'dark theme uses the violet accent (' + accent + ')');
   const nav = await page.evaluate(() => [...document.querySelectorAll('.top nav a')].map((a) => a.textContent.trim()));

@@ -76,7 +76,7 @@
 
   /* ---------------- main page ---------------- */
   function viewPlan() {
-    document.title = GAME ? 'Learning plan · Game Dev Lab' : 'Plan · Hex';
+    document.title = GAME ? 'Learning plan · Hex Lab' : 'Plan · Hex Lab';
     if (diag) return drawDiag();
     const mins = store.get('planMin', 30), goal = store.get('goalDate', ''), tasks = buildPlan(mins), done = tasks.filter((t) => t.done).length;
     const days = goal ? Math.ceil((new Date(goal) - new Date(dstr(new Date()))) / 864e5) : null;

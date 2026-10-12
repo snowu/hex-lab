@@ -1,4 +1,4 @@
-/* Answer feedback for Hex (a static site on GitHub Pages).
+/* Answer feedback for Hex Lab (a static site on GitHub Pages).
    The lab is public and holds no login, so this Worker protects itself: only the lab's origin gets CORS,
    input is capped hard, calls are rate limited per IP, and model output is reduced to a fixed JSON shape.
    An Origin header is not authentication (a script can send any value); the caps and the rate limit are

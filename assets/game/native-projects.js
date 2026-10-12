@@ -32,7 +32,7 @@
     H.routes.push([/^#\/native-projects$/, list], [/^#\/native-project\/([\w-]+)$/, view]);
 
     function list() {
-      document.title = 'Playable native projects · Game Dev Lab';
+      document.title = 'Playable native projects · Hex Lab';
       app.innerHTML = `<div class="page-h"><h1>Playable native projects</h1><p>Write mechanics that run in an actual native terminal game. Build locally, play with keyboard input, then import its native-computed replay here.</p></div><div class="dgrid">${items.map(project => `<a class="dcard tc" href="#/native-project/${project.id}"><h2>${esc(project.title)}</h2><p>${esc(project.blurb)}</p><span class="chip">${esc(project.difficulty)} · ${project.minutes} min</span><span class="chip">C · Zig · C++</span></a>`).join('')}</div><p><a href="#/game-katas">Practice an individual mechanic first</a> · <a href="#/projects">JavaScript build-along projects</a></p>`;
     }
 

@@ -16,7 +16,7 @@
     [/^#\/play\/(mechanics|debug|level|art)$/, (kind) => playground(kind)],
   );
   function hub() {
-    document.title = "Build & play · Game Dev Lab";
+    document.title = "Build & play · Hex Lab";
     const tools = [
       [
         "mechanics",
@@ -62,7 +62,7 @@
     app.innerHTML = `<div class="page-h"><h1>Build &amp; play</h1><p>Predict what will happen, change one thing, play it, and save what you learned.</p></div><div class="dgrid">${tools.map(([id, title, text]) => `<a class="dcard tc" href="#/play/${id}"><h2>${title}</h2><p>${text}</p></a>`).join("")}<a class="dcard tc" href="#/projects"><h2>Build-along games</h2><p>Pong → Breakout → platformer room → wave arena. Play checkpoints and export your game.</p></a><a class="dcard tc" href="#/native-projects"><h2>Playable native games</h2><p>Write the mechanics in C, Zig or C++, play locally, and inspect your native replay.</p></a><a class="dcard tc" href="#/game-katas"><h2>Game katas</h2><p>Practice C, Zig and C++ with native starters, tests and reference solutions.</p></a><a class="dcard tc" href="#/notebook"><h2>Project notebook</h2><p>Experiments, screenshots, bugs, decisions and your next attempt.</p></a></div>`;
   }
   function playground(kind) {
-    document.title = `${kind} lab · Game Dev Lab`;
+    document.title = `${kind} lab · Hex Lab`;
     const saved = store.get("gd:play:" + kind, {}),
       config = { ...C.DEFAULTS, ...saved.config },
       level = saved.level || C.DEFAULT_LEVEL;

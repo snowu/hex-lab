@@ -38,7 +38,7 @@
   };
   H.routes.push([/^#\/notebook$/, view]);
   function view() {
-    document.title = "Project notebook · Game Dev Lab";
+    document.title = "Project notebook · Hex Lab";
     const all = entries(),
       outcomes = Object.values(store.get(OUTCOMES, {}));
     app.innerHTML = `<div class="page-h"><h1>Project notebook</h1><p>Keep evidence of what you built, what broke, and what you will try next. Experiments and screenshots save here; normal backup and cloud sync include this notebook.</p></div><section class="tc brk"><h2>Demonstrated outcomes</h2>${outcomes.length ? `<ul>${outcomes.map((o) => `<li>${esc(o.label)} · ${new Date(o.ts).toLocaleDateString()}</li>`).join("")}</ul>` : "<p>Reach a goal, solve a kata or finish a project checkpoint to record an outcome.</p>"}</section>
