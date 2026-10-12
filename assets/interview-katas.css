@@ -3,5 +3,27 @@
 @media(max-width:520px){.ikpath-grid{grid-template-columns:1fr 1fr}.ikpath{padding:12px;gap:7px}.ikpath b{font-size:.82rem}.ikpath span{font-size:.73rem}.ikpractice{padding:12px}.ikpaths-head h2{font-size:1rem}}
 .kata-split>*,.kata-work,.kd-scroll{min-width:0}.kata-split .kpn{flex-wrap:wrap}.kata-split .kpn a{white-space:normal;overflow-wrap:anywhere}.kata-work .cs-row{flex-wrap:wrap}.kata-work .cs-row select{max-width:100%}
 @media(max-width:1000px){.kata-split{grid-template-columns:minmax(0,1fr)}}
-@media(max-width:520px){.kata-work .CodeMirror{height:clamp(220px,38vh,340px)}.kata-work .ex-tab>span:last-child{display:none}.kata-work .ex-tab{gap:8px;padding:9px 10px}.kata-work .ex-head{padding:14px 14px 0;gap:8px}.kata-work .ex-actions{padding:12px 14px}.kata-work .ex-actions .sp{display:none}}
-@media(max-width:520px){.kata-work .ex-head{flex-wrap:wrap;padding-right:60px;align-items:flex-start}.kata-work .ex-head .chip{margin-left:0}}
+/* Give the tutor its own header cell, so chips never sit beneath it. */
+.kata-work .ex{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px}
+.kata-work .ex> *{grid-column:1 / -1;min-width:0}
+.kata-work .ex> .ask-mini{position:static;grid-column:2;grid-row:1;align-self:start;justify-self:end;margin:16px 16px 16px 0;min-height:32px;box-sizing:border-box}
+.kata-work .ex> .ex-head{grid-row:1;flex-wrap:wrap;gap:8px;padding:16px}
+.kata-work .ex:has(> .ask-mini)> .ex-head{grid-column:1;padding-right:0}
+.kata-work .ex-head .ex-title{flex:1 1 100%;line-height:1.5}
+.kata-work .ex-head .chip{margin-left:0}
+.kata-work .ex-prompt:empty{display:none}
+.kata-work .ex-win{margin:0 16px}
+.kata-work .ex-tab{flex-wrap:wrap;gap:8px;padding:10px 12px}
+.kata-work .ex-tab .file{min-width:0;overflow-wrap:anywhere}
+.kata-work .ex-actions{padding:16px;gap:10px}
+.kata-work .out{padding:0 16px 16px}
+.kata-work .out:empty{padding:0}
+.kata-work .ex .fbk{padding:0 16px 16px}
+@media(max-width:520px){
+  .kata-work .CodeMirror{height:clamp(220px,38vh,340px)}
+  .kata-work .ex-tab>span:last-child{display:none}
+  .kata-work .ex-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kata-work .ex-actions .run{grid-column:1 / -1}
+  .kata-work .ex-actions .sp{display:none}
+  .kata-work .ex-actions .btn{min-width:0;white-space:normal;justify-content:center}
+}
