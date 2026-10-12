@@ -1,0 +1,28 @@
+/* Design practice: readable progress, keyboard-accessible review and phone spacing. */
+.design-overview{padding:1.2rem;border:1px solid var(--line);border-radius:12px;margin-bottom:1.2rem}
+.design-overview strong{display:block;font-size:1.15rem;margin-bottom:.4rem}
+.design-overview span,.design-history span{color:var(--muted);font-size:.85rem}
+.design-overview p{margin:.8rem 0 0;max-width:72ch;line-height:1.65}
+.design-history{margin:1.4rem 0;border:1px solid var(--line);border-radius:12px;padding:1rem}
+.design-history summary{cursor:pointer;font-weight:600}
+.design-history article{padding:1rem 0;border-bottom:1px solid var(--line)}
+.design-history article:last-child{border-bottom:0}
+.design-history article a,.design-history article span{display:block;margin-bottom:.4rem}
+.design-history article p{line-height:1.6;margin:0;overflow-wrap:anywhere}
+.design-save-status{margin:.8rem 0 0;font-size:.85rem}
+#drub label{display:flex;align-items:flex-start;gap:.7rem;width:100%;cursor:pointer}
+#drub input{flex:0 0 auto;margin-top:.3rem;accent-color:var(--accent);width:1rem;height:1rem}
+#drub li{padding:.75rem;line-height:1.6}
+#dnext{margin-top:1rem;line-height:1.65}
+#dsteps textarea,#dlearn{line-height:1.65}
+@media(max-width:600px){
+  .dprompt .dbar{gap:.65rem;align-items:center;flex-wrap:wrap}
+  .dprompt .dbar .sp{display:none}
+  .dprompt .dbar .btn{flex:1 1 145px;justify-content:center;white-space:normal}
+  .dprompt .dclock{order:-1;width:100%;font-size:1.5rem}
+  #dcompare .cols{display:flex;flex-direction:column;gap:.8rem}
+  #dcompare .col{width:100%;min-width:0}
+  #dcompare .ct{overflow-wrap:anywhere}
+  #dcompare pre{overflow-x:auto;max-width:100%}
+  .design-overview,.design-history{padding:1rem}
+}

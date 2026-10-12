@@ -189,3 +189,17 @@ node tests/e2e/run.mjs game-learning native-projects learning-drafts
 The learning and native-project browser suites compile downloaded packages and require C17, C++20 and Zig 0.17 compilers in `PATH` (or selected with `CC`, `CXX` and `ZIG`).
 
 The native contract review and regression evidence are documented in [docs/native-contract-matrix.md](docs/native-contract-matrix.md).
+
+## Guided senior interview practice
+
+The interview home offers six paths: coding, system design, data/SQL, reliability, full-stack and senior judgment. Each path links existing lessons with practice checkpoints. Lesson progress updates automatically; practice checkpoints and rubric scores are explicitly self-reported. Selecting a path focuses the daily plan, which fits the selected 15-, 30- or 60-minute budget.
+
+Coding katas include five ordered pattern paths, progressive hints, reference reasoning and a saved interview debrief. Python still runs its real exercise suite in the browser; other languages use the existing local Exercism workflow. Design reviews retain drafts, checked criteria and revision targets through reloads, and saved attempts retain the original answer. Story drafts can be recovered, while rehearsal records retain outline usage and the next improvement. Mock interviews save answer notes, support pause/resume, restore reviews and offer a retry of the same question.
+
+These records use the existing progress export and optional sync. No AI service is required for the guided practice, hints or self-review.
+
+```sh
+node tests/e2e/run.mjs interview-learning interview-katas design-learning story-practice
+```
+
+The suites exercise real navigation, reload recovery, keyboard controls, time budgets and phone layouts. Existing `katas`, `cards`, `interactive`, `feedback`, `mobile`, `gate`, `smoke` and `gamedev` suites cover execution and shared behavior.

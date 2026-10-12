@@ -16,14 +16,16 @@
   };
   const allExercises = () => TRACKS.flatMap((t) => t.lessons.flatMap((l) => l.sections.filter((s) => (s.type === 'code' || s.type === 'drill')).map((s) => ({ t, l, s }))));
   const seeded = (str) => { let h = 0; for (const c of str + dstr(new Date())) h = (h * 31 + c.charCodeAt(0)) | 0; return (h >>> 0) % 1000; };
-  const weakestTrack = () => [...TRACKS].filter((t) => t.lessons.some((l) => lessonPct(l) < 100)).sort((a, b) => mastery(a) - mastery(b))[0];
+  const activePath = () => GAME ? null : window.INTERVIEW_LEARNING?.paths.find((p) => p.id === store.get('interview:activePath', '')) || null;
+  const pathLessons = () => new Set(activePath()?.steps.filter((s) => s.lesson).map((s) => s.lesson) || []);
+  const weakestTrack = () => { const pending = TRACKS.filter((t) => t.lessons.some((l) => lessonPct(l) < 100)); const focused = pending.filter((t) => t.lessons.some((l) => pathLessons().has(l.id) && lessonPct(l) < 100)); return [...(focused.length ? focused : pending)].sort((a, b) => mastery(a) - mastery(b))[0]; };
 
   function pickDrill(mins) {
     const att = store.get('attempts', []);
     const scored = allExercises().map((e) => {
       const mine = att.filter((x) => x.id === e.s.id), ok = mine.some((x) => x.ok), fails = mine.filter((x) => !x.ok).length;
       const lastTs = mine.length ? Math.max(...mine.map((x) => x.ts)) : 0, days = lastTs ? (Date.now() - lastTs) / 864e5 : 99;
-      return { e, score: (ok ? 0 : 100) + (e.t.id === 'patterns' ? 25 : 0) + fails * 5 + Math.min(days, 30) + ((e.s.minutes || 20) <= mins ? 15 : 0) + seeded(e.s.id) / 1000 };
+      return { e, score: (pathLessons().has(e.l.id) ? 60 : 0) + (ok ? 0 : 100) + (e.t.id === 'patterns' ? 25 : 0) + fails * 5 + Math.min(days, 30) + ((e.s.minutes || 20) <= mins ? 15 : 0) + seeded(e.s.id) / 1000 };
     });
     return scored.sort((a, b) => b.score - a.score)[0]?.e;
   }
@@ -62,9 +64,12 @@
       tasks.push({ icon: 'mic', title: stories.length ? 'Practise one story out loud (2 min)' : 'Write your first STAR story', detail: stories.length ? 'Pick the one you are least comfortable with.' : 'Behavioral rounds are won with prepared stories.', href: '#/stories', done: (act.story || 0) >= 1, min: 8 });
     }
     const wt = weakestTrack();
-    if (wt) { const l = wt.lessons.find((x) => lessonPct(x) < 100); tasks.push({ icon: wt.id, title: `Learn: ${l.title}`, detail: `${wt.title}, your weakest area (${mastery(wt)}%). Work the quizzes and challenges, not just the text.`, href: '#/lesson/' + l.id, done: (act.practice || 0) >= 3, min: l.minutes }); }
+    if (wt) { const l = wt.lessons.find((x) => pathLessons().has(x.id) && lessonPct(x) < 100) || wt.lessons.find((x) => lessonPct(x) < 100); tasks.push({ icon: wt.id, title: `Learn: ${l.title}`, detail: `${wt.title}, your weakest area (${mastery(wt)}%). Work the quizzes and challenges, not just the text.`, href: '#/lesson/' + l.id, done: (act.practice || 0) >= 3, min: l.minutes }); }
     if (mins >= 60) tasks.push({ icon: 'mic', title: 'One mock interview question', detail: 'Answer out loud, then tick the rubric.', href: '#/mock', done: (act.mock || 0) >= 1, min: 15 });
-    return tasks;
+    let remaining = mins;
+    const budgeted = tasks.filter((task) => { if (task.min > remaining) return false; remaining -= task.min; return true; });
+    if (remaining >= 5 && wt && !budgeted.some((t) => t.title.startsWith('Learn:'))) { const l = wt.lessons.find((l) => pathLessons().has(l.id) && lessonPct(l) < 100) || wt.lessons.find((l) => lessonPct(l) < 100); budgeted.push({ icon: wt.id, title: `Focused review: ${l.title}`, detail: 'Spend five minutes on one section and one check. Continue the full lesson in a later session.', href: '#/lesson/' + l.id, done: (act.practice || 0) >= 1, min: 5 }); }
+    return budgeted;
   }
 
   /* ---------------- main page ---------------- */
@@ -77,6 +82,7 @@
     if (tasks.length && done === tasks.length && store.get('plandone', '') !== dstr(new Date())) { store.set('plandone', dstr(new Date())); addXp(30, 'Daily plan complete'); }
     app.innerHTML = `
       <div class="page-h"><h1>Plan</h1><p><span id="daysleft">${GAME ? '' : daysLeftHtml(days)}</span>${GAME ? 'A repeatable learning session: review, practise, design and build. Use the diagnostic to find concepts to revisit.' : 'A short, repeatable session that targets pressure skills: code against the clock, design reps, and out-loud practice. No interview date needed.'}</p></div>
+      ${activePath() ? `<div class="callout"><b>Practice focus: ${esc(activePath().title)}</b><p>The plan favors lessons and coding drills from your chosen path.</p><a href="#/interview-path/${activePath().id}">Return to path</a> · <button class="linkbtn" id="clearPath">Use all tracks</button></div>` : ''}
       <section class="pl-top">
         <div class="seg" role="group" aria-label="Session length">${[15, 30, 60].map((m) => `<button data-m="${m}" class="${m === mins ? 'on' : ''}">${m} min</button>`).join('')}</div>
         ${GAME ? '' : `<label class="lbl inl">interview date (optional) <input type="date" id="goal" value="${esc(goal)}"></label>`}
@@ -97,6 +103,7 @@
       <section class="backup"><div class="ph"><h2>Backup</h2><span class="muted">your data lives only in this browser</span></div>
         <p class="muted">Export a file to move to another browser or device, or to keep a copy before clearing site data.</p>
         <div class="dbar"><button class="btn" id="bexp">${ic('arrow', 15)} Export progress</button><label class="btn" for="bimp">${ic('arrowL', 15)} Import progress</label><input type="file" id="bimp" accept="application/json" hidden></div></section>`;
+    const clearPath = $('#clearPath'); if (clearPath) clearPath.onclick = () => { store.set('interview:activePath', ''); viewPlan(); };
     $$('.pl-top .seg button').forEach((b) => (b.onclick = () => { store.set('planMin', +b.dataset.m); viewPlan(); }));
     /* Never re-render while the date is being typed: each digit of a year is already a "valid" date and rebuilding the input swallowed the keystrokes. */
     const goalEl = $('#goal'), saveGoal = () => {

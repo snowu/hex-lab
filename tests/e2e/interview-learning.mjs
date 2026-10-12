@@ -1,0 +1,67 @@
+import { newPage } from './helpers.mjs';
+export default async ({ browser, url, ok, section }) => {
+  const page = await newPage(browser, { viewport: { width: 390, height: 844 } });
+  await page.goto(url, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.ip-card');
+  section('guided interview paths');
+  ok(await page.locator('.ip-card').count() === 6, 'six focused interview paths appear on home');
+  const paths = await page.evaluate(() => INTERVIEW_LEARNING.paths.map((p) => ({ id: p.id, lessons: p.steps.filter((s) => s.lesson).map((s) => s.lesson) })));
+  const known = await page.evaluate(() => TRACKS.flatMap((t) => t.lessons.map((l) => l.id)));
+  ok(paths.every((p) => p.lessons.every((l) => known.includes(l))), 'every curated lesson exists for a signed-out learner');
+  for (const p of paths) {
+    await page.go(url, '#/interview-path/' + p.id);
+    ok(await page.locator('.ip-step').count() >= 5, p.id + ' includes learn and practice checkpoints');
+    ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), p.id + ' fits phone width');
+  }
+  await page.go(url, '#/interview-path/coding');
+  await page.locator('[data-check="kata"]').check();
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('[data-check="kata"]');
+  ok(await page.locator('[data-check="kata"]').isChecked(), 'practice checkpoint survives reload');
+  await page.evaluate(() => { const l = TRACKS.flatMap((t) => t.lessons).find((l) => l.id === 'pat-intro'); const p = JSON.parse(localStorage.getItem('sil:progress') || '{}'); p[l.id] = Object.fromEntries(LAB.itemsOf(l).map((x) => [x.k, true])); if (!LAB.itemsOf(l).length) p[l.id].read = true; localStorage.setItem('sil:progress', JSON.stringify(p)); });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.ip-step');
+  ok(await page.locator('.ip-step').first().evaluate((el) => el.classList.contains('complete')), 'path reuses actual lesson completion');
+  section('daily plan uses focus and respects time');
+  await page.go(url, '#/plan');
+  ok((await page.locator('.callout').first().innerText()).includes('Practice focus'), 'selected path informs the daily plan');
+  for (const mins of [15, 30, 60]) {
+    await page.locator('[data-m="' + mins + '"]').click();
+    const total = await page.locator('.pmin').evaluateAll((els) => els.reduce((n, el) => n + parseInt(el.textContent), 0));
+    ok(total > 0 && total <= mins, mins + ' minute plan fits chosen session (' + total + ')');
+  }
+  await page.locator('#clearPath').click();
+  ok(await page.locator('#clearPath').count() === 0, 'learner can return to all tracks');
+  section('mock notes, timer and actionable review');
+  await page.go(url, '#/mock');
+  await page.locator('#go').click();
+  const original = await page.locator('.qq').innerText();
+  await page.locator('#mockNotes').fill('Clarify assumptions, trace an example, defend the trade-off.');
+  await page.locator('#mockPause').click();
+  const elapsed = await page.locator('#tm').innerText();
+  await page.waitForTimeout(1100);
+  ok(await page.locator('#tm').innerText() === elapsed, 'paused timer stays still');
+  await page.go(url, '#/');
+  await page.go(url, '#/mock');
+  await page.locator('#resumeMock').click();
+  ok(await page.locator('.qq').innerText() === original && (await page.locator('#mockNotes').inputValue()).includes('Clarify'), 'same question and draft recover after navigation');
+  ok((await page.locator('#mockPause').textContent()).trim() === 'Resume timer', 'restored practice starts paused');
+  await page.locator('#done').click();
+  await page.locator('.rubric li').first().focus();
+  await page.keyboard.press('Space');
+  ok(await page.locator('.rubric li').first().getAttribute('aria-checked') === 'true', 'rubric supports keyboard and exposes checked state');
+  await page.locator('#mockNext').fill('Explain failure handling with a concrete retry example.');
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('sil:mockhist')).at(-1));
+  ok(saved.hit === 1 && saved.hits[0] && saved.notes.includes('Clarify') && saved.next.includes('retry'), 'attempt saves answer evidence, rubric and next step');
+  ok((await page.locator('#mockGaps').innerText()).startsWith('Practise next:'), 'review points to the next missing rubric item');
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('#resumeMock'); await page.locator('#resumeMock').click();
+  ok(await page.locator('.rubric li.hit').count() === 1 && (await page.locator('#mockNext').inputValue()).includes('retry'), 'completed review recovers selected criteria and reflection');
+  ok(await page.evaluate(() => JSON.parse(localStorage.getItem('sil:mockhist')).length === 1), 'restoring review does not duplicate attempts');
+  await page.locator('#mstats details summary').click();
+  await page.locator('#mstats [data-retry]').first().click();
+  ok(await page.locator('.qq').innerText() === original && await page.locator('#mockNotes').inputValue() === '', 'retry opens the same question with a clean answer');
+  ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'active mock fits phone width');
+  ok(page.errors.length === 0, 'no browser errors: ' + page.errors.join('; '));
+  await page.context().close();
+};

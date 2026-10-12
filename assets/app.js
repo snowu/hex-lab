@@ -231,6 +231,7 @@ function viewHome() {
     </section>
     ${nx ? `<a class="cont tc" style="--h:${hueOf(nx.t.id)}" href="#/lesson/${nx.l.id}">${ring(lessonPct(nx.l), 52, 5)}<div class="tx"><div class="k">${nx.resume || nx.started ? 'Continue where you left off' : 'Up next'}</div><div class="tt">${esc(nx.l.title)}</div><div class="sub">${esc(nx.t.title)} · ${nx.l.minutes} min</div></div>${ic('arrow', 22)}</a>` : `<div class="cont tc" style="--h:150">${ic('trophy', 28)}<div class="tx"><div class="tt">${GAME ? 'Every lesson complete. Build a project or revisit a kata.' : 'Every lesson complete. Go run some mock interviews.'}</div></div></div>`}
     ${(() => { const ms = mockSummary(); return !GAME && ms.weakest && ms.weakest.avg < 80 ? `<a class="cont tc" id="weak" style="--h:${MOCK_HUE[ms.weakest.kind] ?? 255};margin-top:12px" href="#/mock"><span class="si" style="width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--panel2);color:var(--c)">${ic('target', 22)}</span><div class="tx"><div class="k">Weak spot from your mock interviews</div><div class="tt">${esc(ms.weakest.kind)} · ${ms.weakest.avg}% rubric coverage</div><div class="sub">${ms.weakest.n} attempt${ms.weakest.n === 1 ? '' : 's'}. Practice it again.</div></div>${ic('arrow', 22)}</a>` : ''; })()}
+    ${!GAME && window.INTERVIEW_LEARNING ? INTERVIEW_LEARNING.home() : ''}
     <div class="sec-h"><h2>Tracks</h2><span>${total} lessons · ${Math.round(TRACKS.reduce((a, t) => a + trackMin(t), 0) / 60)} hours</span></div>
     <div class="tgrid">${TRACKS.map((t) => `
       <a class="tcard tc ${t.hot ? 'feat' : ''}" style="--h:${hueOf(t.id)}" href="#/track/${t.id}">
@@ -760,7 +761,10 @@ const ago = (ts) => { const m = Math.round((Date.now() - ts) / 60000); return m 
 const MOCK_HUE = { 'Full-stack': 100, Databases: 200, 'Coding under pressure': 165, Behavioral: 255, 'System Design': 150, 'Neonomics / Open Banking': 44, 'Scale & Cloud': 215, 'AI Era': 320 };
 function viewMock(autoAI) {
   document.title = 'Mock interview · Senior Interview Lab';
-  let kind = store.get('mockkind', ''), q = null, t0 = 0, iv = null, secs = 0, rec = null;
+  let kind = store.get('mockkind', ''), q = null, t0 = 0, iv = null, secs = 0, rec = null, paused = false;
+  const draft = () => store.get('mockActive', null);
+  const saveDraft = () => { if (!q) return; if (!paused && !rec) secs = Math.max(0, Math.floor((Date.now() - t0) / 1000)); store.set('mockActive', { id: cid(q), secs, notes: $('.mock .notes')?.value || '', recTs: rec?.ts || null }); };
+  const updateRecord = (patch) => { if (!rec) return; const all = mockHist(), r = all.find((a) => a.ts === rec.ts); if (r) { Object.assign(r, patch); Object.assign(rec, patch); store.set('mockhist', all); } };
   store.set('mockkind', '');
   const kinds = [...new Set(MOCK.map((m) => m.kind))];
   const kh = (k) => MOCK_HUE[k] ?? hueOf(k);
@@ -773,7 +777,8 @@ function viewMock(autoAI) {
         <div><b>${s.h.length}</b><span>attempts</span></div><div><b>${s.avg}%</b><span>avg rubric coverage</span></div><div><b>${s.seen.size}/${MOCK.length}</b><span>questions tried</span></div>
         ${weak ? `<button class="btn sm primary" id="pw">${ic('target', 14)} Practice weakest: ${esc(weak.kind)}</button>` : ''}</div>
       <div class="mrows">${kinds.map((k) => { const b = s.by[k]; return `<div class="mrow tc" style="--h:${kh(k)}"><span class="mk">${esc(k)}</span><span class="mbar"><i style="width:${b ? b.avg : 0}%"></i></span><span class="mv">${b ? `${b.avg}% · ${b.n}×` : 'not tried'}</span></div>`; }).join('')}</div>
-      <details><summary>Recent attempts</summary>${s.h.slice(-6).reverse().map((a) => { const m = MOCK.find((x) => cid(x) === a.id); return `<div class="mhist"><span class="chip">${a.hit}/${a.total}</span><span class="mq">${esc(m ? strip(m.q) : 'Question')}</span><span class="mt">${ago(a.ts)}</span></div>`; }).join('')}</details></div>`;
+      <details><summary>Recent attempts</summary>${s.h.slice(-6).reverse().map((a) => { const m = MOCK.find((x) => cid(x) === a.id); return `<div class="mhist"><span class="chip">${a.hit}/${a.total}</span><span class="mq">${esc(m ? strip(m.q) : 'Question')}</span><span class="mt">${ago(a.ts)}</span>${m ? `<button type="button" class="btn sm" data-retry="${esc(a.id)}">Try again</button>` : ''}${a.next ? `<small>Next step: ${esc(a.next)}</small>` : ''}</div>`; }).join('')}</details></div>`;
+    $$('[data-retry]').forEach((b) => b.onclick = () => { const m = MOCK.find((x) => cid(x) === b.dataset.retry); if (m) startQuestion(m, true); });
     const pw = $('#pw'); if (pw) pw.onclick = () => { kind = weak.kind; pick(); };
   };
   const draw = () => {
@@ -783,17 +788,20 @@ function viewMock(autoAI) {
       ${q ? `<div class="qcard tc brk has-ask" style="--h:${kh(q.kind)}">${askBtn(`Mock interview question (${strip(q.kind)}): ${strip(q.q)}\n\nHow would a strong senior candidate answer this? Give a structure for the answer, the key points, trade-offs and common mistakes. Then ask me to try it myself.`, 'Ask AI how to answer')}<span class="chip tc">${esc(q.kind)}</span> <span class="chip">${ic('clock', 12)} suggested ${q.minutes} min</span>
         <div class="qq">${q.q}</div>
         <div class="timer"><span class="tm" id="tm">00:00</span><span class="tb" id="tb"><i style="width:0"></i></span></div>
-        <textarea class="notes" placeholder="Your notes: assumptions, structure, trade-offs…"></textarea>
+        <label for="mockNotes" class="lbl">Your answer notes</label><textarea id="mockNotes" class="notes" placeholder="Your notes: assumptions, structure, trade-offs…"></textarea><div class="mock-draft-status" id="mockSaved" role="status">Notes save on this device.</div><div class="mock-controls"><button type="button" class="btn sm" id="mockPause">${paused ? 'Resume timer' : 'Pause timer'}</button><span class="muted">${paused ? 'Timer paused' : 'Time yourself, then review your evidence.'}</span></div>
         <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><button id="done" class="btn primary">${ic('check', 16)} I'm done: show rubric</button><button id="skip" class="btn">${ic('rotate', 16)} Another question</button>${window.FEEDBACK && FEEDBACK.enabled() ? `<button id="aibtn" class="btn" title="An AI interviewer asks follow-ups, then grades you against the rubric">${ic('mic', 16)} Interview me (AI)</button>` : ''}</div>
-        <div id="aiint" class="aiint"></div><div id="rub"></div></div>` : `<div class="empty"><div class="big">${ic('mic', 30)}</div><h2 style="margin:0 0 6px">Ready when you are</h2><p style="color:var(--muted);margin:0 0 18px">You'll get a random question (unseen ones first) and a timer.</p><button class="btn primary" id="go">${ic('play', 16)} Give me a question</button>${window.FEEDBACK && FEEDBACK.enabled() ? ` <button class="btn" id="goai">${ic('mic', 16)} Start an AI interview</button><p class="muted" style="margin:14px 0 0">An AI interviewer asks follow-ups, then grades you against the rubric.</p>` : ''}</div>`}</div>`;
+        <div id="aiint" class="aiint"></div><div id="rub"></div></div>` : `<div class="empty"><div class="big">${ic('mic', 30)}</div><h2 style="margin:0 0 6px">Ready when you are</h2><p style="color:var(--muted);margin:0 0 18px">You'll get a random question (unseen ones first) and a timer.</p><button class="btn primary" id="go">${ic('play', 16)} Give me a question</button>${draft() && MOCK.some((m) => cid(m) === draft().id) ? ' <button class="btn" id="resumeMock">Resume saved practice</button>' : ''}${window.FEEDBACK && FEEDBACK.enabled() ? ` <button class="btn" id="goai">${ic('mic', 16)} Start an AI interview</button><p class="muted" style="margin:14px 0 0">An AI interviewer asks follow-ups, then grades you against the rubric.</p>` : ''}</div>`}</div>`;
     renderStats();
     $$('.fchip').forEach((b) => (b.onclick = () => { kind = b.dataset.k; pick(); }));
     const go = $('#go'); if (go) go.onclick = pick;
+    const resume = $('#resumeMock'); if (resume) resume.onclick = () => { const d = draft(), m = MOCK.find((x) => cid(x) === d.id); if (!m) return; q = m; secs = Math.max(0, Number(d.secs) || 0); paused = true; rec = mockHist().find((a) => a.ts === d.recTs) || null; ai = null; draw(); $('.mock .notes').value = d.notes || ''; $('#tm').textContent = fmtT(secs); if (rec) showRubric(); };
+    const notes = $('.mock .notes'); if (notes) notes.oninput = () => { saveDraft(); updateRecord({ notes: notes.value }); $('#mockSaved').textContent = 'Notes saved on this device.'; };
+    const pause = $('#mockPause'); if (pause) { pause.hidden = !!rec; pause.onclick = () => { if (!paused) { saveDraft(); clearInterval(iv); paused = true; } else { paused = false; t0 = Date.now() - secs * 1000; tick(); } pause.textContent = paused ? 'Resume timer' : 'Pause timer'; pause.nextElementSibling.textContent = paused ? 'Timer paused' : 'Time yourself, then review your evidence.'; saveDraft(); }; }
     const sk = $('#skip'); if (sk) sk.onclick = pick;
     const ab = $('#aibtn'); if (ab) ab.onclick = startAI;
     const gai = $('#goai'); if (gai) gai.onclick = () => { pick(); startAI(); };
     const dn = $('#done'); if (dn) dn.onclick = showRubric;
-    if (q) tick();
+    if (q && !paused && !rec) tick();
   };
   /* ---- AI interviewer: follow-up questions, then the rubric is graded from the transcript ---- */
   const AI_TURNS = 4;
@@ -837,7 +845,8 @@ function viewMock(autoAI) {
       showRubric();
       $$('.rubric li').forEach((li, i) => li.classList.toggle('hit', !!cur.graded.hits[i]));
       const n = $$('.rubric li.hit').length, all = mockHist(), r = all.find((a) => a.ts === rec.ts);
-      if (r) { r.hit = n; r.ai = true; store.set('mockhist', all); rec.hit = n; }
+      if (r) { r.hit = n; r.hits = cur.graded.hits; r.ai = true; store.set('mockhist', all); Object.assign(rec, r); }
+      $$('.rubric li').forEach((li) => li.setAttribute('aria-checked', String(li.classList.contains('hit')))); reviewGaps(); saveDraft();
       $('#cov').textContent = `Covered ${n}/${q.rubric.length}.`; renderStats();
       $('#rub').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } catch (e) { if (ai !== cur) return; cur.err = e.message; cur.busy = false; cur.grading = false; drawAI(); }
@@ -845,27 +854,38 @@ function viewMock(autoAI) {
   const showRubric = () => {
     clearInterval(iv);
     if (!rec) {
-      rec = { id: cid(q), kind: q.kind, ts: Date.now(), secs, hit: 0, total: q.rubric.length };
+      if (!paused) secs = Math.max(0, Math.floor((Date.now() - t0) / 1000));
+      rec = { id: cid(q), kind: q.kind, ts: Date.now(), secs, hit: 0, total: q.rubric.length, hits: [], notes: $('.mock .notes')?.value || '', next: '' };
       const all = mockHist(); all.push(rec); store.set('mockhist', all.slice(-200));
       addXp(15, 'Mock interview done'); logAct('mock'); renderStats();
     }
     const rev = (q.lessons || []).map((id) => findLesson(id)).filter(Boolean);
-    $('#rub').innerHTML = `<h3>A strong answer covers</h3><p style="color:var(--muted);margin:0 0 6px;font-size:.9rem">Tick what you covered. Took ${fmtT(secs)}. <span id="cov"></span></p><ul class="rubric">${q.rubric.map((r) => `<li><span class="cb">${ic('check', 12, 3.4)}</span><span>${r}</span></li>`).join('')}</ul>
+    $('#rub').innerHTML = `<h3>A strong answer covers</h3><p style="color:var(--muted);margin:0 0 6px;font-size:.9rem">Self-review: tick only points supported by your answer. Took ${fmtT(secs)}. <span id="cov"></span></p><ul class="rubric">${q.rubric.map((r, i) => `<li role="checkbox" tabindex="0" aria-checked="${!!rec.hits?.[i]}" class="${rec.hits?.[i] ? 'hit' : ''}"><span class="cb">${ic('check', 12, 3.4)}</span><span>${r}</span></li>`).join('')}</ul>
+      <div class="mock-review"><label for="mockNext">One change for your next answer</label><textarea class="notes" id="mockNext" rows="3" placeholder="Name the missing evidence or trade-off, and how you will practise it.">${esc(rec.next || '')}</textarea><div id="mockGaps" class="muted"></div></div>
       ${rev.length ? `<div class="revisit"><span>Revisit what you missed:</span>${rev.map((f) => `<a class="chip tc" style="--h:${hueOf(f.t.id)}" href="#/lesson/${f.l.id}">${ic(f.t.id, 12)} ${esc(f.l.title)}</a>`).join('')}</div>` : ''}`;
     $$('.rubric li').forEach((li) => (li.onclick = () => {
       li.classList.toggle('hit');
       const n = $$('.rubric li.hit').length, all = mockHist(), r = all.find((a) => a.ts === rec.ts);
-      if (r) { r.hit = n; store.set('mockhist', all); rec.hit = n; }
+      if (r) { r.hit = n; r.hits = $$('.rubric li').map((li) => li.classList.contains('hit')); store.set('mockhist', all); Object.assign(rec, r); }
+      $$('.rubric li').forEach((li) => li.setAttribute('aria-checked', String(li.classList.contains('hit'))));
+      reviewGaps(); saveDraft();
       $('#cov').textContent = `Covered ${n}/${q.rubric.length}.`; renderStats();
     }));
+    $$('.rubric li').forEach((li) => li.onkeydown = (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); li.click(); } });
+    $('#mockNext').oninput = (e) => { updateRecord({ next: e.target.value }); renderStats(); };
+    $('#cov').textContent = `Covered ${rec.hit}/${q.rubric.length}.`;
+    $('#mockPause').hidden = true; $('#mockPause').nextElementSibling.textContent = 'Review saved on this device.'; reviewGaps(); saveDraft();
   };
+  const reviewGaps = () => { const missing = q.rubric.filter((_, i) => !$('.rubric li:nth-child(' + (i + 1) + ')')?.classList.contains('hit')); const target = $('#mockGaps'); if (target) target.textContent = missing.length ? 'Practise next: ' + strip(missing[0]) : 'All points checked. Try the question again with a different constraint and defend an alternative.'; };
   const tick = () => { clearInterval(iv); iv = setInterval(() => { secs = Math.floor((Date.now() - t0) / 1000); const tm = $('#tm'); if (!tm) return; tm.textContent = fmtT(secs); const pct = Math.min(100, (secs / (q.minutes * 60)) * 100), tb = $('#tb'); tb.firstChild.style.width = pct + '%'; tb.classList.toggle('over', secs > q.minutes * 60); }, 500); };
   const pick = () => {
     const pool = MOCK.filter((m) => !kind || m.kind === kind), seen = mockSummary().seen, fresh = pool.filter((m) => !seen.has(cid(m))), src = fresh.length ? fresh : pool;
     let n; do { n = src[Math.floor(Math.random() * src.length)]; } while (src.length > 1 && n === q);
-    q = n; t0 = Date.now(); secs = 0; rec = null; ai = null; draw();
+    startQuestion(n);
   };
-  cleanup = () => clearInterval(iv);
+  const startQuestion = (m, selectKind = false) => { saveDraft(); q = m; if (selectKind) kind = m.kind; t0 = Date.now(); secs = 0; rec = null; ai = null; paused = false; draw(); saveDraft(); };
+  cleanup = () => { saveDraft(); clearInterval(iv); removeEventListener('pagehide', saveDraft); };
+  addEventListener('pagehide', saveDraft);
   draw();
   if (autoAI && window.FEEDBACK && FEEDBACK.enabled()) { pick(); startAI(); }
 }
