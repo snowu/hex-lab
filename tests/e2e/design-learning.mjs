@@ -1,0 +1,35 @@
+import { newPage } from './helpers.mjs';
+export default async function ({ url, browser, ok, section }) {
+  const page = await newPage(browser, { viewport: { width: 390, height: 844 } });
+  await page.goto(url + '#/design');
+  await page.locator('.dcard').first().waitFor();
+  section('Design review checkpoints');
+  const href = await page.locator('.dcard').first().getAttribute('href');
+  await page.go(url, href);
+  await page.locator('textarea[data-s]').first().fill('Concrete requirements and availability trade-off.');
+  await page.reload(); await page.locator('textarea[data-s]').first().waitFor();
+  ok(await page.locator('textarea[data-s]').first().inputValue() === 'Concrete requirements and availability trade-off.', 'design notes survive reload');
+  await page.locator('#dfinish').click();
+  await page.locator('#drub input').first().check();
+  await page.locator('#dlearn').fill('Estimate peak requests before picking a database.');
+  await page.reload(); await page.locator('#dlearn').waitFor();
+  ok(await page.locator('#drub input').first().isChecked(), 'rubric selection survives reload');
+  ok(await page.locator('#dlearn').inputValue() === 'Estimate peak requests before picking a database.', 'reflection survives reload');
+  ok(await page.locator('#dnext').innerText().then((v) => v.includes('Next practice target')), 'unchecked rubric becomes a practice target');
+  ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'design comparison fits phone width');
+  await page.locator('#drevisenotes').click();
+  ok(await page.locator('textarea[data-s]').first().isVisible(), 'reference review can return to editable notes');
+  await page.reload(); await page.locator('textarea[data-s]').first().waitFor();
+  ok(await page.locator('textarea[data-s]').first().isVisible(), 'revision mode survives reload without discarding notes');
+  await page.locator('#dfinish').click();
+  ok(await page.locator('#dlearn').inputValue() === 'Estimate peak requests before picking a database.', 'revising notes preserves the reflection');
+  await page.locator('#dsave').click();
+  await page.go(url, '#/design');
+  ok(await page.locator('.design-overview').innerText().then((v) => v.includes('1 saved reps')), 'saved practice is visible in overview');
+  await page.locator('.design-history summary').click();
+  ok(await page.locator('.design-history').innerText().then((v) => v.includes('Estimate peak requests')), 'recent history exposes next steps');
+  await page.locator('[data-level="warm-up"]').click();
+  ok(await page.locator('.dcard .chip').allTextContents().then((v) => !v.some((s) => s === 'hard')), 'difficulty filter narrows prompts');
+  ok(page.errors.length === 0, 'design learning has no browser errors: ' + page.errors.join('; '));
+  await page.context().close();
+}
