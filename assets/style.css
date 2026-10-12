@@ -920,3 +920,11 @@ pre[data-native-code] .token.macro,pre[data-native-code] .token.directive,.nativ
 .dr-draft{padding:16px 20px;border-top:1px solid var(--line)}
 .dr-draft .lbl{margin:0}
 .dr-draft .native-editor{margin-top:10px}
+/* A tighter reading scale for phones; form controls retain their touch sizing. */
+@media(max-width:520px){
+  html{font-size:15px}
+  body{font-size:15px}
+  h1,.lhead h1,.hero h1{font-size:1.75rem;line-height:1.25}
+  h2{font-size:1.12rem}
+  .lhead .sum,.hero .lead{font-size:1rem}
+}
