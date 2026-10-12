@@ -857,7 +857,12 @@ function buildIndex() {
 }
 const QUICK = () => [
   { kind: 'Go to', icon: 'home', title: 'Learn', sub: 'All tracks', href: '#/' }, { kind: 'Go to', icon: 'cards', title: 'Flashcards', sub: 'Spaced repetition', href: '#/review' },
-  { kind: 'Go to', icon: 'mic', title: 'Mock interview', sub: 'Random question + timer', href: '#/mock' }, { kind: 'Go to', icon: 'link', title: 'Free resources', sub: 'Curated links', href: '#/resources' },
+  ...(!GAME ? [{ kind: 'Go to', icon: 'mic', title: 'Mock interview', sub: 'Random question + timer', href: '#/mock' }] : []),
+  { kind: 'Go to', icon: 'target', title: GAME ? 'Learning plan' : 'Daily plan', sub: 'Diagnostic, progress and backup', href: '#/plan' },
+  { kind: 'Go to', icon: 'terminal', title: 'Code katas', sub: 'Exercises and spaced reviews', href: '#/katas' },
+  { kind: 'Go to', icon: 'design', title: 'Design lab', sub: 'Architecture practice', href: '#/design' },
+  ...(GAME ? [{ kind: 'Go to', icon: 'gdpixel', title: 'Pixel Forge', sub: 'Open spritewright for your project', href: '#/forge' }] : []),
+  { kind: 'Go to', icon: 'link', title: 'Free resources', sub: 'Curated links', href: '#/resources' },
   ...TRACKS.map((t) => ({ kind: 'Tracks', icon: t.id, hue: hueOf(t.id), title: t.title, sub: `${t.lessons.length} lessons`, href: '#/track/' + t.id })),
 ];
 function openPalette() { $('#cmdk').hidden = false; $('#cq').value = ''; renderPal(); $('#cq').focus(); }
