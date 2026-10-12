@@ -45,7 +45,7 @@
     const arr = stories(), filter = mode.filter || '';
     const count = (cid) => arr.filter((s) => (s.tags || []).includes(cid)).length;
     const shown = filter ? arr.filter((s) => (s.tags || []).includes(filter)) : arr, fc = COMP.find((c) => c.id === filter);
-    app.innerHTML = `<div class="page-h"><h1>Story bank</h1><p>Behavioral rounds are won with prepared stories. Write 6-8 strong ones, tag what each shows, and practise them aloud until they are 2 minutes and sound natural. One good story covers several questions.</p></div>
+    app.innerHTML = `<div class="page-h"><h1>Story bank</h1><p>Build a small bank of specific stories you can adapt to behavioral questions. Tag the competencies each story demonstrates, then practise explaining your decisions and outcomes aloud in about two minutes.</p></div>
       ${store.get(draftKey, null) ? `<div class="callout"><b>Unfinished story: ${esc(store.get(draftKey, {}).title || 'Untitled')}</b><p>Your writing is saved on this device. Resume it before starting another story.</p><button class="btn primary" id="sresume">Resume draft</button><button class="btn ghost" id="sdiscard">Discard draft</button></div>` : ''}
       <section><div class="ph"><h2>Coverage</h2><span class="muted">${COMP.filter((c) => count(c.id)).length}/${COMP.length} competencies have a story</span></div>
         <div class="cov">${COMP.map((c) => `<button class="covc ${count(c.id) ? 'has' : 'gap'} ${filter === c.id ? 'on' : ''}" data-c="${c.id}"><b>${esc(c.name)}</b><small>${count(c.id) ? count(c.id) + ' stor' + (count(c.id) > 1 ? 'ies' : 'y') : 'no story yet'}</small></button>`).join('')}</div>
@@ -115,7 +115,7 @@
     $('#pstart').onclick = () => { if (iv) return; t0 = Date.now(); iv = setInterval(tick, 400); $('#pstart').disabled = true; $('#pdone').disabled = false; };
     $('#ppeek').onclick = () => { peeked = true; $('#poutline').hidden = false; $('#ppeek').disabled = true; };
     $('#pdone').onclick = () => {
-      clearInterval(iv); iv = null; tick();
+      clearInterval(iv); iv = null; tick(); $('#pdone').disabled = true;
       const list = [`Under 2:30 (you took ${fmtClock(secs)})`, 'Clear situation in the first 20 seconds', 'I said what I did, not what we did', 'Gave a concrete number in the result', 'Ended with what I learned', 'Did not read from the page'];
       $('#pself').innerHTML = `<h3>Self-check</h3><ul class="rubric" id="prub">${list.map((x, i) => `<li role="checkbox" tabindex="0" aria-checked="${i === 0 && secs <= limit}" class="${i === 0 && secs <= limit ? 'hit' : ''}"><span class="cb">${ic('check', 12, 3.4)}</span><span>${esc(x)}</span></li>`).join('')}</ul><p class="muted">Self-reported reflection, not a scored interview. ${peeked ? 'You opened the outline; try the next attempt without it.' : 'Use the checks to choose one thing to improve.'}</p><label class="lbl" for="pnext">One specific change for your next attempt</label><textarea class="inp" id="pnext" rows="3" placeholder="e.g. Explain why I rejected the migration before describing the result."></textarea><div class="dbar"><button class="btn primary" id="psave">Save practice</button></div>`;
       $$('#prub li').forEach((li) => { li.onclick = () => { li.classList.toggle('hit'); li.setAttribute('aria-checked', String(li.classList.contains('hit'))); }; li.onkeydown = (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); li.click(); } }; });
