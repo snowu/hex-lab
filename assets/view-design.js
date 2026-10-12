@@ -4,7 +4,7 @@
   const STEPS = window.DESIGN_STEPS, DESIGNS = window.DESIGNS;
   H.routes.push([/^#\/design$/, () => viewDesign()], [/^#\/design\/([\w-]+)$/, (id) => viewWorkspace(id)]);
 
-  const hist = () => store.get('designhist', []);
+  const hist = () => store.get('designhist', []).filter((rep) => DESIGNS.some((d) => d.id === rep.id));
   const histOf = (id) => hist().filter((x) => x.id === id);
   const words = (t) => (String(t).trim().match(/\S+/g) || []).length;
   let tab = 'reps', level = 'all';
@@ -101,11 +101,11 @@
     $$('#drub input').forEach((input) => { input.onchange = () => { input.closest('li').classList.toggle('hit', input.checked); upd(); saveReview(); }; });
     $('#dlearn').oninput = saveReview;
     $('#dsave').onclick = () => {
-      const score = $$('#drub li.hit').length, all = hist();
-      all.push({ id: d.id, ts: Date.now(), secs, score, total: d.rubric.length, hints, words: wordsTotal, learn: $('#dlearn').value.trim() });
+      const score = $$('#drub li.hit').length, all = store.get('designhist', []);
+      all.push({ id: d.id, ts: Date.now(), secs, score, total: d.rubric.length, hints, words: wordsTotal, notes: mine, checked: Array.from($$('#drub input')).map((input) => input.checked), learn: $('#dlearn').value.trim() });
       store.set('designhist', all.slice(-200)); logAct('design'); addXp(40 + (secs ? 20 : 0), 'Design rep saved');
       if (score >= d.rubric.length - 1) { const r = $('#dsave').getBoundingClientRect(); confetti(r.left, r.top); }
-      store.set('dw:' + d.id, {}); store.set(reviewKey, null); $('#dsave').disabled = true; $('#dsave').textContent = 'Saved'; $('#drevisenotes').hidden = true;
+      store.set('dw:' + d.id, {}); store.set(reviewKey, null); $('#dsave').disabled = true; $('#dsave').textContent = 'Saved'; $('#drevisenotes').hidden = true; $$('#drub input').forEach((input) => { input.disabled = true; }); $('#dlearn').readOnly = true;
     };
     if (window.FEEDBACK && FEEDBACK.enabled()) {
       el.insertAdjacentHTML('beforeend', '<section class="cmp"><h3>Second opinion</h3><div id="dfbk"></div></section>');

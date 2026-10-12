@@ -24,6 +24,8 @@ export default async function ({ url, browser, ok, section }) {
   await page.locator('#dfinish').click();
   ok(await page.locator('#dlearn').inputValue() === 'Estimate peak requests before picking a database.', 'revising notes preserves the reflection');
   await page.locator('#dsave').click();
+  ok(await page.locator('#dlearn').evaluate((el) => el.readOnly) && await page.locator('#drub input').first().isDisabled(), 'saved review cannot recreate an unfinished draft');
+  ok(await page.evaluate(() => { const rep = JSON.parse(localStorage.getItem('sil:designhist')).at(-1); return Object.values(rep.notes).some((note) => note.includes('Concrete requirements')) && rep.checked[0]; }), 'saved attempt retains original notes and selected evidence');
   await page.go(url, '#/design');
   ok(await page.locator('.design-overview').innerText().then((v) => v.includes('1 saved reps')), 'saved practice is visible in overview');
   await page.locator('.design-history summary').click();

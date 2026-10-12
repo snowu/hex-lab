@@ -3,3 +3,5 @@
 @media(max-width:520px){.ikpath-grid{grid-template-columns:1fr 1fr}.ikpath{padding:12px;gap:7px}.ikpath b{font-size:.82rem}.ikpath span{font-size:.73rem}.ikpractice{padding:12px}.ikpaths-head h2{font-size:1rem}}
 .kata-split>*,.kata-work,.kd-scroll{min-width:0}.kata-split .kpn{flex-wrap:wrap}.kata-split .kpn a{white-space:normal;overflow-wrap:anywhere}.kata-work .cs-row{flex-wrap:wrap}.kata-work .cs-row select{max-width:100%}
 @media(max-width:1000px){.kata-split{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:520px){.kata-work .CodeMirror{height:clamp(220px,38vh,340px)}.kata-work .ex-tab>span:last-child{display:none}.kata-work .ex-tab{gap:8px;padding:9px 10px}.kata-work .ex-head{padding:14px 14px 0;gap:8px}.kata-work .ex-actions{padding:12px 14px}.kata-work .ex-actions .sp{display:none}}
+@media(max-width:520px){.kata-work .ex-head{flex-wrap:wrap;padding-right:60px;align-items:flex-start}.kata-work .ex-head .chip{margin-left:0}}
