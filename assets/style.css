@@ -891,3 +891,8 @@ pre[data-native-code] .token.macro,pre[data-native-code] .token.directive,.nativ
 .native-editor textarea{position:relative;display:block;box-sizing:border-box;margin:0;background:transparent;color:transparent;caret-color:var(--ink);white-space:pre;font-variant-ligatures:none;font-feature-settings:'liga' 0,'calt' 0;line-height:1.6}
 .native-editor textarea::selection{background:color-mix(in srgb,var(--accent) 28%,transparent);color:transparent}
 @media (forced-colors:active){.native-editor .native-code-render{display:none}.native-editor textarea{color:CanvasText;caret-color:CanvasText}.native-editor textarea::selection{color:HighlightText;background:Highlight}}
+
+.gk-related{display:flex;align-items:center;gap:12px;margin-top:16px;padding:14px 16px;border-top:1px solid var(--line)}
+.gk-related .btn{max-width:100%;white-space:normal}
+.gk-result{display:block;margin:12px 16px;overflow-wrap:anywhere}
+.gk-result:empty{display:none}
