@@ -10,7 +10,7 @@ const store = {
 };
 const app = $('#app');
 try { if (!localStorage.getItem('sil:pyMigrated')) { Object.keys(localStorage).filter((k) => k.startsWith('sil:draft:')).forEach((k) => localStorage.removeItem(k)); localStorage.setItem('sil:pyMigrated', 'true'); } } catch {}
-const GAME = window.MODE === 'gamedev', SITE = GAME ? 'Game Dev Lab' : 'Senior Interview Lab';
+const GAME = window.MODE === 'gamedev', SITE = GAME ? 'Game Dev Lab' : 'Hex';
 const TRACKS = LessonTime.apply(window.TRACKS), CARDS = window.CARDS || [], MOCK = window.MOCK || [], RES = window.RESOURCES || [];
 
 /* ---------- icons ---------- */
@@ -193,7 +193,7 @@ function viewHome() {
   app.innerHTML = `
     <section class="hero"><div class="hero-l">
       ${GAME ? `<span class="eyebrow"><span class="p">$</span> ./gamedev <b>--mode=build-things</b></span>
-      <h1>Learn to make games, <span class="grad">one pixel at a time.</span><span class="cur"></span></h1>` : `<span class="eyebrow"><span class="p">$</span> ./senior-prep <b>--mode=ai-era</b></span>
+      <h1>Learn to make games, <span class="grad">one pixel at a time.</span><span class="cur"></span></h1>` : `<span class="eyebrow"><span class="p">$</span> ./hex <b>--mode=ai-era</b></span>
       <h1>Practice like it's the <span class="grad">real interview.</span><span class="cur"></span></h1>`}
       ${GAME ? `<p class="lead">${TRACKS.length} tracks, from the game loop and game math through programming patterns, physics, graphics, AI and networking to design, procedural generation and pixel art. ${exTotal} Zig and C++ drills you compile yourself, ${simTotal} interactive simulations, ${bugTotal} bug hunts and a pixel editor. Examples lean on Godot, Zig and C++; the ideas apply to any engine.</p>` : `<p class="lead">${TRACKS.length} tracks with ${exTotal} runnable coding challenges (Python and SQL), ${bugTotal} bug hunts and ${simTotal} interactive simulations, plus flashcards and mock interviews. From system design and Kafka to AWS, Terraform and a dedicated open-banking track for Neonomics. Every lesson works as text, as practice, or both.</p>`}
       <div class="cta">
@@ -760,7 +760,7 @@ document.addEventListener('click', (e) => {
 const dueCards = (track) => CARDS.filter((c) => (!track || c.track === track) && (!cardState[cid(c)] || cardState[cid(c)].due <= Date.now()));
 const trackHue = (name) => ({ 'Full-stack': 100, Database: 200, Patterns: 165, Playbook: 255, Design: 150, Reliability: 28, Kafka: 275, AWS: 215, Terraform: 262, AI: 320, 'Open Banking': 44 }[name] ?? hueOf(name));
 function viewReview() {
-  document.title = 'Flashcards · Senior Interview Lab';
+  document.title = 'Flashcards · Hex';
   let filter = '', deck = [], cur = 0, flipped = false, total = 0;
   const tracks = [...new Set(CARDS.map((c) => c.track))];  /* includes "My cards" once you have made one */
   const build = (all) => { deck = (all ? CARDS.filter((c) => !filter || c.track === filter) : dueCards(filter)).sort(() => Math.random() - 0.5); total = deck.length; cur = 0; flipped = false; draw(); };
@@ -819,7 +819,7 @@ function mockSummary() {
 const ago = (ts) => { const m = Math.round((Date.now() - ts) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' d ago'; };
 const MOCK_HUE = { 'Full-stack': 100, Databases: 200, 'Coding under pressure': 165, Behavioral: 255, 'System Design': 150, 'Neonomics / Open Banking': 44, 'Scale & Cloud': 215, 'AI Era': 320 };
 function viewMock(autoAI) {
-  document.title = 'Mock interview · Senior Interview Lab';
+  document.title = 'Mock interview · Hex';
   let kind = store.get('mockkind', ''), q = null, t0 = 0, iv = null, secs = 0, rec = null, paused = false;
   const draft = () => store.get('mockActive', null);
   const saveDraft = () => { if (!q) return; if (!paused && !rec) secs = Math.max(0, Math.floor((Date.now() - t0) / 1000)); store.set('mockActive', { id: cid(q), secs, notes: $('.mock .notes')?.value || '', recTs: rec?.ts || null }); };
@@ -953,7 +953,7 @@ function viewMock(autoAI) {
 const catIcon = (c) => ({ 'Full-stack': 'fullstack', Databases: 'data', 'Neonomics & Open Banking': 'openbanking', 'System Design': 'design', Kafka: 'route', AWS: 'cloud', Terraform: 'cloud', 'Coding Practice': 'coding', 'AI Engineering': 'ai', 'Security & Career': 'reliability' }[c] || 'book');
 const catHue = (c) => ({ 'Full-stack': 100, Databases: 200, 'Neonomics & Open Banking': 44, 'System Design': 150, Kafka: 275, AWS: 215, Terraform: 262, 'Coding Practice': 190, 'AI Engineering': 320, 'Security & Career': 28 }[c] ?? hueOf(c));
 function viewResources() {
-  document.title = 'Free resources · Senior Interview Lab';
+  document.title = 'Free resources · Hex';
   const cats = [...new Set(RES.map((r) => r.cat))]; let f = '';
   const draw = () => {
     app.innerHTML = `<div class="page-h"><h1>Free resources</h1><p>Hand-picked, openly readable material. Links open in a new tab.</p></div>

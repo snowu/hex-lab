@@ -1,6 +1,7 @@
-# 🧗 Senior Interview Lab
+# ⬡ Hex
 
-Interactive prep for **senior engineering interviews in the AI era**, with a dedicated **Neonomics / open banking** track.
+Interview prep and game-dev learning in one static site: **senior engineering interviews in the AI era** (with a dedicated **Neonomics / open banking** track)
+plus a full **Game Dev Lab** (theory, pixel art, Zig and C++ drills).
 Pure static site (no build step), hosted on GitHub Pages.
 
 ## What's inside
@@ -59,7 +60,7 @@ Neonomics details come from their public docs and general PSD2 knowledge, not in
 cd tests && npm ci && npx playwright install chromium
 ./setup-sandbox-libs.sh      # only on a minimal Linux/WSL image missing system libraries (no root needed)
 node e2e/run.mjs             # or: node e2e/run.mjs cloud smoke
-LAB_URL=https://snowu.github.io/senior-interview-lab/index.html node e2e/run.mjs smoke fullstack cloud   # against the live site
+LAB_URL=https://snowu.github.io/hex-lab/index.html node e2e/run.mjs smoke fullstack cloud   # against the live site
 ```
 
 ## AI feedback (optional)

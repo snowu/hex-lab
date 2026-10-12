@@ -9,7 +9,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const out = path.join(root, 'content/katas');
 const arg = process.argv.find((a) => a.startsWith('--ref='));
 const REPO = 'exercism/python';
-const gh = async (p) => { const r = await fetch('https://api.github.com' + p, { headers: { 'user-agent': 'senior-interview-lab' } }); if (!r.ok) throw new Error(p + ' ' + r.status); return r.json(); };
+const gh = async (p) => { const r = await fetch('https://api.github.com' + p, { headers: { 'user-agent': 'hex-lab' } }); if (!r.ok) throw new Error(p + ' ' + r.status); return r.json(); };
 const ref = arg ? arg.slice(6) : (await gh(`/repos/${REPO}/commits/main`)).sha;
 const raw = async (p) => { const r = await fetch(`https://raw.githubusercontent.com/${REPO}/${ref}/${p}`); return r.ok ? r.text() : null; };
 

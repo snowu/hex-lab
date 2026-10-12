@@ -76,7 +76,7 @@
 
   /* ---------------- main page ---------------- */
   function viewPlan() {
-    document.title = GAME ? 'Learning plan · Game Dev Lab' : 'Plan · Senior Interview Lab';
+    document.title = GAME ? 'Learning plan · Game Dev Lab' : 'Plan · Hex';
     if (diag) return drawDiag();
     const mins = store.get('planMin', 30), goal = store.get('goalDate', ''), tasks = buildPlan(mins), done = tasks.filter((t) => t.done).length;
     const days = goal ? Math.ceil((new Date(goal) - new Date(dstr(new Date()))) / 864e5) : null;
@@ -208,15 +208,15 @@
   /* ---------------- backup ---------------- */
   function exportData() {
     const data = {}; try { Object.keys(localStorage).filter((k) => k.startsWith('sil:')).forEach((k) => (data[k] = localStorage.getItem(k))); } catch {}
-    const blob = new Blob([JSON.stringify({ app: 'senior-interview-lab', version: 1, exported: new Date().toISOString(), data }, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `interview-lab-progress-${dstr(new Date())}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    const blob = new Blob([JSON.stringify({ app: 'hex-lab', version: 1, exported: new Date().toISOString(), data }, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `hex-progress-${dstr(new Date())}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     toast('Progress exported');
   }
   function importData(e) {
     const f = e.target.files[0]; if (!f) return;
     f.text().then((txt) => {
       let j; try { j = JSON.parse(txt); } catch { return alert('That file is not valid JSON.'); }
-      if (!j || j.app !== 'senior-interview-lab' || !j.data) return alert('That does not look like a progress export from this app.');
+      if (!j || (j.app !== 'hex-lab' && j.app !== 'senior-interview-lab') || !j.data) return alert('That does not look like a progress export from this app.');
       const keys = Object.keys(j.data).filter((k) => k.startsWith('sil:'));
       if (!confirm(`Import ${keys.length} items? This REPLACES your current progress on this device.`)) return;
       try { Object.keys(localStorage).filter((k) => k.startsWith('sil:')).forEach((k) => localStorage.removeItem(k)); keys.forEach((k) => localStorage.setItem(k, j.data[k])); } catch {}
