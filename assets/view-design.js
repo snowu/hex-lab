@@ -11,9 +11,9 @@
 
   /* ---------------- list ---------------- */
   function viewDesign() {
-    document.title = 'Design lab · Senior Interview Lab';
+    document.title = 'Design lab · ' + (window.MODE === 'gamedev' ? 'Game Dev Lab' : 'Senior Interview Lab');
     const tabs = [['reps', 'Design reps'], ['est', 'Estimation trainer'], ['nums', 'Numbers to know']];
-    app.innerHTML = `<div class="page-h"><h1>Design lab</h1><p>Design under pressure is a skill you train with reps: a clock, a blank page, then a comparison against a reference. Each rep takes 30-40 minutes. Do one or two a week.</p></div>
+    app.innerHTML = `<div class="page-h"><h1>Design lab</h1><p>${window.MODE === 'gamedev' ? 'Practise game architecture: sketch a small system, compare approaches, then record what you learned. The clock is optional.' : 'Design under pressure is a skill you train with reps: a clock, a blank page, then a comparison against a reference. Each rep takes 30-40 minutes. Do one or two a week.'}</p></div>
       <div class="filters">${tabs.map(([k, n]) => `<button class="fchip ${tab === k ? 'on' : ''}" data-t="${k}">${n}</button>`).join('')}</div><div id="dbody"></div>`;
     $$('.fchip', app).forEach((b) => (b.onclick = () => { tab = b.dataset.t; viewDesign(); }));
     ({ reps: drawReps, est: drawEstimation, nums: drawNumbers }[tab])($('#dbody'));
@@ -69,10 +69,10 @@
     const el = $('#dcompare'); $('#dsteps').hidden = true;
     const wordsTotal = STEPS.reduce((n, s) => n + words(mine[s.id] || ''), 0);
     el.innerHTML = `
-      <div class="callout"><b>Compare, don't just read.</b> For each step, look at what the reference has that you did not. ${secs ? `You took <b>${fmtClock(secs)}</b> of ${d.minutes}:00.` : 'You did not start the clock, so this rep will not count toward your pressure practice.'} ${hints ? `Hints used: ${hints}.` : ''}</div>
+      <div class="callout"><b>Compare, don't just read.</b> For each step, look at what the reference has that you did not. ${secs ? `You took <b>${fmtClock(secs)}</b> of ${d.minutes}:00.` : (window.MODE === 'gamedev' ? 'Compare at your own pace.' : 'You did not start the clock, so this rep will not count toward your pressure practice.')} ${hints ? `Hints used: ${hints}.` : ''}</div>
       ${STEPS.map((s) => `<section class="cmp"><h3>${esc(s.title)}</h3><div class="cols"><div class="col mine"><div class="ch">your answer</div><div class="ct">${esc(mine[s.id] || '(empty)').replace(/\n/g, '<br>')}</div></div><div class="col ref"><div class="ch">reference</div><div class="ct html">${d.ref[s.id]}</div></div></div></section>`).join('')}
       <section class="cmp"><h3>Trade-offs the reference would mention</h3><ul>${d.tradeoffs.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></section>
-      <section class="cmp"><h3>Pressure round: answer each out loud in 60 seconds</h3><ol>${d.followups.map((t) => `<li>${esc(t)}</li>`).join('')}</ol></section>
+      <section class="cmp"><h3>${window.MODE === 'gamedev' ? 'Experiments to try next' : 'Pressure round: answer each out loud in 60 seconds'}</h3><ol>${d.followups.map((t) => `<li>${esc(t)}</li>`).join('')}</ol></section>
       <section class="cmp"><h3>Score yourself honestly</h3><ul class="rubric" id="drub">${d.rubric.map((r) => `<li><span class="cb">${ic('check', 12, 3.4)}</span><span>${esc(r)}</span></li>`).join('')}</ul>
         <div class="dbar"><button class="btn primary" id="dsave">${ic('check', 15)} Save this rep</button><span class="muted" id="dscore"></span></div>
         <label class="lbl">The two things I missed or will do differently next time</label><textarea id="dlearn" rows="3" placeholder="e.g. I skipped estimates and never named a failure mode"></textarea></section>`;
@@ -107,7 +107,7 @@
       <p class="estq">${esc(cur.g.q)}</p>
       <div class="estin"><input id="eans" inputmode="decimal" autocomplete="off" placeholder="your estimate (plain numbers, or 1.5k / 3m / 2b)"><span class="unit">${esc(cur.g.unit)}</span><button class="btn primary" id="echeck">Check</button><button class="btn ghost" id="eskip">skip</button></div>
       <div id="eout"></div></div>
-      <p class="muted">Goal: right order of magnitude fast, then within 1.5×. Do the arithmetic out loud; round aggressively (86,400 ≈ 10^5).</p>`;
+      <p class="muted">${window.MODE === 'gamedev' ? 'Estimate first, then check the arithmetic and units. Use these budgets when profiling a game.' : 'Goal: right order of magnitude fast, then within 1.5×. Do the arithmetic out loud; round aggressively (86,400 ≈ 10^5).'}</p>`;
     const ans = $('#eans'); ans.focus();
     const check = () => {
       if (cur.done) { cur = null; return drawEstimation(el); }
@@ -116,7 +116,7 @@
       cur.done = true;
       const ratio = v / cur.g.answer, off = ratio >= 1 ? ratio : 1 / ratio, st = E();
       st.n++; let verdict, cls;
-      if (off <= 1.5) { st.good++; st.streak++; st.best = Math.max(st.best, st.streak); verdict = 'Within 1.5×. Interview-grade.'; cls = 'good'; if (st.streak % 5 === 0) addXp(10, `${st.streak} estimates in a row`); }
+      if (off <= 1.5) { st.good++; st.streak++; st.best = Math.max(st.best, st.streak); verdict = window.MODE === 'gamedev' ? 'Within 1.5×. Good estimate.' : 'Within 1.5×. Interview-grade.'; cls = 'good'; if (st.streak % 5 === 0) addXp(10, `${st.streak} estimates in a row`); }
       else if (off <= 3) { st.close++; st.streak = 0; verdict = `Right ballpark (${off.toFixed(1)}× ${ratio > 1 ? 'too high' : 'too low'}). Re-check one step.`; cls = 'warn'; }
       else { st.streak = 0; verdict = `Off by ${off >= 100 ? '>100' : off.toFixed(0)}× (${ratio > 1 ? 'too high' : 'too low'}). Look for a unit slip.`; cls = 'bad'; }
       store.set('estats', st); logAct('est');

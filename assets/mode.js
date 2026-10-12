@@ -22,8 +22,9 @@
     const ft = document.querySelector('.foot span'); if (ft) ft.textContent = 'Progress is stored only in your browser. Content is original, with links to free third-party material. Code is checked by compiling it.';
     const cq = document.getElementById('cq'); if (cq) cq.placeholder = 'Search lessons, flashcards, links…';
     $('.brand').setAttribute('aria-label', 'Game Dev Lab home');
-    for (const k of ['design', 'katas', 'stories', 'plan', 'mock']) { const a = document.querySelector(`.top nav a[href="#/${k}"]`); if (a) a.remove(); }
-    const guard = () => { if (/^#\/(design|katas|stories|plan|mock)/.test(location.hash)) location.hash = '#/'; };
+    for (const k of ['stories', 'mock']) { const a = document.querySelector(`.top nav a[href="#/${k}"]`); if (a) a.remove(); }
+    const forge = document.createElement('a'); forge.href = '#/forge'; forge.textContent = 'forge'; forge.dataset.nav = 'forge'; $('.top nav').append(forge);
+    const guard = () => { if (/^#\/(stories|mock)/.test(location.hash)) location.hash = '#/'; };
     addEventListener('hashchange', guard); guard();
   }
   const b = document.createElement('button');
