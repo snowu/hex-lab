@@ -11,6 +11,27 @@
   const evidence = () => store.get('gd:kataEvidence', {});
   const passed = (id, language) => Boolean(passes()[id]?.[language]);
   const preferredLanguage = () => languages[store.get('gd:kataLanguage', 'c')] ? store.get('gd:kataLanguage', 'c') : 'c';
+  const recentRecords = () => { const records = store.get('gd:kataRecent', []); return Array.isArray(records) ? records.filter(r => r && byId.has(r.id) && languages[r.language] && Number.isFinite(r.at)) : []; };
+  const draftFiles = (id, language) => { const draft = store.get('gd:kataFiles:' + id + ':' + language, {}); return draft && typeof draft === 'object' && !Array.isArray(draft) ? draft : {}; };
+  const hasDraft = (id, language) => Object.values(draftFiles(id, language)).some(value => typeof value === 'string' && value.trim());
+  const remember = (id, language) => {
+    store.set('gd:kataLanguage:' + id, language);
+    store.set('gd:kataRecent', [{id, language, at: Date.now()}, ...recentRecords().filter(r => r.id !== id)].slice(0, items.length));
+  };
+  const recentKatas = () => {
+    const records = recentRecords(), seen = new Set(records.map(r => r.id));
+    for (const item of items) if (!seen.has(item.id)) {
+      const drafts = Object.keys(languages).filter(language => hasDraft(item.id, language));
+      if (drafts.length) { const selected = store.get('gd:kataLanguage:' + item.id, preferredLanguage()); const language = drafts.find(language => !passed(item.id, language) && language === selected) || drafts.find(language => !passed(item.id, language)) || drafts[0]; records.push({id: item.id, language, at: 0}); }
+    }
+    return records.map(record => ({...record, name: byId.get(record.id).title, href: '#/game-kata/' + record.id, solved: passed(record.id, record.language), draft: hasDraft(record.id, record.language), file: store.get('gd:kataFile:' + record.id + ':' + record.language, '') || Object.keys(draftFiles(record.id, record.language))[0] || ''})).sort((a, b) => Number(a.solved) - Number(b.solved));
+  };
+  const resume = (id, language) => { if (!byId.has(id) || !languages[language]) return; store.set('gd:kataLanguage:' + id, language); store.set('gd:kataLanguage', language); };
+  const recentPanel = () => {
+    const recent = recentKatas();
+    if (!recent.length) return '';
+    return `<section class="ikrecent" aria-label="Continue working"><div class="sec-h"><h2>Continue working</h2><span>${recent.filter(r => !r.solved).length} unfinished katas</span></div><p class="muted">Return to the language and editable file you last used. Opening an exercise does not record a pass.</p><div class="ikrecent-grid">${recent.slice(0, 6).map(r => `<a class="ikrecent-card" data-game-resume="${r.id}" data-resume-language="${r.language}" href="${r.href}"><b>${esc(r.name)}</b><span>${r.solved ? 'Pass recorded · revisit' : r.draft ? 'Draft saved · continue' : 'Opened · continue'}</span><small>${languages[r.language].label}${r.file ? ' · ' + esc(r.file) : ''}${r.at ? ' · ' + esc(new Date(r.at).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})) : ' · earlier saved draft'}</small></a>`).join('')}</div></section>`;
+  };
   const difficulty = item => metadata(item).difficulty || item.difficulty || 1;
   const level = item => difficulty(item) <= 2 ? 'beginner' : difficulty(item) <= 5 ? 'intermediate' : 'advanced';
   const levelLabel = item => level(item)[0].toUpperCase() + level(item).slice(1);
@@ -23,7 +44,7 @@
     if (!passed(item.id, language)) return 'Not yet completed';
     return record?.status === 'passed' ? 'Local results imported' : 'Self-reported pass';
   };
-  let filter = {q: '', group: 'all', topic: 'all', difficulty: 'all', readiness: 'all', path: 'all'};
+  let filter = {q: '', group: 'all', topic: 'all', difficulty: 'all', readiness: 'all', path: 'all', status: 'all'};
   let loadId = 0;
   function orderedPath(item) {
     const selected = learning.paths.find(path => path.id === store.get('gd:kataPath', 'native-basics') && path.steps.includes(item.id));
@@ -44,7 +65,7 @@
     return result ? {item: result} : null;
   }
   window.GAME_LEARNING_UI = {metadata, progress, nextExercise, missing, items, paths: learning.paths};
-  window.GAME_KATA_SR = {due: () => items.filter(item => reviews()[item.id]?.due <= Date.now()).map(item => ({name: item.title, slug: item.id, href: '#/game-kata/' + item.id}))};
+  window.GAME_KATA_SR = {recent: recentKatas, resume, due: () => items.filter(item => reviews()[item.id]?.due <= Date.now()).map(item => ({name: item.title, slug: item.id, href: '#/game-kata/' + item.id}))};
   H.routes.push([/^#\/game-katas$/, list], [/^#\/game-path\/([\w-]+)$/, pathView], [/^#\/game-kata\/([\w-]+)$/, view]);
 
   function languageOptions(language) {
@@ -58,14 +79,14 @@
     }).join('');
   }
   function list() {
-    const language = preferredLanguage();
+    const language = preferredLanguage(), started = new Set(recentKatas().map(r => r.id));
     document.title = 'Game katas · Game Dev Lab';
-    app.innerHTML = `<div class="page-h"><h1>Game katas</h1><p>${items.length} exercises in C, Zig and C++. Follow a path or explore the entire catalog. Each exercise includes native tests, progressive hints and an explained reference.</p></div><section class="gk-paths" aria-label="Guided learning paths"><div class="gk-section-heading"><h2>Choose a learning path</h2><label class="gk-field" for="gkprogresslanguage"><span>Progress language</span><select id="gkprogresslanguage">${languageOptions(language)}</select></label></div><p class="muted">Progress is counted separately for each language. Suggested prerequisites guide your practice; every exercise stays available.</p><div class="gk-path-grid">${pathCards(language)}</div></section><section aria-label="All native exercises"><h2>Explore all exercises</h2><div class="dbar"><a class="btn" href="#/play/mechanics">Try mechanics in a game</a><input class="inp" id="gkfilter" type="search" aria-label="Search native katas" placeholder="Search exercises, concepts or game uses…" value="${esc(filter.q)}"><select id="gkgroup" aria-label="Exercise collection"><option value="all">All exercises</option><option value="game">Game mechanics</option><option value="catalog">Exercism catalog</option></select><button class="btn" id="gkclear">Clear filters</button></div><div class="gk-filter-grid"><label class="gk-field"><span>Topic</span><select id="gktopic" aria-label="Kata topic"><option value="all">All topics</option>${Object.entries(learning.topics).map(([value, label]) => `<option value="${value}">${esc(label)}</option>`).join('')}</select></label><label class="gk-field"><span>Difficulty</span><select id="gkdifficulty" aria-label="Kata difficulty"><option value="all">All levels</option><option value="beginner">Beginner · 1–2</option><option value="intermediate">Intermediate · 3–5</option><option value="advanced">Advanced · 6–9</option></select></label><label class="gk-field"><span>Suggested preparation</span><select id="gkreadiness" aria-label="Kata prerequisites"><option value="all">All exercises stay accessible</option><option value="ready">Prerequisites practiced</option><option value="practice">Prerequisites to practice</option></select></label><label class="gk-field"><span>Learning path</span><select id="gkpathfilter" aria-label="Filter learning path"><option value="all">All paths and exercises</option>${learning.paths.map(path => `<option value="${path.id}">${esc(path.title)}</option>`).join('')}</select></label></div><p class="muted" id="gkcount" role="status"></p><div class="dgrid" id="gklist"></div></section>`;
+    app.innerHTML = `<div class="page-h"><h1>Game katas</h1><p>${items.length} exercises in C, Zig and C++. Follow a path or explore the entire catalog. Each exercise includes native tests, progressive hints and an explained reference.</p></div>${recentPanel()}<section class="gk-paths" aria-label="Guided learning paths"><div class="gk-section-heading"><h2>Choose a learning path</h2><label class="gk-field" for="gkprogresslanguage"><span>Progress language</span><select id="gkprogresslanguage">${languageOptions(language)}</select></label></div><p class="muted">Progress is counted separately for each language. Suggested prerequisites guide your practice; every exercise stays available.</p><div class="gk-path-grid">${pathCards(language)}</div></section><section aria-label="All native exercises"><h2>Explore all exercises</h2><div class="dbar"><a class="btn" href="#/play/mechanics">Try mechanics in a game</a><input class="inp" id="gkfilter" type="search" aria-label="Search native katas" placeholder="Search exercises, concepts or game uses…" value="${esc(filter.q)}"><select id="gkgroup" aria-label="Exercise collection"><option value="all">All exercises</option><option value="game">Game mechanics</option><option value="catalog">Exercism catalog</option></select><button class="btn" id="gkclear">Clear filters</button></div><div class="gk-filter-grid"><label class="gk-field"><span>Practice status</span><select id="gkstatusfilter" aria-label="Kata practice status"><option value="all">All exercises</option><option value="started">In progress</option><option value="passed">Pass recorded</option></select></label><label class="gk-field"><span>Topic</span><select id="gktopic" aria-label="Kata topic"><option value="all">All topics</option>${Object.entries(learning.topics).map(([value, label]) => `<option value="${value}">${esc(label)}</option>`).join('')}</select></label><label class="gk-field"><span>Difficulty</span><select id="gkdifficulty" aria-label="Kata difficulty"><option value="all">All levels</option><option value="beginner">Beginner · 1–2</option><option value="intermediate">Intermediate · 3–5</option><option value="advanced">Advanced · 6–9</option></select></label><label class="gk-field"><span>Suggested preparation</span><select id="gkreadiness" aria-label="Kata prerequisites"><option value="all">All exercises stay accessible</option><option value="ready">Prerequisites practiced</option><option value="practice">Prerequisites to practice</option></select></label><label class="gk-field"><span>Learning path</span><select id="gkpathfilter" aria-label="Filter learning path"><option value="all">All paths and exercises</option>${learning.paths.map(path => `<option value="${path.id}">${esc(path.title)}</option>`).join('')}</select></label></div><p class="muted" id="gkcount" role="status"></p><div class="dgrid" id="gklist"></div></section>`;
     function paint() {
       const selectedPath = learning.paths.find(path => path.id === filter.path);
       const rows = items.filter(item => {
         const meta = metadata(item), needsPractice = missing(item, language).length > 0;
-        return (filter.group === 'all' || (filter.group === 'catalog') === Boolean(item.catalog)) &&
+        return (filter.status === 'all' || (filter.status === 'started' ? started.has(item.id) && !passed(item.id, language) : passed(item.id, language))) && (filter.group === 'all' || (filter.group === 'catalog') === Boolean(item.catalog)) &&
           (filter.topic === 'all' || (meta.topics || []).includes(filter.topic)) &&
           (filter.difficulty === 'all' || level(item) === filter.difficulty) &&
           (filter.readiness === 'all' || (filter.readiness === 'practice') === needsPractice) &&
@@ -79,14 +100,15 @@
         return `<a class="dcard tc" href="#/game-kata/${item.id}" data-kata-id="${item.id}" data-difficulty="${level(item)}"><h3>${esc(item.title)}</h3><p>${esc(item.prompt)}</p><p class="gk-context">${esc(meta.gameContext || '')}</p><span class="chip">${levelLabel(item)} · ${difficulty(item)}/9</span>${(meta.topics || []).slice(0, 2).map(topic => `<span class="chip">${esc(topicLabel(topic))}</span>`).join('')}<span class="chip gk-pass-status">${status(item, language)}</span><small>${needs.length ? `${needs.length} suggested prerequisite${needs.length === 1 ? '' : 's'} to practice · open access` : 'Ready to practice'}</small>${reviews()[item.id]?.due <= Date.now() ? '<span class="chip">Review due</span>' : ''}</a>`;
       }).join('') || '<p>No exercises match. Clear filters to return to the complete catalog.</p>';
     }
-    const controls = {group: '#gkgroup', topic: '#gktopic', difficulty: '#gkdifficulty', readiness: '#gkreadiness', path: '#gkpathfilter'};
+    const controls = {status: '#gkstatusfilter', group: '#gkgroup', topic: '#gktopic', difficulty: '#gkdifficulty', readiness: '#gkreadiness', path: '#gkpathfilter'};
     for (const [key, selector] of Object.entries(controls)) {
       $(selector).value = filter[key];
       $(selector).onchange = () => {filter[key] = $(selector).value; paint();};
     }
     $('#gkfilter').oninput = () => {filter.q = $('#gkfilter').value; paint();};
-    $('#gkclear').onclick = () => {filter = {q: '', group: 'all', topic: 'all', difficulty: 'all', readiness: 'all', path: 'all'}; list();};
+    $('#gkclear').onclick = () => {filter = {q: '', group: 'all', topic: 'all', difficulty: 'all', readiness: 'all', path: 'all', status: 'all'}; list();};
     $('#gkprogresslanguage').onchange = event => {store.set('gd:kataLanguage', event.target.value); list();};
+    app.querySelectorAll('[data-game-resume]').forEach(link => link.onclick = () => resume(link.dataset.gameResume, link.dataset.resumeLanguage));
     paint();
   }
   function pathView(id) {
@@ -144,7 +166,8 @@
     const item = byId.get(id);
     if (!item) return list();
     const meta = metadata(item), route = '#/game-kata/' + id;
-    let language = preferredLanguage(), token = ++loadId, editor, saveCurrent = () => {}, disposers = [];
+    let language = store.get('gd:kataLanguage:' + id, preferredLanguage()), token = ++loadId, editor, saveCurrent = () => {}, disposers = [];
+    if (!languages[language]) language = preferredLanguage();
     const dispose = () => {saveCurrent(); editor?.destroy(); editor = null; for (const cleanup of disposers) cleanup?.(); disposers = [];};
     async function paint() {
       dispose();
@@ -173,6 +196,7 @@
         return;
       }
       if (!isCurrent()) return;
+      remember(id, language);
       const names = Object.keys(bundle.starter), draftKey = 'gd:kataFiles:' + id + ':' + language;
       const fileKey = 'gd:kataFile:' + id + ':' + language, draft = store.get(draftKey, {});
       const code = Object.fromEntries(names.map(name => [name, typeof draft[name] === 'string' ? draft[name] : bundle.starter[name]]));
@@ -191,7 +215,7 @@
         if (!isCurrent()) return;
         for (const name of names) if (typeof files[name] === 'string') code[name] = files[name];
         editor.setValue(code[filename]);
-        store.set(draftKey, code);
+        store.set(draftKey, code); remember(id, language);
       };
       const getFiles = () => {save(); return {...code};};
       function markPass(options = {}) {
@@ -216,8 +240,8 @@
         $('#gkpass').disabled = true;
         $('#gknextarea').innerHTML = nextMarkup(item, language);
       }
-      $('#gkcode').oninput = save;
-      $('#gkfile').onchange = () => {save(); filename = $('#gkfile').value; store.set(fileKey, filename); $('#gkfilename').textContent = filename; editor.setValue(code[filename]);};
+      $('#gkcode').oninput = () => {save(); remember(id, language);};
+      $('#gkfile').onchange = () => {save(); filename = $('#gkfile').value; store.set(fileKey, filename); remember(id, language); $('#gkfilename').textContent = filename; editor.setValue(code[filename]);};
       $('#gklanguage').onchange = () => {save(); language = $('#gklanguage').value; store.set('gd:kataLanguage', language); paint();};
       $('#gkdownload').onclick = () => {
         save();
