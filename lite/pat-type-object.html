@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Type object, prototype and data-driven design · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdpatterns">Game Programming Patterns</a> · lesson 6 of 12 · 35 min</p>
+<h1>Type object, prototype and data-driven design</h1>
+<p class="sum">Make &quot;kinds of thing&quot; into data, let designers add content without code, and resolve inheritance once.</p>
+<div class="sec">
+<h3>The class explosion</h3>
+<p>The first instinct for a game with many monsters is a class per monster: <code>Goblin</code>, <code>Orc</code>, <code>GoblinChief</code>, <code>FireGoblin</code>... Every new variant needs code, a recompile, and a programmer. Most of those classes differ only in <b>numbers and references</b> (hp 10 vs 25, which sprite, which attack). That is data, not behaviour.</p>
+<h3>Type object</h3>
+<p>Create <b>one</b> <code>Monster</code> class and a separate <code>MonsterType</code> object that holds the shared definition. Each monster instance has a reference to its type. "Goblin" and "Orc" become <b>rows of data</b> that designers can add without touching code.</p>
+<pre><code># GDScript: a type is a Resource, edited in the inspector, saved as a .tres file
+class_name EnemyType extends Resource
+@export var display_name := "Goblin"
+@export var max_hp := 10
+@export var speed := 3.0
+@export var sprite: Texture2D
+@export var parent: EnemyType            # inherit anything not set here
+
+# the one Monster class
+class_name Enemy extends CharacterBody2D
+var type: EnemyType
+func setup(t: EnemyType): type = t; hp = t.max_hp</code></pre>
+<p>This is also how you separate <b>engine code</b> from <b>game content</b>. The same pattern drives weapons, items, spells, tiles, quests and levels. Godot <code>Resource</code> files and Unity <code>ScriptableObject</code> assets are this pattern with an editor.</p>
+<h3>Prototype and inheritance between types</h3>
+<p>"Elite goblin chief" is the goblin with a few overrides. Let a type name a <b>parent</b> and only store what differs. To read a stat, walk up the chain until a type sets it (you implement exactly this in the drill). The older name for the idea is <b>prototype</b> (JavaScript's prototype chain is the same mechanism). Two design points:</p>
+<ul><li><b>Resolve once, not per frame.</b> Flatten the chain into a final table at load time. Looking up the chain inside the update loop wastes time.</li><li><b>Make the source visible.</b> When a goblin has 25 hp, designers must be able to see <i>which ancestor said so</i>. Tooling that shows the inherited value in a different colour prevents hours of confusion.</li><li><b>Reject cycles and missing parents</b> at load time with a clear error that names the file.</li></ul>
+<h3>Data-driven design: how far to go</h3>
+<p>You can push more and more into data: stats, then spawn tables and wave definitions, then ability <i>parameters</i>, then whole behaviours expressed as data (a list of effects, or bytecode, see the bytecode lesson). The trade-off is that the more behaviour lives in data, the more you need a data language, validation and tooling, and the harder debugging gets. A good boundary: <b>if a designer will want to change it weekly, it is data; if it changes how the engine works, it is code.</b></p>
+<p>Practical rules: reference other things by <b>stable string ids</b> ("iron_sword"), never by array index; validate data on load and report the file and field; keep derived values (damage per second) computed, not stored; version your data files (see the save-file lesson).</p></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Type object: data-driven monsters with inheritance</p><p>Instead of a C++/Zig class per monster kind (<code>Goblin</code>, <code>GoblinChief</code>, <code>EliteGoblinChief</code>...), make "monster type" <b>data</b>. A type has a name, an optional parent type, and stats that may be set or left unset. Designers add types without recompiling.</p>
+<ul><li><code>define(name, parent, stats)</code>: add a type. Returns <code>false</code> if the name already exists or the parent has not been defined yet.</li><li><code>resolve(name)</code>: the final stats. Walk from the type up through its parents: each stat comes from the <b>closest</b> type that sets it. Returns nothing if the type is unknown or a stat is never set anywhere on the chain.</li></ul>
+<p>Example: <code>goblin</code> sets hp 10, attack 2, speed 3. <code>chief</code> (parent goblin) sets hp 25 and attack 4. <code>elite</code> (parent chief) sets speed 5. Resolving <code>elite</code> gives hp 25, attack 4, speed 5.</p><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub const Stats = struct { hp: ?i32 = null, attack: ?i32 = null, speed: ?i32 = null };
+pub const Resolved = struct { hp: i32, attack: i32, speed: i32 };
+
+pub const Registry = struct {
+    const max = 8;
+
+    names: [max][]const u8 = undefined,
+    parents: [max]?usize = @splat(null),
+    stats: [max]Stats = undefined,
+    n: usize = 0,
+
+    /// false if the name exists already or the parent is not defined yet
+    pub fn define(self: *Registry, name: []const u8, parent: ?[]const u8, stats: Stats) bool {
+        _ = self;
+        _ = name;
+        _ = parent;
+        _ = stats;
+        return false;
+    }
+
+    /// each stat comes from the closest type on the chain that sets it; null if unknown or incomplete
+    pub fn resolve(self: *const Registry, name: []const u8) ?Resolved {
+        _ = self;
+        _ = name;
+        return null;
+    }
+};
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You have 40 enemy kinds, and designers want to add new ones weekly. Which structure fits?</div><ol class="opts"><li><b>A.</b> A subclass per enemy kind</li><li><b>B.</b> One Enemy class that references an EnemyType data object (a type object), with kinds defined in data files</li><li><b>C.</b> A giant switch statement on an enemy id inside Enemy</li><li><b>D.</b> Copy-pasting the Goblin class</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Where should you resolve "an elite goblin inherits hp from goblin and speed from elite" for the best performance?</div><ol class="opts"><li><b>A.</b> Every frame, when the stat is read</li><li><b>B.</b> Once at load time, flattening each type into a final table</li><li><b>C.</b> Only when the enemy dies</li><li><b>D.</b> In the shader</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><h3>Exercise: design the data for weapons</h3><p>You want swords, axes, bows and staffs; each can be upgraded, some shoot projectiles, some apply fire damage.</p><ul><li>List the <b>stats</b> (damage, speed, range) and the <b>references</b> (sprite, sound, projectile type) a <code>WeaponType</code> needs.</li><li>Which weapons use <b>inheritance</b>? ("Flame sword" = sword + fire damage.)</li><li>Where does a behaviour that does not fit a number go ("chain lightning jumps to 3 nearby enemies")? Options: a small set of named effect types with parameters (data), or a script reference. Which would you choose for 10 weapons? For 500?</li><li>What validation would you run at load time?</li></ul></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Weapon definitions reference each other by array index, and inserting a new sword in the middle silently re-points every later weapon. What is the robust convention?</div><ol class="opts"><li><b>A.</b> Reference other things by stable string ids like iron_sword, and validate data on load, reporting the file and field</li><li><b>B.</b> Keep array indices but never insert in the middle</li><li><b>C.</b> Hard-code every weapon id in the engine</li><li><b>D.</b> Store weapons only in code comments</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. Designers will tweak sword damage weekly, but the combat damage formula itself rarely changes. Which side of the data-versus-code boundary does each belong on?</div><ol class="opts"><li><b>A.</b> Both belong in code, since designers can read code</li><li><b>B.</b> Damage numbers are data designers edit freely; how the engine applies them is code, because it changes how the engine works</li><li><b>C.</b> Put the damage formula in each level file for flexibility</li><li><b>D.</b> Delete the damage numbers and compute them randomly</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="pat-pool.html">← Object pool, flyweight and data locality</a> · <a href="pat-dirty.html">Dirty flag and caching →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Type object: data-driven monsters with inheritance</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Keep parallel arrays (names, parent indices, stats) and a find(name) helper. define: reject duplicates, translate the parent name to an index (failing if missing), store. resolve: start with three empty optionals, loop cur = idx; while cur: fill any still-empty stat from stats[cur]; cur = parents[cur].</p><p>Type Object (and its close relative Prototype) is why games are mostly data: weapons, enemies, items, spells. The runtime has one Monster class that holds a pointer/index to its type. Resolving inheritance once at load time, not per frame, is the usual optimisation (flatten the chain into a final table). Godot Resources and Unity ScriptableObjects are this pattern with an editor on top. Watch for cycles (reject parents that are not defined yet, as here) and for "inheritance depth creep" where nobody knows where a stat comes from: show the source in tooling.</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> One Enemy class that references an EnemyType data object (a type object), with kinds defined in data files</p><div>Type objects let non-programmers add kinds and keep the code small. Subclasses and switches need a programmer and a rebuild for every new kind.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Once at load time, flattening each type into a final table</p><div>Walking a parent chain in the hot loop is wasted work; flatten at load and keep the original definitions for tooling.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>A.</b> Reference other things by stable string ids like iron_sword, and validate data on load, reporting the file and field</p><div>Stable ids survive reordering and let load-time validation catch typos with a clear error.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>B.</b> Damage numbers are data designers edit freely; how the engine applies them is code, because it changes how the engine works</p><div>If a designer wants to change it weekly it is data; if it changes how the engine works it is code.</div></div>
+<p class="nav"><a href="pat-pool.html">← Object pool, flyweight and data locality</a> · <a href="pat-dirty.html">Dirty flag and caching →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

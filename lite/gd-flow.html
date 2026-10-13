@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flow, difficulty and teaching without text · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gddesign">Game Design Theory</a> · lesson 2 of 5 · 6 min</p>
+<h1>Flow, difficulty and teaching without text</h1>
+<p class="sum">Keeping players between bored and overwhelmed, and the level-design pattern behind the best tutorials.</p>
+<div class="sec">
+<h3>The flow channel</h3>
+<p>Csikszentmihalyi's <b>flow</b> is the state of being absorbed when challenge roughly matches skill. Too easy and the player is bored, too hard and they are anxious. As skill grows, the challenge has to grow with it, or the player falls out of the channel. Level and difficulty design is mostly about moving the player along that channel, with <b>rest</b> beats between peaks so they can recover.</p>
+<h3>Difficulty curves</h3>
+<ul><li>Not a straight ramp: a <b>sawtooth</b> (tension, release, a bit higher tension) feels better than a monotone climb.</li><li>Difficulty has several independent axes: execution (reflexes), knowledge (what to do), decision complexity and resource pressure. Raise one at a time.</li><li><b>Dynamic difficulty</b> (quietly adjusting) can help, but players hate being rubber-banded when they notice. Offering a visible difficulty choice, or assist options, respects them.</li><li>Fail states: make failing <b>fast to recover from</b>. Short respawn and a checkpoint just before the hard part beat a punishing penalty. Celeste lets you retry in a fraction of a second.</li></ul>
+<h3>Teach by doing</h3>
+<p>Players skip text. Good games teach through the level itself, commonly with a four-beat structure (often called Nintendo's level design approach, from the Japanese <i>ki-shō-ten-ketsu</i>):</p>
+<ol><li><b>Introduce</b> a mechanic in a safe place where failing costs nothing.</li><li><b>Develop</b> it: use it with small variations and mild risk.</li><li><b>Twist</b>: combine it with something unexpected or flip the context.</li><li><b>Conclude</b>: a final test that pays off the idea, then move on without ever repeating it.</li></ol>
+<p>The opening of <i>Super Mario Bros.</i> level 1-1 is the famous example: a lone goomba you cannot avoid teaches stomping in a safe space; a block row teaches jumping into blocks and mushrooms; a pit-free start lets you experiment before it adds gaps.</p>
+<h3>Readability and feedback</h3>
+<ul><li>Telegraph before you punish: the enemy winds up, the floor glows, a sound plays.</li><li>Be consistent: if red means danger, never use red for a safe thing.</li><li>The player should always know <i>why</i> they died. “Unfair” almost always means “I did not understand what happened.”</li></ul></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Players keep dying at the first boss and quitting. Which change targets the right problem?</div><ol class="opts"><li><b>A.</b> Lower the boss HP by 50%, always</li><li><b>B.</b> Telegraph attacks, add a checkpoint right before the boss, and shorten the retry time</li><li><b>C.</b> Remove the boss</li><li><b>D.</b> Add a text tutorial before the boss</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You introduce a new enemy. What does the “introduce, develop, twist, conclude” pattern say to do first?</div><ol class="opts"><li><b>A.</b> Put it in the hardest arena</li><li><b>B.</b> Show it in a safe spot where the player can observe it and fail cheaply</li><li><b>C.</b> Explain it in a popup</li><li><b>D.</b> Combine it with three other enemies</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Your difficulty curve is a steady straight ramp and players burn out halfway. Which shape fits the lesson, and why?</div><ol class="opts"><li><b>A.</b> A sawtooth with rest beats: tension, release, then slightly higher tension</li><li><b>B.</b> A steeper straight ramp, so skilled players stay engaged</li><li><b>C.</b> A flat line, so nobody ever fails</li><li><b>D.</b> Random spikes, so every session surprises</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<div class="box"><div class="q">2. Players call a new boss unfair. The attacks are dodgeable but come with no wind-up, and dying sends them back ten minutes. What is the readability fix?</div><ol class="opts"><li><b>A.</b> Halve the boss damage so the unfairness matters less</li><li><b>B.</b> Telegraph attacks before they land, keep danger cues consistent, and make retries fast with a nearby checkpoint</li><li><b>C.</b> Hide the boss tells to raise the challenge</li><li><b>D.</b> Add a lore popup explaining the boss motives</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<p class="nav"><a href="gd-core-loop.html">← Core loop, verbs and pillars</a> · <a href="gd-juice.html">Game feel and juice →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Telegraph attacks, add a checkpoint right before the boss, and shorten the retry time</p><div>Legibility (telegraphing) plus fast recovery fixes the cause of frustration. Pure HP tuning may make the boss trivial for others without making failure understandable.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Show it in a safe spot where the player can observe it and fail cheaply</p><div>The first beat is safe exposure. Complexity and risk come in the following beats.</div></div>
+<div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>A.</b> A sawtooth with rest beats: tension, release, then slightly higher tension</p><div>Challenge must grow with skill along the flow channel, with recovery beats between peaks instead of a monotone climb.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Telegraph attacks before they land, keep danger cues consistent, and make retries fast with a nearby checkpoint</p><div>Unfair almost always means unread: telegraph before punishing and make failure fast to understand and recover from.</div></div>
+<p class="nav"><a href="gd-core-loop.html">← Core loop, verbs and pillars</a> · <a href="gd-juice.html">Game feel and juice →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

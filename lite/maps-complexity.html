@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hash maps &amp; complexity talk · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#coding">Coding Fluency</a> · lesson 1 of 3 · 45 min</p>
+<h1>Hash maps &amp; complexity talk</h1>
+<p class="sum">Most practical problems are a hash map plus a clear invariant.</p>
+<div class="sec">
+<p>Always say the complexity out loud and what you trade for it. The 80% pattern: <b>replace a nested loop with a dict or set lookup</b> → O(n²) becomes O(n) time at O(n) space.</p>
+<pre><code># O(n^2): "in" on a list is a linear scan
+for a in xs:
+    for b in xs:
+        ...
+
+# O(n) time, O(n) space
+seen = set()
+for x in xs:
+    if x in seen:
+        ...
+    seen.add(x)</code></pre>
+<p>Know your standard library: <code>dict</code> and <code>set</code> (hash tables; dicts keep insertion order since 3.7), <code>collections.Counter</code>, <code>defaultdict</code> and <code>deque</code>, and <code>heapq</code>. Keys must be hashable: tuples are, lists and dicts are not. And <code>x in some_list</code> is O(n), the most common accidental quadratic.</p></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You must find the first duplicate in a stream of N ids, memory is plentiful. Best approach?</div><ol class="opts"><li><b>A.</b> Sort then scan: O(n log n)</li><li><b>B.</b> Nested loops: O(n²)</li><li><b>C.</b> Set of seen ids: O(n) time, O(n) space</li><li><b>D.</b> Binary search on the ids</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Latest record wins</p><p>Write <code>latest_by_id(events)</code>. Each event is a dict <code>{'id', 'ts', 'value'}</code>. Return a list with <b>one event per id</b>, the one with the highest <code>ts</code>, ordered by <b>first appearance of the id</b>. Ties on <code>ts</code>: keep the later one in the input. Do it in O(n).</p><p><b>Starter:</b></p><pre>def latest_by_id(events):
+    # your code
+    pass
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Group and count</p><p>Write <code>top_k(words, k)</code> returning the <code>k</code> most frequent words as a list, sorted by count descending, ties broken alphabetically.</p><p><b>Starter:</b></p><pre>def top_k(words, k):
+    # your code
+    pass
+</pre><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A reviewer flags this loop over 100k users as too slow: "for u in users: if u in banned_list: ...". What is the problem and the fix?</div><ol class="opts"><li><b>A.</b> Sorting is missing; sort both lists first</li><li><b>B.</b> String comparison is slow; hash the usernames manually</li><li><b>C.</b> Membership on a list is O(n), making the loop quadratic; build a set of banned ids first for O(1) lookups</li><li><b>D.</b> The loop variable name is too short; rename it</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. You want to group events by a composite key of (user_id, day). Which key choice works in a dict, and why?</div><ol class="opts"><li><b>A.</b> A tuple (user_id, day), because tuples are hashable</li><li><b>B.</b> A list [user_id, day], because lists preserve order</li><li><b>C.</b> A dict {user: user_id, day: day}, because it is self-describing</li><li><b>D.</b> A set {user_id, day}, because sets are fastest</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="stateful-classes.html">Design-a-class problems →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>C.</b> Set of seen ids: O(n) time, O(n) space</p><div>A Set gives O(1) average membership. Mention the memory trade-off, and that with tight memory you might sort or use a Bloom filter (accepting false positives).</div></div>
+<div class="ans" id="a2"><p><b>2. Latest record wins</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> A dict keeps insertion order, and assigning to an existing key keeps its original position.</p><p><b>Reference solution:</b></p><pre>def latest_by_id(events):
+    best = {}
+    for e in events:
+        cur = best.get(e['id'])
+        if cur is None or e['ts'] &gt;= cur['ts']:
+            best[e['id']] = e
+    return list(best.values())</pre><p>Dicts preserve insertion order (3.7+), and re-assigning an existing key keeps its original position, which gives the ordering for free.</p></div>
+<div class="ans" id="a3"><p><b>3. Group and count</b> <a href="#q3">back ↑</a></p><p><b>Hint:</b> collections.Counter counts for you. Counter.most_common breaks ties by first-seen order, not alphabetically, so sort yourself with a (−count, word) key.</p><p><b>Reference solution:</b></p><pre>from collections import Counter
+
+def top_k(words, k):
+    counts = Counter(words)
+    ranked = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+    return [word for word, _ in ranked[:k]]</pre><p>When n is huge and k is small, heapq.nsmallest(k, ..., key=...) is O(n log k) instead of sorting everything.</p></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>C.</b> Membership on a list is O(n), making the loop quadratic; build a set of banned ids first for O(1) lookups</p><div>The lesson warns x in some_list is O(n), the most common accidental quadratic. A set turns the lookup into O(1) average.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>A.</b> A tuple (user_id, day), because tuples are hashable</p><div>Dict and set keys must be hashable: tuples are, lists/dicts/sets are not. Say the complexity trade out loud: O(n) time for O(n) space.</div></div>
+<p class="nav"><a href="stateful-classes.html">Design-a-class problems →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

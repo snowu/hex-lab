@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Engineering a multi-bank aggregator · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#openbanking">Neonomics &amp; Open Banking</a> · lesson 4 of 5 · 30 min</p>
+<h1>Engineering a multi-bank aggregator</h1>
+<p class="sum">Heterogeneity, normalisation, throttling, outages and reconciliation.</p>
+<div class="sec">
+<p>The core engineering problem: <b>thousands of banks, one reliable API</b>. Each bank differs in formats, auth quirks, rate limits, uptime, field semantics and release schedule. Patterns that matter:</p>
+<ul>
+<li><b>Adapter / anti-corruption layer per bank</b> (or per bank-group/standard like Berlin Group, STET, UK OB). Everything above the adapter sees one canonical model.</li>
+<li><b>Canonical model + raw payload.</b> Normalise, but keep the original for debugging and for fields you did not map yet.</li>
+<li><b>Per-bank resilience:</b> timeouts, circuit breakers, rate limiters, bulkheads (separate pools), so one bad bank cannot sink others.</li>
+<li><b>Contract tests &amp; sandboxes</b> per bank, plus synthetic probes in production that detect a bank changing behaviour before customers do.</li>
+<li><b>Data freshness is a product feature:</b> expose “as of” timestamps and degrade to cached data with a clear flag when the bank is down.</li>
+<li><b>Reconciliation:</b> regularly compare what you believe happened (payments, statuses) with what the bank reports. Money systems assume drift and detect it.</li>
+</ul></div>
+<div class="sec"><div class="box"><p class="kind">Simulation: One slow bank vs your worker pool</p><p>An aggregator serves three banks (illustrative names) from one pool of 64 workers at 30 requests/s each. For the first 20 seconds everything is healthy: ~99.7% success, p95 under half a second. Then <b>Havn Bank</b> degrades: calls take about 9 seconds and 10% fail. Step through the scenarios and watch which protection contains the damage. The breaker counts errors and calls slower than 2s as failures.</p><p><b>Try this in the full app:</b></p><ul><li><b>no protection</b>: after the incident Havn Bank holds the workers, queues build, and the <i>healthy</i> banks fail too. Look at the timeline.</li><li><b>+ timeout</b>: Havn Bank is cut off at 2s, which helps a lot but it still consumes a large share of the pool.</li><li><b>+ bulkhead</b>: each bank gets its own workers, so the healthy banks stay at baseline however slow Havn Bank is.</li><li><b>+ breaker</b>: after a few slow or failed calls Havn Bank is failed instantly, so no workers are wasted on it.</li><li>Raise the load to 60 req/s or shrink the pool, and see how much headroom each setup really has.</li><li>Drop the incident latency to 1s and raise the error rate instead: compare how the breaker reacts to errors versus slowness.</li></ul><p class="note">Interactive: needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Normalise two banks’ transactions</p><p>Implement <code>normalize(bank, raw)</code> returning <code>{'id', 'date', 'amount_minor', 'currency', 'description', 'counterparty'}</code> where <code>date</code> is <code>YYYY-MM-DD</code> and <code>amount_minor</code> is a signed <b>int</b> of minor units (2 decimals assumed). Two formats:</p>
+<pre><code>bank 'A' (Berlin-Group-like):
+  {'transactionId', 'bookingDate': '2024-03-01', 'transactionAmount': {'amount': '-12.50', 'currency': 'EUR'},
+   'creditorName', 'remittanceInformationUnstructured'}
+bank 'B':
+  {'id', 'date': '01.03.2024', 'amountMinor': -1250, 'ccy': 'NOK', 'text', 'counterparty'}</code></pre>
+<p>Parse A’s decimal <b>string</b> exactly (never via float): <code>'-0.10'</code> must give <code>-10</code>, <code>'7'</code> gives <code>700</code>, <code>'1.5'</code> gives <code>150</code>. Missing optional text fields become <code>''</code>. Unknown bank → <code>ValueError</code>.</p><p><b>Starter:</b></p><pre>def normalize(bank, raw):
+    pass
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Bank X starts responding in 25 seconds instead of 300ms. Your workers share one pool across all banks. What happens, and what is the fix?</div><ol class="opts"><li><b>A.</b> Nothing: other banks are unaffected</li><li><b>B.</b> Workers pile up waiting on X and starve every other bank; fix with per-bank timeouts, concurrency limits (bulkheads) and a circuit breaker</li><li><b>C.</b> Add more workers only</li><li><b>D.</b> Cache everything forever</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You call a bank’s account endpoint on a schedule for 50,000 consented users with no user present. What PSD2/operational constraint dominates the design?</div><ol class="opts"><li><b>A.</b> None</li><li><b>B.</b> Unattended access is limited (about 4 calls per 24h per account), banks also throttle aggregators, so you need a scheduler that budgets calls per account and per bank, staggers load, and favours on-demand refreshes when the user is present</li><li><b>C.</b> Only CPU limits</li><li><b>D.</b> Use webhooks from the banks</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><h3>Worked design prompt: “Design the data refresh scheduler”</h3><ul><li><b>Inputs:</b> consents (user, bank, accounts, last refresh, status), per-bank limits, user activity signals.</li><li><b>Mechanics:</b> priority queue keyed by next-eligible time; a token bucket per bank and a daily budget per account; jittered schedule; user-present refreshes jump the queue.</li><li><b>Failure:</b> circuit breaker per bank, exponential backoff per consent, mark consent “needs reauth” on auth errors and notify the customer via webhook.</li><li><b>Correctness:</b> idempotent writes (upsert by transaction id), dedupe overlapping windows, store fetch watermarks.</li><li><b>Observability:</b> freshness SLO (e.g. 95% of active accounts &lt; 6h old), success rate per bank, quota utilisation.</li></ul></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A bank adds a new fee field your adapter does not map yet, and support needs it to debug a complaint today. What design choice saves you?</div><ol class="opts"><li><b>A.</b> Dropping unmapped fields keeps the model clean, so wait for the next schema release</li><li><b>B.</b> Rewriting the adapter per complaint is fastest</li><li><b>C.</b> Keeping the raw bank payload alongside the canonical model, so unmapped fields stay available for debugging and later mapping</li><li><b>D.</b> Asking the bank to remove the new field</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. A bank is down during the morning dashboard rush. What is the right degraded behaviour?</div><ol class="opts"><li><b>A.</b> Fail the whole dashboard for all banks so the outage is visible</li><li><b>B.</b> Retry the bank in a tight loop until it recovers</li><li><b>C.</b> Invent a plausible balance from last week’s average</li><li><b>D.</b> Serve clearly flagged cached data with its as-of timestamp, then reconcile against the bank when it recovers</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="ob-payments-money.html">← Payments &amp; money handling</a> · <a href="ob-interview-prep.html">Preparing for the Neonomics interview →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Normalise two banks’ transactions</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> decimal.Decimal(text) * 100 is exact. Check that it is a whole number before int(...) so extra decimals fail loudly instead of truncating. dict.get(key, "") handles missing fields.</p><p><b>Reference solution:</b></p><pre>from decimal import Decimal
+
+def parse_minor(text):
+    value = Decimal(text.strip()) * 100
+    if value != value.to_integral_value():
+        raise ValueError('more than 2 decimals: ' + text)
+    return int(value)
+
+def normalize(bank, raw):
+    if bank == 'A':
+        amount = raw['transactionAmount']
+        return {
+            'id': raw['transactionId'],
+            'date': raw['bookingDate'],
+            'amount_minor': parse_minor(amount['amount']),
+            'currency': amount['currency'],
+            'description': raw.get('remittanceInformationUnstructured', ''),
+            'counterparty': raw.get('creditorName', ''),
+        }
+    if bank == 'B':
+        day, month, year = raw['date'].split('.')
+        return {
+            'id': raw['id'],
+            'date': f'{year}-{month}-{day}',
+            'amount_minor': raw['amountMinor'],
+            'currency': raw['ccy'],
+            'description': raw.get('text', ''),
+            'counterparty': raw.get('counterparty', ''),
+        }
+    raise ValueError('unknown bank: ' + str(bank))</pre><p>Real mapping also handles debtor vs creditor naming by sign, booked vs pending, value date vs booking date, timezones, duplicates across pages, and banks that omit stable ids (derive a deterministic hash). Keep the raw payload next to the normalised one.</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Workers pile up waiting on X and starve every other bank; fix with per-bank timeouts, concurrency limits (bulkheads) and a circuit breaker</p><div>Classic head-of-line blocking. Isolate failure domains per dependency, and fail fast so healthy banks keep their capacity.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Unattended access is limited (about 4 calls per 24h per account), banks also throttle aggregators, so you need a scheduler that budgets calls per account and per bank, staggers load, and favours on-demand refreshes when the user is present</p><div>Plan a refresh budget: per-account daily quota, per-bank token buckets, jitter to avoid top-of-the-hour spikes, and prioritise refreshes triggered by an active user session.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>C.</b> Keeping the raw bank payload alongside the canonical model, so unmapped fields stay available for debugging and later mapping</p><div>Normalise into a canonical model but retain the original payload. Heterogeneous banks change faster than your mappings.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>D.</b> Serve clearly flagged cached data with its as-of timestamp, then reconcile against the bank when it recovers</p><div>Data freshness is a product feature: degrade to labelled cached data with as-of timestamps, and assume drift that reconciliation must detect.</div></div>
+<p class="nav"><a href="ob-payments-money.html">← Payments &amp; money handling</a> · <a href="ob-interview-prep.html">Preparing for the Neonomics interview →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

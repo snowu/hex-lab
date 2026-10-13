@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Command: actions as data · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdpatterns">Game Programming Patterns</a> · lesson 2 of 12 · 30 min</p>
+<h1>Command: actions as data</h1>
+<p class="sum">Turn &quot;do this&quot; into an object you can store, send, undo and replay. Input mapping, undo/redo and replays.</p>
+<div class="sec">
+<h3>The problem</h3>
+<p>The straightforward input code is a pile of <code>if</code>s inside the player: <code>if Input.is_pressed("jump"): jump()</code>. It works until you want to <b>rebind keys</b>, let an <b>AI</b> drive the same character, <b>replay</b> a run, add <b>undo</b>, or send the player's actions over the <b>network</b>. All of those need the same thing: the action must exist as a <i>value</i>, separate from who decides it and when it runs.</p>
+<h3>The pattern</h3>
+<p>A <b>command</b> is an object (or just a piece of data) that represents "do this action". The code that produces commands (keyboard, gamepad, AI, network, replay file) is decoupled from the code that executes them.</p>
+<pre><code># GDScript: input becomes commands, the actor executes them
+class_name MoveCommand extends RefCounted
+var dir: Vector2
+func execute(actor): actor.move(dir)
+
+# the player controller only produces commands
+func _unhandled_input(event):
+    if event.is_action_pressed("jump"):
+        queue.push_back(JumpCommand.new())</code></pre>
+<p>Because the AI now emits the same commands, an enemy and a player can drive the very same character class, and a "possess this unit" feature is a one-line change of who produces the commands.</p>
+<h3>Undo and redo</h3>
+<p>Add an <code>undo()</code> to each command. The cheap and robust way is to store what the command <i>changed</i> (the previous value) rather than computing the reverse action: moving a unit back by "-1 tile" fails if the move was blocked, but restoring the saved old position always works. Keep a stack of executed commands; <b>undo</b> pops and reverses, <b>redo</b> re-applies, and executing a <b>new</b> command clears the redo stack (the old future no longer exists). You write exactly this in the drill below.</p>
+<h3>Replay and networking</h3>
+<p>If commands are plain data and the simulation is <b>deterministic</b> (fixed timestep, seeded RNG, see the game loop and procgen lessons), then a replay is just <b>(seed, list of (frame, command))</b>: a few kilobytes for a whole match. Deterministic lockstep networking sends only the commands too. Both rely on the same rule: <i>the only way to change the world is through commands.</i> One direct write that bypasses them silently breaks every replay.</p>
+<h3>Commands as data in Zig</h3>
+<p>In a language with tagged unions a command is naturally a union and executing it is one <code>switch</code> (no virtual calls, trivially serialisable):</p>
+<pre><code data-check="zig">const std = @import("std");
+
+const Command = union(enum) {
+    move: struct { dx: i32, dy: i32 },
+    set_hp: i32,
+    heal: i32,
+};
+
+const Actor = struct {
+    x: i32 = 0,
+    y: i32 = 0,
+    hp: i32 = 10,
+
+    fn execute(self: *Actor, c: Command) void {
+        switch (c) {
+            .move =&gt; |m| {
+                self.x += m.dx;
+                self.y += m.dy;
+            },
+            .set_hp =&gt; |v| self.hp = v,
+            .heal =&gt; |v| self.hp = @min(self.hp + v, 10),
+        }
+    }
+};
+
+test "a recorded list of commands replays to the same state" {
+    const log = [_]Command{ .{ .move = .{ .dx = 2, .dy = 0 } }, .{ .set_hp = 4 }, .{ .heal = 3 }, .{ .move = .{ .dx = 0, .dy = -1 } } };
+    var a = Actor{};
+    var b = Actor{};
+    for (log) |c| a.execute(c);
+    for (log) |c| b.execute(c);
+    try std.testing.expectEqual(a, b);
+    try std.testing.expectEqual(@as(i32, 7), a.hp);
+}</code></pre>
+<h3>Costs and variants</h3>
+<ul><li><b>Memory</b> for history: cap the stack (the drill keeps the last 4) or store compact deltas.</li><li><b>Closures</b> can replace command classes (<code>func(): actor.move(dir)</code>) when you do not need to inspect or serialise them. Data commands (unions) can be saved to disk and sent over a network; closures cannot.</li><li><b>Compound commands</b>: one user gesture (drag-select and move 20 units) should be <b>one</b> undo step, so a command can hold a list of sub-commands.</li><li>The pattern is overkill for a game with one input mapping and no undo. Add it when the first of the needs above appears.</li></ul></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Command pattern: undo and redo</p><p>An editor has 8 integer cells. Every change is a <b>command object</b> that remembers how to reverse itself: the index, the new value and the <b>previous</b> value. A history keeps the last <b>4</b> commands.</p>
+<ul><li><code>exec(index, value)</code>: set the cell and push a command on the undo stack (when the stack already holds 4, the <b>oldest</b> is forgotten). An out-of-range index does nothing and records nothing. A new change <b>clears the redo stack</b>.</li><li><code>undo()</code>: reverse the latest command and move it to the redo stack. <code>false</code> if there is nothing to undo.</li><li><code>redo()</code>: re-apply the latest undone command and move it back to the undo stack. <code>false</code> if there is nothing to redo.</li></ul><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub const Command = struct { index: usize, value: i32, prev: i32 = 0 };
+
+pub const History = struct {
+    cells: [8]i32 = @splat(0),
+    undo_buf: [4]Command = undefined,
+    undo_len: usize = 0,
+    redo_buf: [4]Command = undefined,
+    redo_len: usize = 0,
+
+    /// Set cells[index] = value and remember how to undo it.
+    pub fn exec(self: *History, index: usize, value: i32) void {
+        _ = self;
+        _ = index;
+        _ = value;
+    }
+
+    pub fn undo(self: *History) bool {
+        _ = self;
+        return false;
+    }
+
+    pub fn redo(self: *History) bool {
+        _ = self;
+        return false;
+    }
+};
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Why does a command usually store the <i>previous value</i> for undo instead of computing the reverse action?</div><ol class="opts"><li><b>A.</b> It uses less memory</li><li><b>B.</b> The reverse of an action is not always well defined (a blocked move, a clamped heal), restoring the saved value always is</li><li><b>C.</b> It is faster</li><li><b>D.</b> Undo is not possible otherwise</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A replay system records the player's commands and plays them back, but the replay diverges after 20 seconds. Which is the most likely cause?</div><ol class="opts"><li><b>A.</b> Commands are too large</li><li><b>B.</b> The simulation is not deterministic: wall-clock time, unseeded or shared RNG, a variable timestep, or a direct state change that bypasses commands</li><li><b>C.</b> Replays only work for 20 seconds</li><li><b>D.</b> The renderer is too slow</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><h3>Design exercise: turn-based strategy undo</h3><p>Units move, attack, and a unit can be killed by an attack. Players want to undo their <b>whole turn</b>, step by step.</p><ul><li>What does the <code>AttackCommand</code> need to store so undo can bring a dead unit back? (HP before, the unit itself kept in a graveyard list rather than freed, its tile.)</li><li>How do you make "move 5 units, then attack" undo as one step or as six? (compound command vs one per action: decide with the player's mental model.)</li><li>What if the attack rolled a random number? (Store the <i>result</i> in the command, or the RNG state, so redo gives the same outcome.)</li><li>What must <b>not</b> be in the history? (animations, sounds, UI state: derive those from state changes.)</li></ul></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. You undid two moves in a level editor, then the player issues a brand-new move. What should happen to the redo stack and why?</div><ol class="opts"><li><b>A.</b> Keep it, so the player can redo the undone moves later</li><li><b>B.</b> Merge it with the new move to save memory</li><li><b>C.</b> Append the new move to the redo stack without clearing</li><li><b>D.</b> Clear it, because the old future no longer exists once a new command is executed</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. Your prototype uses closures like func(): actor.move(dir) for input, and now you need save-to-disk replays and network play. What is the problem and the fix?</div><ol class="opts"><li><b>A.</b> Closures are data that can be saved and sent over the network, so nothing needs to change</li><li><b>B.</b> Closures cannot be inspected or serialised; switch to data commands such as a tagged union so a replay is just seed plus a list of frame and command</li><li><b>C.</b> Replays need faster closures, so inline every closure by hand</li><li><b>D.</b> Networking only needs larger closures, so capture the whole world in each one</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="pat-thinking.html">← Thinking in patterns: sequencing</a> · <a href="pat-observer.html">Observer and event queue →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Command pattern: undo and redo</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Capture prev = cells[index] before you overwrite it. undo writes prev back; redo writes value again. Write one helper that pushes onto a bounded stack (drop the oldest by shifting) and use it for both stacks. Clearing redo is just redo_len = 0.</p><p>This is the Command pattern: an action turned into data. The same object powers undo/redo, input replay (record commands with their frame number), network play (send commands, not state), AI (an enemy emits the same commands a player does) and macros. The trick that makes undo cheap is storing the previous value in the command instead of snapshotting the whole world. For large changes (move 500 selected tiles) one command holds a list of per-tile changes so one Ctrl+Z reverts the whole gesture.</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> The reverse of an action is not always well defined (a blocked move, a clamped heal), restoring the saved value always is</p><div>"Heal by 3" at full health changed nothing, so "damage by 3" would be wrong. Restoring the old value is exact.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> The simulation is not deterministic: wall-clock time, unseeded or shared RNG, a variable timestep, or a direct state change that bypasses commands</p><div>Replays assume the same inputs give the same results. Any hidden input (time, random, uninitialised memory) or hidden writer breaks that.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>D.</b> Clear it, because the old future no longer exists once a new command is executed</p><div>Redo re-applies an undone past. A new command replaces that future, so the stack must be discarded.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>B.</b> Closures cannot be inspected or serialised; switch to data commands such as a tagged union so a replay is just seed plus a list of frame and command</p><div>Commands as data are trivially serialisable and sendable. Closures capture code that cannot be stored or transmitted.</div></div>
+<p class="nav"><a href="pat-thinking.html">← Thinking in patterns: sequencing</a> · <a href="pat-observer.html">Observer and event queue →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

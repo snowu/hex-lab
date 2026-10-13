@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Observer and event queue · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdpatterns">Game Programming Patterns</a> · lesson 3 of 12 · 40 min</p>
+<h1>Observer and event queue</h1>
+<p class="sum">Let things react to each other without knowing each other: signals, callbacks, and queues that decouple in time.</p>
+<div class="sec">
+<h3>The problem</h3>
+<p>The player picks up a coin. The score must go up, a sound must play, an achievement may unlock, the HUD must flash, analytics logs it. If the coin code calls all of those directly, the coin knows about the whole game, and removing the HUD breaks it. We want the coin to say <i>"I was collected"</i> and let whoever cares react.</p>
+<h3>Observer</h3>
+<p>The <b>subject</b> keeps a list of <b>observers</b> and calls each one when something happens. Godot's <b>signals</b>, C#'s <code>event</code>, JavaScript's <code>addEventListener</code> are all this.</p>
+<pre><code># GDScript
+signal collected(value)            # in coin.gd
+func _on_body_entered(body):
+    collected.emit(5)              # coin knows nothing about who listens
+
+# somewhere else
+coin.collected.connect(hud.add_score)</code></pre>
+<p>In C++ an observer list is a vector of callbacks; in Zig a slice of function pointers plus a context pointer. The shape is always the same: <b>register, notify, unregister</b>.</p>
+<h3>What goes wrong</h3>
+<ul><li><b>Lifetime.</b> If a subscriber is destroyed but still registered, the next notification calls freed memory (C++/Zig crash) or a dead object (GDScript error). Always unregister in the destructor/<code>_exit_tree</code>, or use an engine that cleans up connections for you (Godot disconnects signals when either node is freed).</li><li><b>Re-entrancy.</b> A handler may add or remove observers, or trigger the same event again, <i>while the list is being walked</i>. Iterate over a copy, or defer the changes.</li><li><b>Order.</b> The order handlers run in is usually unspecified. If two handlers depend on each other's work, you have hidden coupling: make it explicit.</li><li><b>Invisible control flow.</b> "Who reacts to this event?" is not answered by reading the code that emits it. Keep events few and meaningful, name them in the past tense (<code>collected</code>, <code>died</code>), and avoid chains where handlers emit events that trigger handlers.</li><li><b>Leaks.</b> Connecting every time an object is respawned without disconnecting stacks up duplicate handlers (the "I get double score" bug).</li></ul>
+<h3>Event queue: decoupling in time</h3>
+<p>Observer still runs the handlers <i>right now</i>, inside the sender. That is a problem when a handler is slow (loading a sound) or when it is unsafe to run at that moment (you cannot delete an object in the middle of the physics step). An <b>event queue</b> stores the events and processes them later, at a point you choose in the frame. The sender fires and forgets; the receiver pulls when ready.</p>
+<ul><li>Typical use: audio requests ("play explosion"), input events, game-wide messages, network messages, deferred UI updates.</li><li>Implementation: a <b>ring buffer</b> (you build one in the drill): fixed memory, O(1) push and pop, no allocation during play.</li><li><b>The design decision is the full-queue policy.</b> Drop the new event, drop the oldest, grow, block, or treat it as a bug. Use the simulation below to feel the difference. Audio can usually drop; a "level complete" event must never be lost.</li><li>Costs: events run later (latency, and the world may have changed since: carry the data you need in the event, not a pointer to something that may be gone), and debugging is harder because the stack trace no longer shows who sent it. Log or tag events with a sender id.</li></ul>
+<h3>Observer, queue or direct call?</h3>
+<table><tr><th>Use</th><th>When</th></tr>
+<tr><td>Direct call</td><td>Two things that always go together. Do not decouple what is not independent.</td></tr>
+<tr><td>Observer / signal</td><td>One source, several unrelated reactions, handled immediately and cheaply.</td></tr>
+<tr><td>Event queue</td><td>Handling must wait for a safe point, can be slow, crosses threads, or the order and rate need control.</td></tr></table></div>
+<div class="sec"><div class="box"><p class="kind">Simulation: A ring-buffer event queue under load</p><p>Events are produced at one rate and handled at another through a fixed-size queue. Change the rates and the "when full" policy.</p><p><b>Try this in the full app:</b></p><ul><li>Set <b>produced</b> below <b>handled</b>: the queue stays nearly empty and nothing is dropped.</li><li>Press <b>burst ×10</b>: a short spike is absorbed by a bigger capacity, and dropped by a smaller one.</li><li>Raise <b>produced</b> above <b>handled</b> and watch it fill: no capacity solves a permanent overload, only a policy does.</li><li>Compare <b>drop the new event</b> and <b>drop the oldest</b>: which events would you rather lose in a game, the stale ones or the fresh ones?</li></ul><p class="note">Interactive: needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Event queue: a fixed-size ring buffer</p><p>An event queue decouples <i>who sends</i> from <i>who handles</i> and from <i>when</i>. The standard implementation is a <b>ring buffer</b>: a fixed array with a <code>head</code> (oldest item) and a <code>count</code>, so push and pop are O(1) and nothing is ever allocated.</p>
+<ul><li><code>push(v)</code>: store at the back. If the queue is full, store nothing and return <code>false</code>.</li><li><code>pushOverwrite(v)</code>: always store; if full, the <b>oldest</b> item is dropped to make room. Returns <code>true</code> if something was dropped.</li><li><code>pop()</code>: remove and return the oldest item (FIFO), or nothing if empty. <code>peek()</code> returns it without removing.</li><li><code>len()</code>: number of items.</li></ul>
+<p>The queue must keep working after the indices wrap around the end of the array many times.</p><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub fn RingQueue(comptime T: type, comptime capacity: usize) type {
+    return struct {
+        const Self = @This();
+
+        items: [capacity]T = undefined,
+        head: usize = 0, // index of the oldest item
+        count: usize = 0,
+
+        pub fn len(self: *const Self) usize {
+            return self.count;
+        }
+
+        /// false (and nothing stored) when full
+        pub fn push(self: *Self, v: T) bool {
+            _ = self;
+            _ = v;
+            return false;
+        }
+
+        /// always stores v; true if the oldest item had to be dropped
+        pub fn pushOverwrite(self: *Self, v: T) bool {
+            _ = self;
+            _ = v;
+            return false;
+        }
+
+        pub fn pop(self: *Self) ?T {
+            _ = self;
+            return null;
+        }
+
+        pub fn peek(self: *const Self) ?T {
+            _ = self;
+            return null;
+        }
+    };
+}
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Bug hunt: Spot the observer bugs (C++)</p><p>A simple event hub. Click the <b>3</b> lines that cause crashes or missed notifications.</p><pre> 1  class Hub {
+ 2      std::vector&lt;std::function&lt;void(int)&gt;&gt; listeners_;
+ 3  public:
+ 4      void subscribe(std::function&lt;void(int)&gt; f) { listeners_.push_back(f); }
+ 5      void emit(int v) {
+ 6          for (auto&amp; f : listeners_) f(v);
+ 7      }
+ 8  };
+ 9  // somewhere in a Player class:
+10  Player(Hub&amp; h) { h.subscribe([this](int v) { on_event(v); }); }
+11  ~Player() {}</pre><p>3 buggy lines. Find them, then check.</p><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A sound-effect request is sent every time any of 300 bullets hits something. On a busy frame the audio system stalls. Which design change helps most?</div><ol class="opts"><li><b>A.</b> Call the audio function directly from each bullet for lowest latency</li><li><b>B.</b> Push requests onto an event queue, merge or drop duplicates, and let the audio system pull a limited number per frame</li><li><b>C.</b> Make the audio system a singleton</li><li><b>D.</b> Run the bullets at a lower frame rate</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You connect a signal in <code>_ready()</code> of an enemy that is recycled from a pool, and never disconnect. After 50 respawns the player gets 50x score per kill. Why?</div><ol class="opts"><li><b>A.</b> Godot signals are buggy</li><li><b>B.</b> Each respawn ran the connection again without disconnecting, so the handler is registered many times</li><li><b>C.</b> The score variable overflowed</li><li><b>D.</b> Pools do not support signals</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. An enemy subscribes to a global event hub and is later destroyed, but the next event crashes on freed memory. What is the robust fix?</div><ol class="opts"><li><b>A.</b> Restart the game whenever an enemy is destroyed</li><li><b>B.</b> Subscribe twice so one copy survives</li><li><b>C.</b> Keep a way to unregister (a handle or id from subscribe) and always disconnect in the destructor or _exit_tree; prefer engines that auto-disconnect like Godot signals</li><li><b>D.</b> Make every handler static so it never needs cleanup</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. A physics callback wants to delete a projectile and play a sound, but deleting mid-step is unsafe and the sound load can stall the frame. Which structure fits and what must you decide up front?</div><ol class="opts"><li><b>A.</b> A direct call from the projectile to the audio and physics code, for lowest latency</li><li><b>B.</b> Push the requests onto an event queue processed at a safe point, with an explicit when-full policy: audio may drop but a level-complete event must never be lost</li><li><b>C.</b> A deeper inheritance hierarchy for projectiles</li><li><b>D.</b> Poll every projectile from the audio system each frame</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="pat-command.html">← Command: actions as data</a> · <a href="pat-state.html">State, hierarchies and stacks →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Event queue: a fixed-size ring buffer</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> The back is at (head + count) % capacity. pop reads items[head], then head = (head + 1) % capacity and count -= 1. pushOverwrite when full: drop the oldest first (advance head, count -= 1), then push.</p><p>The Event Queue pattern fixes two problems of direct callbacks: the sender no longer blocks while handlers run, and a handler can be run later at a safe point in the frame (so a collision handler cannot delete an object mid-physics-step). The ring buffer choice shows the real design decision: what happens when it is full. Drop the new event, drop the oldest, grow, or block? Input and audio queues usually drop; a network send queue may want to disconnect the client instead. Make the policy explicit.</p></div>
+<div class="ans" id="a2"><p><b>2. Spot the observer bugs (C++)</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> One is missing API, one is mutation during iteration, one is a lifetime problem.</p><ul><li><b>Line 4:</b> There is no way to unsubscribe, so listeners can never be removed. Return a handle/id from subscribe and provide unsubscribe.</li><li><b>Line 6:</b> A listener may call <code>subscribe</code> (or unsubscribe) while this loop runs, which can reallocate the vector and invalidate the iteration (undefined behaviour). Iterate over a copy, or defer changes until emit finishes.</li><li><b>Line 11:</b> The lambda captures <code>this</code>, but the destructor never unsubscribes, so after a Player is destroyed the hub still calls a dangling pointer. Unsubscribe in the destructor (RAII handle).</li></ul></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Push requests onto an event queue, merge or drop duplicates, and let the audio system pull a limited number per frame</p><div>A queue lets the receiver control the rate and policy (cap voices, merge identical sounds), instead of the senders overwhelming it.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Each respawn ran the connection again without disconnecting, so the handler is registered many times</p><div>Connect once, or disconnect when returning the object to the pool. Duplicate registration is the classic "lapsed" and "duplicate listener" bug.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>C.</b> Keep a way to unregister (a handle or id from subscribe) and always disconnect in the destructor or _exit_tree; prefer engines that auto-disconnect like Godot signals</p><div>Observer lifetime must be managed. A dead subscriber left registered is called after it is gone.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>B.</b> Push the requests onto an event queue processed at a safe point, with an explicit when-full policy: audio may drop but a level-complete event must never be lost</p><div>Queues decouple in time so slow or unsafe work waits for a chosen point. The full-queue policy is the core design decision.</div></div>
+<p class="nav"><a href="pat-command.html">← Command: actions as data</a> · <a href="pat-state.html">State, hierarchies and stacks →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

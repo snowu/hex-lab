@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>From sprite to screen · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdgfx">Graphics, UI &amp; Audio</a> · lesson 1 of 5 · 15 min</p>
+<h1>From sprite to screen</h1>
+<p class="sum">Coordinate spaces, draw order, draw calls and batching, blending, filtering and the costs you can actually control.</p>
+<div class="sec">
+<h3>The journey of one sprite</h3>
+<p>A character sprite is a rectangle of pixels in a texture. To appear on screen it passes through these steps, in every engine, whether you see them or not:</p>
+<ol><li><b>Placement.</b> The sprite has a position, rotation and scale in its parent's space, and parents have parents: its <b>world transform</b> is the product of all of them (see the transforms lesson).</li><li><b>Camera.</b> The world is transformed into <b>view space</b>: moved and scaled so the camera is at the origin. Zoom is a scale, shake is an offset.</li><li><b>Culling.</b> Sprites completely outside the view are skipped.</li><li><b>Sorting.</b> What is drawn on top of what.</li><li><b>Submission.</b> The CPU packs the vertices and the texture reference into <b>draw calls</b> for the GPU.</li><li><b>GPU.</b> Each sprite becomes two triangles. For every screen pixel the triangles cover, a <b>fragment shader</b> samples the texture and outputs a colour, which is <b>blended</b> with what is already there.</li><li><b>Presentation.</b> The finished frame is shown (VSync decides when).</li></ol>
+<h3>Coordinate spaces: a cheat sheet</h3>
+<table><tr><th>Space</th><th>Origin / unit</th><th>Used for</th></tr>
+<tr><td>Local</td><td>The object's pivot</td><td>Where is the sword relative to the hand?</td></tr>
+<tr><td>World</td><td>The level's origin, game units</td><td>Gameplay, physics, AI</td></tr>
+<tr><td>View / camera</td><td>Camera centre</td><td>Parallax, zoom</td></tr>
+<tr><td>Screen / viewport</td><td>Top-left pixel of the window</td><td>Mouse position, UI</td></tr></table>
+<p>Most "the click is in the wrong place" and "the HUD moves with the camera" bugs are a mix-up of spaces. Name your variables by space (<code>world_pos</code>, <code>screen_pos</code>) and convert explicitly (Godot: <code>get_global_mouse_position()</code>, <code>canvas_transform</code>).</p>
+<h3>Draw order</h3>
+<p>2D has no depth buffer by default: <b>later is on top</b>. Order is decided by (1) layers (background, world, effects, UI), (2) a <b>z-index</b>, and (3) the order in the scene tree. For top-down and isometric games, <b>y-sorting</b> draws things lower on the screen later, so a character standing behind a tree is hidden and in front of it is not: use the sprite's <i>feet</i> (its pivot at the base) as the sort key, and make the pivot consistent across all sprites. In Godot enable <code>y_sort_enabled</code> on the parent and give sprites an offset so their origin is at the feet.</p>
+<h3>Draw calls and batching</h3>
+<p>Each time the CPU tells the GPU "draw this with that texture and that state" costs a roughly fixed overhead, independent of how many pixels it draws. A thousand small sprites in a thousand calls is far slower than the same thousand in a few calls. <b>Batching</b> merges sprites that share the same texture, material and blend mode into one call. How to help it:</p>
+<ul><li>Use a <b>texture atlas</b> (many sprites packed into one image) so different sprites share one texture. Pack related things together (all enemies of a level).</li><li>Avoid breaking batches: switching texture, shader, blend mode or clip rectangle between sprites forces a new call. Sort by material when order does not matter.</li><li>Prefer tile maps and multi-mesh instancing for thousands of identical things.</li><li>Check your engine's monitors for draw calls (Godot: Debugger → Monitors → Draw calls) and see how it changes as you add things.</li></ul>
+<h3>Blending</h3>
+<ul><li><b>Alpha blend</b> (normal): <code>result = src * a + dst * (1 - a)</code>. Needs correct draw order.</li><li><b>Additive</b>: <code>dst + src</code>. Glows, fire, magic. Order does not matter, and it can only brighten.</li><li><b>Multiply</b>: darkens, for shadows and tinting.</li><li><b>Premultiplied alpha</b>: the colour is already multiplied by alpha in the texture. Filtering and scaling look correct (no dark halos around sprite edges), and it is what engines often use internally. Mixing straight and premultiplied textures is the usual cause of white or black fringes.</li></ul>
+<h3>Texture filtering</h3>
+<p><b>Linear</b> filtering blends neighbouring texels and makes scaled art smooth, which is wrong for pixel art; use <b>nearest</b>. <b>Mipmaps</b> store smaller pre-filtered versions for textures shown small (3D, zooming out) and prevent shimmering; turn them off for pixel art. A texel is a pixel of the texture; the sampling point rarely lands exactly on one, which is why scaling by non-integers and moving by sub-pixels needs the care described in the pixel art track.</p>
+<h3>Resolution and scaling</h3>
+<p>Decide a <b>base resolution</b> and a <b>stretch policy</b>: pixel art scales by integers with letterboxing (the integer scaling drill); high-definition games usually keep the world's visible height fixed and let the width vary with the aspect ratio, anchoring the UI to the edges. Test extreme aspect ratios (ultrawide, a phone in portrait) and safe areas (notches).</p>
+<h3>Overdraw and fill rate</h3>
+<p>Transparent pixels cost as much as opaque ones: a full-screen translucent layer, or fifty stacked soft particles, makes the GPU shade the same pixels many times. Mobile and integrated GPUs run out of fill rate long before they run out of triangles. Trim transparent borders of sprites, avoid large soft sprites, and use opaque backgrounds where possible.</p>
+<h3>Performance checklist</h3>
+<ol><li>Measure draw calls and frame time before changing anything.</li><li>Atlases and shared materials.</li><li>Cull what is off-screen (engines do this for you, but your own effects might not).</li><li>Watch overdraw (a debug overdraw view exists in most engines).</li><li>Don't change shader parameters per sprite if you can avoid it: it breaks batches (use instance parameters or vertex colour).</li></ol></div>
+<div class="sec"><div class="box"><p class="kind">Bug hunt: Spot the draw order bugs (GDScript)</p><p>A top-down game. Characters appear in front of a tree when they stand behind it, and the sorting flickers. Click the <b>2</b> lines responsible.</p><pre> 1  # Level scene: Node2D (y_sort_enabled = true)
+ 2  #   Tree (Sprite2D)
+ 3  #   Player (CharacterBody2D)
+ 4  
+ 5  # tree.gd
+ 6  func _ready():
+ 7      centered = true
+ 8      texture = preload(&quot;res://art/tree.png&quot;)   # 32x64 sprite, trunk base at the bottom
+ 9  
+10  # player.gd
+11  func _ready():
+12      z_index = 5</pre><p>2 buggy lines. Find them, then check.</p><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Your game has 2,000 small sprites using 200 different textures and runs slowly on mobile. The GPU is not busy. What is the likely bottleneck and fix?</div><ol class="opts"><li><b>A.</b> Too many pixels; reduce resolution</li><li><b>B.</b> Too many draw calls from texture switches; pack the sprites into a few atlases so they batch</li><li><b>C.</b> Too few triangles</li><li><b>D.</b> The audio</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Scaled-up pixel art looks blurry. Which setting is wrong?</div><ol class="opts"><li><b>A.</b> Alpha blending</li><li><b>B.</b> Texture filtering: it should be nearest-neighbour, not linear</li><li><b>C.</b> VSync</li><li><b>D.</b> The camera zoom</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Glowing fire particles overlap and the order they were created in changes how they look. Which blend mode removes the order dependence?</div><ol class="opts"><li><b>A.</b> Alpha blend</li><li><b>B.</b> Additive blend (dst + src)</li><li><b>C.</b> Multiply</li><li><b>D.</b> None: it is impossible</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. In a top-down game with y-sorting enabled, the hero always draws above a tree even when standing behind it. The hero has z_index 5 and the tree sprite is centred. What two fixes apply?</div><ol class="opts"><li><b>A.</b> Keep z_index equal for things that sort by y, and put the sort origin at the trunk base with an offset instead of the image middle</li><li><b>B.</b> Raise the hero z_index even higher and shrink the tree texture</li><li><b>C.</b> Disable y_sort and sort by name</li><li><b>D.</b> Draw the tree in the UI layer</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. A mobile level with big soft smoke puffs runs slowly while the triangle count is tiny. What is the likely cost and fix?</div><ol class="opts"><li><b>A.</b> Too many draw calls, so add more textures</li><li><b>B.</b> Overdraw and fill rate: stacked translucent pixels are shaded many times, so trim transparent sprite borders, prefer opaque backgrounds and budget full-screen transparency</li><li><b>C.</b> The audio bus is too loud</li><li><b>D.</b> The camera zoom is wrong</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="gfx-transforms.html">Transforms, matrices and hierarchies →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Spot the draw order bugs (GDScript)</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> The sort key is the node origin: one line moves it to the wrong place, one overrides sorting entirely.</p><ul><li><b>Line 7:</b> <code>centered = true</code> puts the sprite's origin in the middle of the 32×64 image, so the y-sort key is the middle of the tree, not the trunk base. Use <code>centered = false</code> with an <code>offset</code> so the origin is at the base of the trunk.</li><li><b>Line 12:</b> A fixed <code>z_index</code> puts the player above everything with a lower z regardless of y, which defeats y-sorting for the player. Leave z_index equal for things that must sort by y.</li></ul></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Too many draw calls from texture switches; pack the sprites into a few atlases so they batch</p><div>Many tiny calls are CPU/driver overhead. Atlases let sprites share a texture and be drawn in a few calls.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Texture filtering: it should be nearest-neighbour, not linear</p><div>Linear filtering interpolates between texels. Nearest keeps the hard pixel edges.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Additive blend (dst + src)</p><div>Addition is commutative: the sum of all particles is the same in any order (alpha blending is not).</div></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>A.</b> Keep z_index equal for things that sort by y, and put the sort origin at the trunk base with an offset instead of the image middle</p><div>A fixed z overrides y order, and the node origin is the sort key. Feet-based pivots make behind and in-front correct.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>B.</b> Overdraw and fill rate: stacked translucent pixels are shaded many times, so trim transparent sprite borders, prefer opaque backgrounds and budget full-screen transparency</p><div>Transparent pixels cost as much as opaque ones. Layered soft sprites exhaust fill rate first.</div></div>
+<p class="nav"><a href="gfx-transforms.html">Transforms, matrices and hierarchies →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

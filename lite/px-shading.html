@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Light, shading, dithering and outlines · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdpixel">Pixel Art</a> · lesson 3 of 6 · 15 min</p>
+<h1>Light, shading, dithering and outlines</h1>
+<p class="sum">Putting form into a sprite: a light source, banding, dithering and anti-aliasing by hand, and outline styles.</p>
+<div class="sec">
+<h3>Pick one light source</h3>
+<p>Choose a direction (commonly top-left, sometimes top-right) and keep it for every object in the game. Then shade by form:</p>
+<ul><li>Surfaces facing the light get the lightest tone, surfaces turning away get the base tone, and surfaces facing away get the shadow tone.</li><li>A sphere has a highlight near the light side, a mid area, a <b>core shadow</b> a bit in from the edge on the dark side, and often a faint <b>reflected light</b> right at the edge. That tiny lighter rim on the dark side separates the object from the background.</li><li>A cube is easier: top face lightest, lit side mid, shadow side darkest, with flat shapes per face.</li><li>Cast <b>shadows</b> ground an object: a simple dark ellipse under a character helps it sit in the world.</li></ul>
+<h3>Banding</h3>
+<p><b>Banding</b> is when shading steps form lines parallel to the outline or evenly spaced stripes. It looks like contour lines on a map. Break it up: vary the width of the bands, let a lighter region wrap around the form instead of repeating the outline shape, and use fewer, bolder shapes.</p>
+<h3>Dithering</h3>
+<p>Dithering mixes two colours in a pattern so the eye sees something in between. With a small palette it creates gradients and texture.</p>
+<ul><li><b>Checkerboard</b> (50% blend) and <b>ordered patterns</b> (Bayer matrices: 25%, 50%, 75% fills) look regular and “retro”.</li><li><b>Noise</b> dithering looks organic but dirty at low resolution.</li><li>At game resolution it can <b>shimmer</b> when moving. Use it on static backgrounds and large surfaces, and sparingly on sprites. Hand-placed dither at the boundary between two ramp steps is more elegant than pattern fills everywhere.</li></ul>
+<h3>Anti-aliasing by hand</h3>
+<p>Adding an intermediate colour in the corner of a stair-step smooths a curve. It is useful on big, static, high-contrast shapes (a moon, a logo). On sprites that move over changing backgrounds, AA pixels that match one background look like halos on another, so keep sprite edges hard or use outlines.</p>
+<h3>Outlines</h3>
+<ul><li><b>Black or very dark outline</b>: strongest separation from any background; classic look.</li><li><b>Coloured outline</b> (a dark shade of the fill): softer, more painterly, still readable.</li><li><b>Selective outline (“selout”)</b>: the outline gets lighter where the form catches light (outline colour follows the adjacent fill), so the sprite feels lit all the way to the edge.</li><li><b>No outline</b> for background elements keeps attention on the foreground. Make sure foreground sprites are separated by value then.</li><li>Inner lines: only where they describe a form change; too many lines flatten the shading.</li></ul></div>
+<div class="sec"><div class="box"><p class="kind">Simulation: Banding and dithering</p><p>A smooth horizontal gradient squeezed into a few colours. Compare the patterns.</p><p><b>Try this in the full app:</b></p><ul><li>With <b>none</b> and 3 colours you see hard bands. The eye notices the edges between them.</li><li>Choose <b>ordered 4×4</b>: the same 3 colours now suggest many more tones.</li><li>Compare <b>2×2</b> (coarse, few extra tones) with <b>8×8</b> (finer, closer to a true gradient).</li><li>Try <b>random noise</b>: smooth in tone but grainy. Which would you use on a tiny sprite?</li><li>Raise the colours to 8: at some point you need much less dithering.</li></ul><p class="note">Interactive: needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Your tree has three green shades as concentric rings following its outline, and it looks like a flat badge. What is this problem called and what helps?</div><ol class="opts"><li><b>A.</b> Aliasing; add more colours</li><li><b>B.</b> Pillow shading/banding; commit to a light direction and shade by form, not by outline</li><li><b>C.</b> Dithering; remove it</li><li><b>D.</b> Overdraw</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Where is dithering usually a poor idea?</div><ol class="opts"><li><b>A.</b> Large static backgrounds</li><li><b>B.</b> Small sprites that move quickly across the screen</li><li><b>C.</b> Skies</li><li><b>D.</b> Textures on walls</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">What does a “selective outline” do?</div><ol class="opts"><li><b>A.</b> Outlines only some sprites</li><li><b>B.</b> Varies the outline colour with the nearby fill/light so lit edges are lighter</li><li><b>C.</b> Removes the outline</li><li><b>D.</b> Uses pure black everywhere</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Every object in a game is shaded as if lit from a different side, and the scene feels wrong. What rule was broken?</div><ol class="opts"><li><b>A.</b> Choose one light direction for the whole game and shade every object from it</li><li><b>B.</b> Every object needs its own palette</li><li><b>C.</b> Dither everything with noise</li><li><b>D.</b> Remove all cast shadows</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. A moving character has soft edge pixels sampled from a green field, and it shows a green halo over a dark cave. What is the fix?</div><ol class="opts"><li><b>A.</b> Add more anti-aliasing colours</li><li><b>B.</b> Dither the whole sprite</li><li><b>C.</b> Keep moving sprite edges hard or outlined, and save hand anti-aliasing for big static high-contrast shapes</li><li><b>D.</b> Scale the sprite by 1.5×</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="px-color.html">← Colour: palettes, ramps and hue shifting</a> · <a href="px-anim.html">Animation →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Pillow shading/banding; commit to a light direction and shade by form, not by outline</p><div>Shading must come from a light source. Make one side lit and one shaded, with shapes that describe the form.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Small sprites that move quickly across the screen</p><div>Patterns that move across the pixel grid shimmer and add noise that distracts from the sprite's shape.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Varies the outline colour with the nearby fill/light so lit edges are lighter</p><div>It keeps the separation of an outline while letting the lit side feel lit.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>A.</b> Choose one light direction for the whole game and shade every object from it</p><div>One shared light direction is what makes separate sprites read as belonging to one world.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>C.</b> Keep moving sprite edges hard or outlined, and save hand anti-aliasing for big static high-contrast shapes</p><div>Edge pixels that match one background become a visible halo on another, so moving sprites stay hard-edged.</div></div>
+<p class="nav"><a href="px-color.html">← Colour: palettes, ramps and hue shifting</a> · <a href="px-anim.html">Animation →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

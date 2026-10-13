@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Performance, memory and the frame budget · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdloop">Game Loop &amp; Architecture</a> · lesson 4 of 4 · 35 min</p>
+<h1>Performance, memory and the frame budget</h1>
+<p class="sum">Profile first, then kill per-frame allocations, pool objects and stop doing O(n²) neighbour checks.</p>
+<div class="sec">
+<h3>Rule zero: measure</h3>
+<p>Guessing where time goes is wrong most of the time. Use the profiler (Godot's Debugger → Profiler / Monitors, Tracy, or <code>perf</code> on native builds) and look at the <i>slowest frame</i>, not the average: players notice the hitch, not the mean. Also decide which side is the bottleneck: <b>CPU</b> (game logic, physics), <b>GPU</b> (fill rate, shaders, overdraw), or <b>draw calls</b> (too many separate things submitted).</p>
+<h3>The usual suspects</h3>
+<ul><li><b>Allocation in the hot loop.</b> Creating objects/strings/arrays every frame causes GC pauses (GDScript, C#) or allocator pressure (C++, Zig). Preallocate and reuse.</li><li><b>O(n²) neighbour checks.</b> Every enemy checking every other enemy. Use a spatial hash or grid (drill below).</li><li><b>Pointer chasing.</b> Arrays of pointers to objects scattered in memory. Prefer flat arrays of plain data.</li><li><b>Doing unneeded work.</b> Update only what is on or near the screen. Skip animation for off-screen enemies. Lower the AI tick rate (think every 4 frames, staggered).</li><li><b>Too many draw calls.</b> Batch by texture/material, use atlases and tile maps, instance repeated meshes.</li><li><b>Overdraw and big shaders</b> on mobile and integrated GPUs.</li></ul>
+<h3>Object pooling</h3>
+<p>Spawning and freeing a bullet 50 times a second churns memory. A <b>pool</b> allocates N bullets once and hands them out and takes them back. Acquire returns null (or recycles the oldest) when empty, which is a <i>design decision</i>: dropping a bullet is nearly always better than a hitch.</p>
+<h4>Zig, with the capacity in the type</h4>
+<pre><code>fn Pool(comptime T: type, comptime n: usize) type {
+    return struct {
+        items: [n]T = undefined,
+        used: [n]bool = @splat(false),
+
+        fn acquire(self: *@This()) ?*T {
+            for (&amp;self.used, 0..) |*u, i| {
+                if (!u.*) { u.* = true; return &amp;self.items[i]; }
+            }
+            return null;   // full: the caller decides what to do
+        }
+    };
+}</code></pre>
+<h4>The same idea in C++</h4>
+<pre><code>template &lt;class T, std::size_t N&gt;
+class Pool {
+    std::array&lt;T, N&gt; items_{};
+    std::array&lt;bool, N&gt; used_{};
+public:
+    T* acquire() {
+        for (std::size_t i = 0; i &lt; N; ++i)
+            if (!used_[i]) { used_[i] = true; return &amp;items_[i]; }
+        return nullptr;
+    }
+};</code></pre>
+<p>These linear scans are O(n); a real pool keeps a free list so acquire is O(1). Try improving it as an extra exercise.</p></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Spatial hash grid for neighbour queries</p><p>Checking every pair of 5,000 entities is 12 million tests per frame. A spatial hash buckets entities into square cells so a query only looks near the point.</p>
+<p>Build one that you <b>rebuild every frame</b>: <code>clear()</code>, then <code>insert(x, y)</code> for each entity (the returned id is the insertion index 0, 1, 2...), then <code>query(x, y, r)</code> returns the ids of all entities whose distance to <code>(x, y)</code> is at most <code>r</code> (exact distance, not whole cells). Coordinates can be negative. Order of results is unspecified.</p>
+<p>Zig version: a fixed number of buckets with an intrusive linked list (<code>heads[bucket]</code>, <code>next[id]</code>), so no allocation. Different cells can share a bucket, so skip entities whose cell is not the one you are visiting, or you will return duplicates. The tests use very few buckets to force collisions. C++ version: use an <code>unordered_map</code> keyed by the cell.</p><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub fn SpatialHash(comptime max_entities: usize, comptime buckets: usize) type {
+    return struct {
+        const Self = @This();
+
+        cell: f32,
+        heads: [buckets]i32 = @splat(-1), // bucket -&gt; newest entity id, or -1
+        next: [max_entities]i32 = undefined, // entity id -&gt; next entity in the same bucket, or -1
+        xs: [max_entities]f32 = undefined,
+        ys: [max_entities]f32 = undefined,
+        n: usize = 0,
+
+        pub fn init(cell: f32) Self {
+            return .{ .cell = cell };
+        }
+
+        pub fn clear(self: *Self) void {
+            _ = self;
+        }
+
+        /// returns the new entity's id (0, 1, 2, ...)
+        pub fn insert(self: *Self, x: f32, y: f32) u32 {
+            _ = self;
+            _ = x;
+            _ = y;
+            return 0;
+        }
+
+        /// writes matching ids into out (at most out.len of them) and returns how many
+        pub fn query(self: *const Self, x: f32, y: f32, r: f32, out: []u32) usize {
+            _ = self;
+            _ = x;
+            _ = y;
+            _ = r;
+            _ = out;
+            return 0;
+        }
+    };
+}
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Bug hunt: Spot the update-loop bugs (C++)</p><p>This C++ enemy update runs every frame. Click the <b>3</b> lines that hurt performance or can crash.</p><pre> 1  void World::update(float dt) {
+ 2      for (Enemy* e : enemies) {
+ 3          std::string label = &quot;enemy_&quot; + std::to_string(e-&gt;id);
+ 4          e-&gt;think(dt, label);
+ 5          for (Enemy* other : enemies) {
+ 6              if (distance(e-&gt;pos, other-&gt;pos) &lt; 32.0f) e-&gt;avoid(other);
+ 7          }
+ 8          if (e-&gt;hp &lt;= 0) enemies.erase(std::find(enemies.begin(), enemies.end(), e));
+ 9      }
+10  }</pre><p>3 buggy lines. Find them, then check.</p><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Your game averages 60 fps but players report stutter. What should you look at first?</div><ol class="opts"><li><b>A.</b> The average frame time</li><li><b>B.</b> The worst-case frames (99th percentile or spikes), usually caused by allocation, GC, loading or a periodic task</li><li><b>C.</b> The GPU temperature</li><li><b>D.</b> The resolution</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Which change most reduces cost for 3,000 enemies each looking for nearby allies?</div><ol class="opts"><li><b>A.</b> Check only every other enemy</li><li><b>B.</b> Bucket enemies into a grid/spatial hash and query neighbouring cells</li><li><b>C.</b> Sort the enemy list each frame</li><li><b>D.</b> Use floats instead of doubles</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Bullets are spawned and freed dozens of times per second and the profiler shows allocator pressure plus GC hitches. What is the standard fix?</div><ol class="opts"><li><b>A.</b> Allocate bigger bullet objects so fewer are needed</li><li><b>B.</b> Preallocate a pool of bullets once and hand slots out and back, dropping or recycling the oldest when full</li><li><b>C.</b> Run the garbage collector more often</li><li><b>D.</b> Spawn bullets on a background thread</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. Every enemy builds a label string and checks every other enemy each frame. Which two changes address the root causes?</div><ol class="opts"><li><b>A.</b> Build the label once at spawn and bucket enemies into a spatial grid so each queries only neighbours</li><li><b>B.</b> Check only every other frame and halve the label length</li><li><b>C.</b> Sort the enemy list and use shorter strings</li><li><b>D.</b> Switch the labels to a faster font and skip dead enemies sometimes</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="gd-entities.html">← Entities, components and scenes</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Spatial hash grid for neighbour queries</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> cell coordinate = floor(v / cell) (floor, not truncation, or negative coordinates land in the wrong cell). To query: loop cells from floor(x - r) to floor(x + r) on both axes, walk each bucket, re-check the entity actually sits in that cell, then do the exact distance test.</p><p>Choose a cell size near the typical query radius (or the largest entity). Too small and queries visit many empty cells, too large and each cell holds too many entities. Alternatives: a quadtree (uneven density), sweep and prune (mostly 1D motion), or just the engine broadphase (Godot, Box2D and Jolt already do this). Hashing (cx, cy) with large primes and a modulo is the classic scheme from "Optimized Spatial Hashing for Collision Detection of Deformable Objects".</p></div>
+<div class="ans" id="a2"><p><b>2. Spot the update-loop bugs (C++)</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> One is an allocation, one is quadratic, one is an iterator invalidation.</p><ul><li><b>Line 3:</b> A <code>std::string</code> is built (and allocated) for every enemy every frame, just to pass as a label. Build it once at spawn or pass the id.</li><li><b>Line 5:</b> Every enemy tests every other enemy: O(n²). With 2,000 enemies that is four million distance checks per frame. Use a spatial hash or grid and query only the neighbours.</li><li><b>Line 8:</b> Erasing from the vector while iterating it with a range-for invalidates the iterator: undefined behaviour or a crash. Mark dead enemies and remove them after the loop (or swap-remove with an index loop).</li></ul></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> The worst-case frames (99th percentile or spikes), usually caused by allocation, GC, loading or a periodic task</p><div>Averages hide hitches. Capture a frame-time graph and investigate the spikes: collection pauses, asset loads on the main thread, or one system doing a big batch every N frames (spread it out).</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Bucket enemies into a grid/spatial hash and query neighbouring cells</p><div>Spatial partitioning turns the all-pairs O(n²) into roughly O(n × neighbours). It is the biggest single win for crowds.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>B.</b> Preallocate a pool of bullets once and hand slots out and back, dropping or recycling the oldest when full</p><div>A pool removes per-frame allocation from the hot loop; dropping a bullet on overflow beats a hitch.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>A.</b> Build the label once at spawn and bucket enemies into a spatial grid so each queries only neighbours</p><div>Hoist per-frame allocation out of the loop and replace the O(n-squared) all-pairs check with a spatial query.</div></div>
+<p class="nav"><a href="gd-entities.html">← Entities, components and scenes</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

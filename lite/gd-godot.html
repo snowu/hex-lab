@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Godot field guide · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdcraft">Techniques &amp; Practice</a> · lesson 5 of 8 · 6 min</p>
+<h1>Godot field guide</h1>
+<p class="sum">The mental model: scenes, nodes, signals, resources, autoloads, physics layers and exporting.</p>
+<div class="sec">
+<h3>The mental model</h3>
+<ul><li><b>Everything is a node.</b> Nodes form a tree; a <b>scene</b> is a saved tree you can instance inside other scenes. A level is a scene that contains player, enemy and tile-map scenes.</li><li><b>Call down, signal up.</b> A parent calls methods on children it owns. A child announces events with <b>signals</b> and has no idea who listens.</li><li><b>Resources</b> (<code>.tres</code>) are data objects shared between scenes: stats, items, themes. Create custom ones with <code>class_name</code> and <code>@export</code> fields, edit in the inspector.</li><li><b>Autoloads</b> (singletons) for truly global services: audio manager, save system, event bus. Keep them few and thin.</li><li><b>Groups</b> tag nodes (“enemies”) so you can call or query them without references.</li></ul>
+<h3>GDScript in five lines that matter</h3>
+<pre><code>class_name Player extends CharacterBody2D
+@export var speed := 220.0               # editable in the inspector
+@onready var sprite := $Sprite2D         # resolved when the node enters the tree
+signal died
+func _physics_process(delta):
+    velocity.x = Input.get_axis("left", "right") * speed
+    move_and_slide()</code></pre>
+<p>Use static types (<code>var hp: int</code>) for speed and earlier errors. Use <code>await</code> for timers and animations. When GDScript becomes the bottleneck you have options: C# (typed, fast, .NET), or <b>GDExtension</b> to write hot paths in C++ (godot-cpp), which is also the door through which Zig and Rust bindings exist.</p>
+<h3>Physics setup checklist</h3>
+<ol><li>Name your collision layers (player, world, enemy, player_bullet, pickup, hurtbox).</li><li>For every object decide <b>layer</b> (what I am) and <b>mask</b> (what I detect).</li><li>Use <code>Area2D</code> for hitboxes and hurtboxes, <code>CharacterBody2D</code> for the player.</li><li>Do movement in <code>_physics_process</code>.</li></ol>
+<h3>Project structure that stays sane</h3>
+<pre><code>res://
+  scenes/     player/  enemies/  levels/  ui/
+  scripts/    (only shared code; per-scene scripts live next to the scene)
+  assets/     art/  audio/  fonts/
+  data/       items/  enemies/  (resources and JSON)</code></pre>
+<h3>Exporting</h3>
+<ul><li>Install export templates (Editor → Manage Export Templates), then add a preset per platform.</li><li><b>Web</b> export works well for jams and portfolios. It needs cross-origin isolation headers for threads and has size and audio quirks. Host on itch.io or a static host that sets the headers.</li><li>Test an exported build early. Many problems (paths, missing resources, performance) only appear in release builds.</li></ul>
+<div class="callout tip">For pixel art: Project Settings → Rendering → Textures → default filter <b>Nearest</b>; Display → Window → Stretch mode <b>canvas_items</b> with an integer scale mode; enable <b>Snap 2D Transforms to Pixel</b>.</div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A <code>Coin</code> scene needs to tell the HUD to add score. What is the idiomatic design?</div><ol class="opts"><li><b>A.</b> Coin calls get_node("/root/Main/HUD").add_score(1)</li><li><b>B.</b> Coin emits a signal (or an autoload event bus emits one), and the HUD or a game-state node connects to it</li><li><b>C.</b> The HUD polls all coins</li><li><b>D.</b> Store score inside the coin</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Player bullets should hit enemies but never the player. Which setup?</div><ol class="opts"><li><b>A.</b> Put them on the same layer and check names in code</li><li><b>B.</b> Bullet on a “player_bullet” layer with mask = enemy (+ world); enemies detect that layer; the player's mask does not include it</li><li><b>C.</b> Disable physics on bullets</li><li><b>D.</b> Use groups only</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Where does a global audio manager or save system belong in a Godot project, and what is the caution?</div><ol class="opts"><li><b>A.</b> In a thin autoload singleton, kept few in number so global state stays manageable</li><li><b>B.</b> Duplicated in every scene so each level owns its copy</li><li><b>C.</b> Inside the player script, since the player is always present</li><li><b>D.</b> In the export preset, so it only exists in release builds</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<div class="box"><div class="q">2. A newcomer puts player movement in _process and tunes speeds there, then reports different handling on high-refresh monitors. What is the fix?</div><ol class="opts"><li><b>A.</b> Multiply by a bigger constant in _process</li><li><b>B.</b> Do movement in _physics_process at its fixed rate, reserving _process for visuals and UI</li><li><b>C.</b> Cap the monitor refresh rate to 60 Hz</li><li><b>D.</b> Move the tuning numbers into the export preset</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<p class="nav"><a href="gd-data-saves.html">← Data-driven design and save files</a> · <a href="gd-zig.html">Zig for game programming →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Coin emits a signal (or an autoload event bus emits one), and the HUD or a game-state node connects to it</p><div>The Coin should not know the HUD exists. Signals (or an event bus) keep scenes reusable and testable alone.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Bullet on a “player_bullet” layer with mask = enemy (+ world); enemies detect that layer; the player's mask does not include it</p><div>Layers and masks are filtered by the engine's broad phase, which is faster and cleaner than branching in scripts.</div></div>
+<div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>A.</b> In a thin autoload singleton, kept few in number so global state stays manageable</p><div>Autoloads suit truly global services, but each one is shared mutable state, so they stay few and thin.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Do movement in _physics_process at its fixed rate, reserving _process for visuals and UI</p><div>Gameplay movement belongs in the fixed-rate callback for stable simulation; per-frame visuals belong in _process.</div></div>
+<p class="nav"><a href="gd-data-saves.html">← Data-driven design and save files</a> · <a href="gd-zig.html">Zig for game programming →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dynamic programming · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#patterns">Coding Patterns</a> · lesson 6 of 7 · 45 min</p>
+<h1>Dynamic programming</h1>
+<p class="sum">State, recurrence, base case, order. Then optimise the memory.</p>
+<div class="sec">
+<p>DP is “recursion with memory”. When a problem asks for a best/min/max/count of something built from smaller versions of itself, use this recipe aloud:</p>
+<ol>
+<li><b>State:</b> what does <code>dp[i]</code> (or <code>dp[i][j]</code>) mean, in one sentence?</li>
+<li><b>Recurrence:</b> how does a state follow from smaller ones?</li>
+<li><b>Base case(s).</b></li>
+<li><b>Order:</b> fill so dependencies are ready (bottom-up), or memoise recursion with <code>functools.lru_cache</code>.</li>
+<li><b>Answer</b> and <b>complexity</b>. Then: can you keep only the previous row?</li>
+</ol>
+<div class="callout warn"><b>Greedy vs DP:</b> if a locally best choice can be wrong later (coin change with [1, 3, 4] and 6), you need DP. Always test your idea on a tricky small case before coding.</div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Coin change (fewest coins)</p><p>Write <code>coin_change(coins, amount)</code> returning the fewest coins needed to make <code>amount</code> from the given denominations (unlimited supply of each), or <code>-1</code> if impossible. <code>amount == 0</code> needs 0 coins.</p><p><b>Starter:</b></p><pre>def coin_change(coins, amount):
+    pass
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Edit distance</p><p>Write <code>edit_distance(a, b)</code>: the minimum number of single-character insertions, deletions or substitutions needed to turn <code>a</code> into <code>b</code> (Levenshtein distance). Use O(len(a) × len(b)) time, and keep memory to O(min of the two lengths) if you can.</p><p><b>Starter:</b></p><pre>def edit_distance(a, b):
+    pass
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. You spot overlapping subproblems and decide on DP. What is the first thing to state out loud?</div><ol class="opts"><li><b>A.</b> The language you will code in</li><li><b>B.</b> What dp[i] means in one sentence, before any recurrence</li><li><b>C.</b> The test framework you prefer</li><li><b>D.</b> The order of your import statements</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<div class="box"><div class="q">2. A teammate proposes a greedy “always take the largest coin” for coin change. Using coins [1, 3, 4] and amount 6, what is the correct response?</div><ol class="opts"><li><b>A.</b> Greedy with the largest coin first is optimal for every coin system</li><li><b>B.</b> DP only works bottom-up and never with recursion</li><li><b>C.</b> A locally best choice can be wrong later, so test on a tricky case like coins 1, 3, 4 for 6 and use DP</li><li><b>D.</b> Base cases are optional once the recurrence is written</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<p class="nav"><a href="pat-heap-search.html">← Heaps &amp; binary search on the answer</a> · <a href="pat-structures.html">Tries &amp; union-find →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Coin change (fewest coins)</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> dp[a] = fewest coins to make a. dp[0] = 0, everything else starts at infinity. For each amount, try every coin: dp[a] = min(dp[a], dp[a - c] + 1). Greedy (largest coin first) is wrong for [1, 3, 4] and 6.</p><p><b>Reference solution:</b></p><pre>def coin_change(coins, amount):
+    INF = float('inf')
+    dp = [0] + [INF] * amount
+    for a in range(1, amount + 1):
+        for c in coins:
+            if c &lt;= a and dp[a - c] + 1 &lt; dp[a]:
+                dp[a] = dp[a - c] + 1
+    return -1 if dp[amount] == INF else dp[amount]</pre><p>O(amount × coins) time and O(amount) space. The DP interview recipe: define the state, the recurrence, the base case and the order of evaluation, then say the complexity. Mention that if the question were “how many ways”, you would add instead of min.</p></div>
+<div class="ans" id="a2"><p><b>2. Edit distance</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> dp[i][j] is the distance between a[:i] and b[:j]. If the characters match, copy the diagonal; otherwise 1 + min(delete, insert, substitute). You only need the previous row, so keep two rows.</p><p><b>Reference solution:</b></p><pre>def edit_distance(a, b):
+    if len(a) &lt; len(b):
+        a, b = b, a  # make b the shorter string to save memory
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i]
+        for j, cb in enumerate(b, 1):
+            if ca == cb:
+                cur.append(prev[j - 1])
+            else:
+                cur.append(1 + min(prev[j], cur[j - 1], prev[j - 1]))
+        prev = cur
+    return prev[-1]</pre><p>The same recurrence powers diff tools, fuzzy matching and "did you mean" suggestions. For huge inputs mention banded variants and Myers diff.</p></div>
+<div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>B.</b> What dp[i] means in one sentence, before any recurrence</p><div>Naming the state first forces the recurrence, base cases, and fill order to follow from it.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>C.</b> A locally best choice can be wrong later, so test on a tricky case like coins 1, 3, 4 for 6 and use DP</p><div>Greedy picks 4+1+1 (3 coins) while 3+3 uses 2, so overlapping subproblems need the DP recurrence, not a local rule.</div></div>
+<p class="nav"><a href="pat-heap-search.html">← Heaps &amp; binary search on the answer</a> · <a href="pat-structures.html">Tries &amp; union-find →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

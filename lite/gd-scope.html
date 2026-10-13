@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scope, prototyping and playtesting · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gddesign">Game Design Theory</a> · lesson 5 of 5 · 6 min</p>
+<h1>Scope, prototyping and playtesting</h1>
+<p class="sum">How small games actually get finished: prototypes that answer questions, vertical slices, and watching people play.</p>
+<div class="sec">
+<h3>Prototype to answer a question</h3>
+<p>A prototype is not a smaller version of the game, it is an experiment: <i>“Is dodging this attack fun?”</i>, <i>“Is grapple movement readable?”</i> Build the cheapest thing that can answer it: grey boxes, placeholder sounds, one room. Throw it away if it fails; keep the learning.</p>
+<h3>Scope is the main killer</h3>
+<p>Most solo projects die by scope, not by skill. Habits that work:</p>
+<ul><li>Write a <b>one-page design</b>: pitch, loop, pillars, and a <b>cut list</b> ordered from “must ship” to “nice to have”. Cut from the bottom without guilt.</li><li>Build a <b>vertical slice</b>: one level at final quality with all main systems, to prove the loop and surface cost early.</li><li>Estimate honestly and multiply by 2 or 3. Content (levels, art, sound) is far more work than code.</li><li>Prefer systems that generate depth from few assets (combinable rules, procedural variation) over hand-made content.</li><li>Ship something tiny first. A finished 2-hour game teaches more than an unfinished epic.</li><li>Use jam constraints (48 hours, a theme, a limit like “one button”) to practise finishing.</li></ul>
+<h3>Playtesting</h3>
+<ul><li>Watch, do not explain. Sit behind the player and stay silent. Where they hesitate or repeat a mistake is where the design is unclear.</li><li>Ask about what they did and felt (“What were you trying to do there?”), not “did you like it?”.</li><li>Test early with ugly builds. Test with people who have never seen the game, five at a time, then fix the problems all five hit.</li><li>Record sessions (with permission) and log telemetry such as deaths per room and quit points.</li><li>Distinguish <b>problem</b> from <b>solution</b>: players are great at reporting problems and terrible at proposing fixes.</li></ul></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You have a two-week game jam. Which plan finishes?</div><ol class="opts"><li><b>A.</b> Build all systems, then add content in the last two days</li><li><b>B.</b> Get a playable loop in the first day, then iterate, with a cut list and a stable build at every end of day</li><li><b>C.</b> Spend week one on custom engine tech</li><li><b>D.</b> Wait for the perfect idea</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">During a playtest the player walks into a dead end and says “I think there should be a map.” What do you do?</div><ol class="opts"><li><b>A.</b> Add a map</li><li><b>B.</b> Note the problem (they got lost) and look for causes: landmarks, signage, level shape, before choosing a fix</li><li><b>C.</b> Ignore it</li><li><b>D.</b> Add a tutorial popup</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><h3>Template: a one-page cut list</h3><ol><li><b>Must ship:</b> core loop, 3 enemy types, 5 levels, save, pause, sound.</li><li><b>Should ship:</b> 2 extra weapons, boss, polished menu, settings (volume, shake, rebind).</li><li><b>Nice to have:</b> secrets, leaderboard, achievements, extra biome.</li><li><b>Not now (write it down so you can stop thinking about it):</b> online, level editor, mod support.</li></ol><p>Review weekly. Anything in “must ship” that is not playable by the halfway point is a risk to tackle first.</p></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. You are unsure whether grapple movement is readable. What is the cheapest prototype that answers it?</div><ol class="opts"><li><b>A.</b> One grey-box room with the grapple and a target, built to test only that question</li><li><b>B.</b> A full vertical slice with final art and sound</li><li><b>C.</b> A survey asking players if they like grapples</li><li><b>D.</b> Three extra movement systems for comparison</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<div class="box"><div class="q">2. Observers keep explaining the controls during playtests and players then do fine. What should change about the test?</div><ol class="opts"><li><b>A.</b> Explain louder so every tester hears</li><li><b>B.</b> Stay silent and watch where they hesitate or repeat mistakes, then ask what they were trying to do</li><li><b>C.</b> Only test with players who already know the game</li><li><b>D.</b> Skip testing until the tutorial text is final</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<p class="nav"><a href="gd-economy.html">← Progression, economies and randomness</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Get a playable loop in the first day, then iterate, with a cut list and a stable build at every end of day</p><div>Always have a playable build, grow outward from it, and cut from a prepared list.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Note the problem (they got lost) and look for causes: landmarks, signage, level shape, before choosing a fix</p><div>Players report real problems but not necessarily the right solution. A readable level might fix it more cheaply than a map system.</div></div>
+<div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>A.</b> One grey-box room with the grapple and a target, built to test only that question</p><div>A prototype is an experiment, not a small game: build the cheapest thing that answers the question and keep the learning.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Stay silent and watch where they hesitate or repeat mistakes, then ask what they were trying to do</p><div>Watching silently reveals where the design is unclear; explaining hides exactly the problems testing must find.</div></div>
+<p class="nav"><a href="gd-economy.html">← Progression, economies and randomness</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

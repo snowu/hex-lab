@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prediction, interpolation and lag compensation · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdnet">Multiplayer &amp; Networking</a> · lesson 2 of 4 · 55 min</p>
+<h1>Prediction, interpolation and lag compensation</h1>
+<p class="sum">How a game feels instant at 100 ms: predict yourself, show others in the past, and let the server rewind time for fairness.</p>
+<div class="sec">
+<h3>The problem</h3>
+<p>With an authoritative server, pressing "move right" means: send the input (50 ms), the server processes it, sends the result back (50 ms), then you see yourself move. A 100 ms delay on every action is unplayable. Three techniques make a networked game feel as if the delay is not there. They are the standard of every modern action game (Quake, Counter-Strike, Overwatch, Rocket League all use variations). Gaffer On Games and Valve's "Source Multiplayer Networking" page explain them in depth.</p>
+<h3>1. Client-side prediction (your own character)</h3>
+<p>The client <b>applies your input immediately</b> using the same movement code as the server, and also sends it with a <b>sequence number</b>. You see yourself move at once. The server later confirms the real result.</p>
+<h3>2. Server reconciliation</h3>
+<p>When a snapshot arrives it says "after processing your input number N, you are at P". The client has already moved on past N with inputs the server has not seen. So it <b>rewinds to P and replays the inputs after N</b> to compute the corrected present (the first drill). If the prediction was right, the replay lands on the same position and nothing visible happens. If the server disagreed (you were pushed, or hit a wall you did not know about), the replay produces a different position and you are corrected. Hide the snap with a short smoothing of the visual position.</p>
+<p>Requirements: movement must be <b>deterministic</b> given (state, input, dt) so client and server compute the same thing; inputs must be tagged and buffered; everything the server can change (knockback, teleport) must come back in snapshots.</p>
+<h3>3. Entity interpolation (everyone else)</h3>
+<p>You cannot predict other players: you do not know their inputs. They arrive as snapshots 10 to 30 times a second, so drawing the latest one makes them jump. Instead draw them <b>slightly in the past</b>, blended between the two snapshots around the render time (the second drill). The delay (typically 100 ms, about two snapshot intervals) guarantees you almost always hold a snapshot on each side. You trade a small, constant visual delay of others for perfectly smooth motion.</p>
+<p><b>Extrapolation</b> (dead reckoning) guesses forward from the last velocity when snapshots run out. Brief extrapolation hides a lost packet; long extrapolation produces rubber-banding corrections. Cap it (about 100 to 250 ms) and hold or fade after that.</p>
+<h3>4. Lag compensation (shooting fairly)</h3>
+<p>Because you see others in the past, when you click on a target you are aiming at where it <i>was</i>. The server, receiving your shot later, would find it already moved. <b>Lag compensation</b>: the server keeps a short history of positions and, when processing your shot, <b>rewinds</b> the world by your latency plus interpolation delay and tests the hit against that past state. "What you see is what you hit" for the shooter, at the cost that a player behind cover can be hit slightly "after" reaching it. Limit the maximum rewind (200 ms or so) so high-ping players do not dominate.</p>
+<h3>Putting it together</h3>
+<table><tr><th>Thing</th><th>Technique</th></tr>
+<tr><td>My own movement</td><td>Prediction + reconciliation</td></tr>
+<tr><td>Other players</td><td>Snapshot interpolation (render in the past)</td></tr>
+<tr><td>Projectiles you fired</td><td>Predict locally (spawn immediately), server owns the truth</td></tr>
+<tr><td>Hit detection</td><td>Server-side with lag compensation</td></tr>
+<tr><td>Physics objects</td><td>Server simulates; clients interpolate (or predict if you interact)</td></tr></table>
+<h3>Things that go wrong</h3>
+<ul><li><b>Prediction drift</b>: the client's code differs from the server's (different float order, missing a rule). Share the movement code, step with the same fixed dt, and log corrections: frequent ones are a bug.</li><li><b>Over-correction jitter</b>: snapping every time a snapshot differs by a pixel. Use a tolerance; correct small errors by blending, large ones by snapping.</li><li><b>Interpolation delay too small</b>: you run out of snapshots and objects freeze or extrapolate. Add jitter margin.</li><li><b>Visual vs simulation position</b>: keep a separate smoothed render position so corrections do not teleport the camera.</li><li><b>Sequence number wrap-around</b>: compare with wrap-aware arithmetic if you use small integers.</li></ul></div>
+<div class="sec"><div class="box"><p class="kind">Simulation: Latency, prediction and interpolation</p><p>Row 1 is your character: grey is the server's truth, the coloured box is what you see. Row 2 is another player as you see them. Everything moves by itself so you can concentrate on the settings.</p><p><b>Try this in the full app:</b></p><ul><li>Raise the <b>round trip</b> to 300 ms with <b>prediction off</b>: your box trails the grey truth. Turn <b>prediction on</b>: your box sits on top of it.</li><li>Press <b>server pushes me</b> with prediction on: after a round trip the client learns it was wrong and shows a correction.</li><li>In the lower row set <b>interpolation delay</b> to 0 and <b>snapshots/s</b> to 5: the other player moves in jerky steps. Raise the delay to 100 to 200 ms: smooth again.</li><li>Add <b>packet loss</b> and <b>jitter</b> with a small delay: motion stutters when the snapshots you need have not arrived.</li><li>Find the smallest delay that stays smooth at your chosen snapshot rate: it is about two snapshot intervals plus the jitter.</li></ul><p class="note">Interactive: needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Client-side prediction and reconciliation</p><p>In an online game the server is the authority, but waiting a round trip to see your own character move feels terrible. So the client <b>predicts</b>: it applies each input immediately and sends it to the server tagged with a sequence number. Later the server reports <i>"after processing your input number N, you are here"</i>. The client must <b>reconcile</b>: start from the server's position and replay the inputs the server has not seen yet.</p>
+<ul><li><code>reconcile(server_pos, acked, pending)</code>: <code>server_pos</code> plus the <code>dx</code> of every pending input whose <code>seq</code> is greater than <code>acked</code>.</li><li><code>dropAcked(pending, acked)</code>: how many leading inputs of <code>pending</code> (sorted by increasing <code>seq</code>) have <code>seq &lt;= acked</code> and can be forgotten.</li></ul><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub const Input = struct { seq: u32, dx: i32 };
+
+/// server_pos is where the server says we were after processing input number acked.
+/// Replay the inputs the server has not seen yet (seq &gt; acked) on top of it.
+pub fn reconcile(server_pos: i32, acked: u32, pending: []const Input) i32 {
+    _ = acked;
+    _ = pending;
+    return server_pos;
+}
+
+/// How many leading inputs (sorted by seq) are acknowledged and can be dropped.
+pub fn dropAcked(pending: []const Input, acked: u32) usize {
+    _ = pending;
+    _ = acked;
+    return 0;
+}
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Snapshot interpolation for remote players</p><p>The server sends a position snapshot 10 to 30 times a second, but you draw 60+ frames a second. To show other players smoothly you render them <b>slightly in the past</b> and blend between the two snapshots around the render time. Implement <code>interpolate(snaps, render_t)</code>:</p>
+<ul><li>Snapshots are sorted by <code>t</code>. Find the two around <code>render_t</code> and blend their <code>x</code> linearly.</li><li>Before the first snapshot, return the first position; after the last, return the last (hold, no extrapolation).</li><li>Two snapshots with the same <code>t</code> must not divide by zero.</li><li>An empty list returns nothing.</li></ul><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub const Snapshot = struct { t: f64, x: f64 };
+
+/// Position at render_t, blended between the snapshots around it. snaps is sorted by t.
+pub fn interpolate(snaps: []const Snapshot, render_t: f64) ?f64 {
+    _ = snaps;
+    _ = render_t;
+    return null;
+}
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">The server says "after input 40 you are at x = 100". The client has applied inputs up to 47 and has them stored. What does reconciliation do?</div><ol class="opts"><li><b>A.</b> Teleports to 100 and discards the rest</li><li><b>B.</b> Starts from 100 and re-applies inputs 41 to 47 to get the corrected present</li><li><b>C.</b> Ignores the server</li><li><b>D.</b> Asks the server for inputs 41 to 47</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Why are other players drawn about 100 ms in the past?</div><ol class="opts"><li><b>A.</b> To save bandwidth</li><li><b>B.</b> So there are normally two snapshots to blend between, producing smooth motion instead of jumps</li><li><b>C.</b> Because their ping is high</li><li><b>D.</b> To make them harder to hit</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You shoot a moving player on your screen and the server says miss. Which technique is designed to fix that?</div><ol class="opts"><li><b>A.</b> More prediction</li><li><b>B.</b> Lag compensation: the server rewinds other players to what you saw when you fired and tests the hit there</li><li><b>C.</b> Higher tick rate only</li><li><b>D.</b> A bigger hitbox for everyone always</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. With prediction on, the client is corrected almost every snapshot even when nothing special happens. What is the likely bug?</div><ol class="opts"><li><b>A.</b> Prediction drift: the client movement code differs from the server, so sharing the code and stepping with the same fixed dt is required</li><li><b>B.</b> The interpolation delay is too large</li><li><b>C.</b> The tick rate is too high</li><li><b>D.</b> Lag compensation is missing</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<div class="box"><div class="q">2. Corrections of one pixel visibly snap the character every snapshot. How should small versus large errors be handled?</div><ol class="opts"><li><b>A.</b> Snap on every difference</li><li><b>B.</b> Ignore the server</li><li><b>C.</b> Correct small errors by blending and reserve snapping for large ones, using a tolerance</li><li><b>D.</b> Extrapolate for a full second</li></ol><p class="tolink" id="q7"><a href="#a7">answer 7 ↓</a></p></div>
+<p class="nav"><a href="net-models.html">← The network and your game</a> · <a href="net-lockstep.html">Deterministic lockstep and rollback →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Client-side prediction and reconciliation</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Both are single loops over the pending inputs. For reconcile just skip inputs with seq <= acked. For dropAcked count from the front and stop at the first input that is not yet acknowledged.</p><p>This is the core of the Quake/Source/Overwatch style of netcode (Gaffer On Games "Networked Physics" and the Valve "Source Multiplayer Networking" page explain it with pictures). It only works if movement is deterministic given the same inputs and the same step, so the client's replay matches the server's processing: another reason for fixed timesteps and no floating-point surprises. Mispredictions (the server says you were blocked) are corrected by replay; a visible snap is hidden by smoothing the error out over a few frames. Other players are not predicted this way: they are shown slightly in the past using snapshot interpolation (the next drill).</p></div>
+<div class="ans" id="a2"><p><b>2. Snapshot interpolation for remote players</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> If render_t <= first.t return first.x; if >= last.t return last.x. Otherwise find i with snaps[i].t <= render_t < snaps[i+1].t and return lerp with f = (render_t - t0) / (t1 - t0).</p><p>Choosing the delay is the design decision: it must cover one send interval plus jitter, so you always have two snapshots to blend between (typically 2 to 3 intervals, 100 ms is common). Too small and you run out of snapshots and the character freezes or you extrapolate and it jitters; too big and others look far behind. This is why shooters need lag compensation on the server: your shot is aimed at what you saw in the past. Interpolate rotation with a slerp/shortest-angle blend, and teleports (respawn) must not be blended.</p></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Starts from 100 and re-applies inputs 41 to 47 to get the corrected present</p><div>The server only knows inputs up to 40. Replaying 41 to 47 on top of its answer restores the client's lead without losing correctness.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> So there are normally two snapshots to blend between, producing smooth motion instead of jumps</p><div>Interpolation needs data on both sides of the render time; the delay buys it.</div></div>
+<div class="ans" id="a5"><p><b>5. Quick check</b> <a href="#q5">back ↑</a></p><p><b>B.</b> Lag compensation: the server rewinds other players to what you saw when you fired and tests the hit there</p><div>It evaluates the shot against the world as the shooter saw it (within a cap).</div></div>
+<div class="ans" id="a6"><p><b>6. Check 1</b> <a href="#q6">back ↑</a></p><p><b>A.</b> Prediction drift: the client movement code differs from the server, so sharing the code and stepping with the same fixed dt is required</p><div>Frequent corrections signal divergence between the two simulations, not normal network noise.</div></div>
+<div class="ans" id="a7"><p><b>7. Check 2</b> <a href="#q7">back ↑</a></p><p><b>C.</b> Correct small errors by blending and reserve snapping for large ones, using a tolerance</p><div>A tolerance with blend-for-small and snap-for-large hides noise without letting real divergence linger.</div></div>
+<p class="nav"><a href="net-models.html">← The network and your game</a> · <a href="net-lockstep.html">Deterministic lockstep and rollback →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

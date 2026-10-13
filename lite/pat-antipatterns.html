@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Singletons, globals and other traps · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdpatterns">Game Programming Patterns</a> · lesson 11 of 12 · 10 min</p>
+<h1>Singletons, globals and other traps</h1>
+<p class="sum">Why the easy pattern hurts, what to do instead, and the other design smells that kill game codebases.</p>
+<div class="sec">
+<h3>The singleton trap</h3>
+<p>A <b>singleton</b> is a class with exactly one instance, reachable from anywhere (<code>Game.instance</code>, an autoload called <code>GameState</code>). It is the most overused pattern in games because it solves "how do I reach X from here?" in one line. The costs show up later:</p>
+<ul><li><b>Hidden dependencies.</b> A function's signature no longer says what it touches; any code can read or change the singleton. Reading a function does not tell you what it depends on.</li><li><b>Global mutable state.</b> Anything can write to it at any time, so bugs appear far from their cause, and execution order starts to matter.</li><li><b>Testing.</b> You cannot test a function without setting up the whole global world, and tests leak state into each other.</li><li><b>"Only one" is rarely true.</b> Split screen means two players. Level editors preview a level inside a level. A replay viewer runs a second simulation. The day "there is only one" stops being true, every call site must change.</li><li><b>Lifetime and initialisation order.</b> Which singleton starts first? Who tears down last? Static initialisation order across files is a classic C++ bug.</li></ul>
+<h3>Alternatives</h3>
+<ol><li><b>Pass it in.</b> If a function needs the world, take the world as a parameter. Verbose for a week; clear forever.</li><li><b>Keep it in the owner.</b> Most "singletons" are really "the current level's X". Let the level own it and hand references down the tree (Godot: call down, signal up).</li><li><b>Service locator</b> for genuinely cross-cutting services (audio, settings, analytics), with an interface so tests can swap them (component lesson).</li><li><b>Scene-local instead of global</b>: an autoload with a small, stable job (an audio bus, a settings store) is fine. An autoload holding the player, the score, the inventory and the current level is a global state blob.</li></ol>
+<h3>Other smells</h3>
+<ul><li><b>God object / "Manager" classes.</b> <code>GameManager</code> that handles input, spawning, score, UI and save. Split by responsibility; a class name ending in Manager is often a missing concept.</li><li><b>Inheritance towers.</b> <code>Entity → Character → Enemy → FlyingEnemy → ShootingFlyingEnemy</code>. Prefer composition and type objects.</li><li><b>Premature generalisation.</b> A plugin system for the one weapon you have. Build the concrete thing twice, then abstract.</li><li><b>Stringly typed everything.</b> Passing <code>"enemy_goblin"</code> around and comparing strings in hot paths. Use enums or interned ids, keep strings at the data boundary.</li><li><b>Update order spaghetti.</b> Systems that depend on being updated in a specific order with no comment saying so. Make the order explicit in one place.</li><li><b>Deep coupling through signals.</b> Event chains where each handler emits the next: nobody can say what happens when you press jump.</li><li><b>Copy-paste scenes.</b> Fifty slightly different enemy scenes instead of one scene and fifty data files.</li></ul>
+<h3>A refactoring recipe</h3>
+<ol><li>Find the singleton's <b>callers</b> and group by what they use.</li><li>Split the singleton by responsibility into small things that each have one reason to change.</li><li>Give each piece an <b>owner</b> (the level, the player) and pass references down where needed.</li><li>For what remains global, define a small interface and a way to swap it.</li><li>Delete the global. If something breaks, you found a hidden dependency.</li></ol></div>
+<div class="sec"><div class="box"><p class="kind">Bug hunt: Spot the global-state bugs</p><p>GDScript with an autoload <code>Game</code>. Click the <b>3</b> lines that are bugs waiting to happen.</p><pre> 1  # game.gd (autoload)
+ 2  var player
+ 3  var score := 0
+ 4  var current_level
+ 5  
+ 6  # coin.gd
+ 7  func _on_body_entered(body):
+ 8      Game.score += 10
+ 9      Game.player.hp = min(Game.player.hp + 1, 10)
+10      queue_free()
+11  
+12  # enemy.gd
+13  func _ready():
+14      target = Game.player</pre><p>3 buggy lines. Find them, then check.</p><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You add local co-op and the global <code>Game.player</code> is everywhere. What is the underlying design mistake?</div><ol class="opts"><li><b>A.</b> Using too many players</li><li><b>B.</b> Encoding "there is exactly one player" into the architecture through a global</li><li><b>C.</b> Using GDScript</li><li><b>D.</b> Not enough singletons</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Which autoload is the least problematic?</div><ol class="opts"><li><b>A.</b> GameState holding player, score, inventory and level</li><li><b>B.</b> An Audio autoload that plays sounds through a small interface and holds no gameplay state</li><li><b>C.</b> Everything Manager</li><li><b>D.</b> A Player autoload</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><h3>Refactoring exercise: break up a GameManager</h3><p>A <code>GameManager</code> has these responsibilities: reads input, spawns enemies, tracks score, shows the HUD, saves and loads, plays music, handles pause.</p><ul><li>Group them into 4 to 6 cohesive pieces. (Input → controllers; spawning → a Spawner owned by the level; score → a ScoreKeeper that listens to events; HUD → UI node that listens; save/load → a SaveService behind an interface; audio → Audio service; pause → a state in a pushdown stack.)</li><li>Which of these needs to be global at all? (Probably only audio and settings.)</li><li>Draw who owns whom and which direction messages flow.</li><li>Pick one responsibility and write the test you could not write before.</li></ul></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A function reads Game.score, writes Game.player.hp and branches on Game.level without taking any parameters. Why is it hard to test?</div><ol class="opts"><li><b>A.</b> It has too many parameters</li><li><b>B.</b> Its signature hides its dependencies in global mutable state, so tests must set up the whole world and leak state into each other</li><li><b>C.</b> It uses too few globals</li><li><b>D.</b> Testing games is impossible in principle</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. You decide to break up a GameManager that handles input, spawning, score, UI, save, music and pause. What is the prescribed first move?</div><ol class="opts"><li><b>A.</b> Rename it to GameManager2 to mark the new version</li><li><b>B.</b> Add more responsibilities so the split is worth it later</li><li><b>C.</b> Find its callers, group them by what they actually use, then split by responsibility so each piece has one reason to change</li><li><b>D.</b> Move everything into static strings</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="pat-bytecode.html">← Bytecode, scripting and data languages</a> · <a href="pat-case-study.html">Putting it together: architecture of a small game →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Spot the global-state bugs</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> All three are the same disease: reaching into global state instead of being given what you need.</p><ul><li><b>Line 8:</b> Writing <code>Game.score</code> directly from the coin couples the coin to the global state, and anything can change score from anywhere. The coin should emit <code>collected</code> and the scoring code react (observer).</li><li><b>Line 9:</b> The coin also reaches through the global into the player's internals and edits hp. The player should expose <code>heal()</code>, or the coin should emit and a Health component react. With two players (split screen) this also heals the wrong one.</li><li><b>Line 14:</b> <code>target = Game.player</code> assumes exactly one player that already exists when the enemy is ready (initialisation order) and is the same forever (respawn replaces it). Inject the target when the enemy is spawned.</li></ul></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Encoding "there is exactly one player" into the architecture through a global</p><div>"Only one" is an assumption that breaks. Pass the relevant player in or keep it with its owner.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> An Audio autoload that plays sounds through a small interface and holds no gameplay state</p><div>A thin service with a stable job and no gameplay state is easy to swap or silence. Autoloads holding game state become the global blob.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Its signature hides its dependencies in global mutable state, so tests must set up the whole world and leak state into each other</p><div>Hidden dependencies through a singleton make behaviour depend on faraway writes and execution order.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>C.</b> Find its callers, group them by what they actually use, then split by responsibility so each piece has one reason to change</p><div>Refactoring starts from usage: caller groups reveal the real responsibilities and their owners.</div></div>
+<p class="nav"><a href="pat-bytecode.html">← Bytecode, scripting and data languages</a> · <a href="pat-case-study.html">Putting it together: architecture of a small game →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

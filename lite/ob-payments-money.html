@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Payments &amp; money handling · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#openbanking">Neonomics &amp; Open Banking</a> · lesson 3 of 5 · 70 min</p>
+<h1>Payments &amp; money handling</h1>
+<p class="sum">Minor units, IBAN validation, fair splitting, and the payment status lifecycle.</p>
+<div class="sec">
+<p>Neonomics’ docs list payment types such as <b>domestic</b>, <b>SEPA credit</b>, scheduled variants, and <b>batch</b> transfers. After the user completes SCA the payment must be <b>completed promptly</b> because bank authorisations expire fast, and status is polled (or pushed) by payment id.</p>
+<h3>Money rules (memorise)</h3>
+<ol>
+<li>Store <b>integer minor units</b> (cents/øre) + <b>ISO 4217 currency</b>. Never floats. Beware currencies with 0 or 3 decimals (JPY, KWD).</li>
+<li>Never add amounts of different currencies.</li>
+<li>Define a <b>rounding rule</b> (half-up? banker’s?) and use it everywhere.</li>
+<li>Use idempotency keys on every payment-creating request (see the Reliability track).</li>
+<li>Ledger entries are <b>append-only</b>; fix mistakes with reversing entries.</li>
+</ol></div>
+<div class="sec"><div class="box"><p class="kind">Predict the output: Floats and rounding in money code</p><p>Two reasons seniors insist on integer minor units or <code>Decimal</code> for currency.</p><pre>print(0.1 + 0.2)
+print(19.99 * 100)
+print(round(19.99 * 100))
+print(round(2.5), round(3.5))</pre><div class="q">Which is the exact output, line by line?</div><ol class="opts"><li><b>A.</b> 0.3, 1999.0, 1999, 3 4</li><li><b>B.</b> 0.30000000000000004, 1998.9999999999998, 1999, 2 4</li><li><b>C.</b> 0.30000000000000004, 1999.0, 1999, 3 4</li><li><b>D.</b> 0.3, 1998.9999999999998, 1998, 2 4</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): IBAN validation (mod 97)</p><p>Implement <code>is_valid_iban(iban)</code>. Steps: remove spaces and uppercase; the format is <code>2 letters + 2 digits + 11–30 alphanumerics</code>; check the country length for <code>NO</code>=15, <code>DE</code>=22, <code>SE</code>=24, <code>DK</code>=18, <code>FI</code>=18, <code>GB</code>=22 (other countries: skip the length check); move the first 4 characters to the end; replace letters with numbers (A=10 … Z=35); the resulting big number mod 97 must equal 1. (Python ints have arbitrary precision, so no overflow tricks needed. In many languages you would compute the remainder piecewise.) Return <code>False</code> for anything that is not a string.</p><p><b>Starter:</b></p><pre>def is_valid_iban(iban):
+    pass
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Split money without losing a cent</p><p>Implement <code>split_amount(total_minor, weights)</code> returning int parts proportional to <code>weights</code> that <b>sum exactly to total_minor</b>. Use the largest-remainder method: floor each share, then give the leftover units one by one to the shares with the largest fractional remainders (ties: lower index first). Raise <code>ValueError</code> for empty, negative or all-zero weights.</p><p><b>Starter:</b></p><pre>def split_amount(total_minor, weights):
+    pass
+</pre><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec">
+<h3>Payment status lifecycle</h3>
+<p>Berlin Group / ISO 20022-style statuses include <code>RCVD</code> (received), <code>PDNG</code> (pending), <code>ACTC</code> (technically accepted), <code>ACCP</code> (accepted for customer profile), <code>ACSP</code> (settlement in process), <code>ACSC</code> (settlement completed), <code>ACCC</code> (credit account completed), <code>RJCT</code> (rejected), <code>CANC</code> (cancelled). Banks report these <b>late, duplicated, skipped, or out of order</b>, and your system must still end in a correct state.</p></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Merge payment status updates safely</p><p>Implement <code>apply_status(current, incoming)</code> returning the new status, with these simplified rules (ranks: RCVD 0, PDNG 1, ACTC 2, ACCP 3, ACSP 4, ACSC 5, ACCC 6):</p>
+<ul><li>If <code>current</code> is terminal (<code>ACCC</code>, <code>RJCT</code>, <code>CANC</code>) → unchanged.</li><li><code>RJCT</code> is accepted unless current rank ≥ 5 (already settled).</li><li><code>CANC</code> is accepted only if current rank ≤ 2.</li><li>Otherwise move forward only: accept <code>incoming</code> if its rank is higher (skipping is fine); ignore same or lower rank (stale or duplicate).</li><li>Unknown status → raise <code>ValueError('unknown status')</code>.</li></ul><p><b>Starter:</b></p><pre>def apply_status(current, incoming):
+    pass
+</pre><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Bug hunt: Spot the money bugs</p><p>This is part of a fee calculator. Click the <b>2</b> lines that are wrong for a payments system.</p><pre>1  def charge_with_fee(amount_eur, fee_percent):
+2      fee = amount_eur * (fee_percent / 100)
+3      return {'total': amount_eur + fee, 'currency': 'EUR'}
+4  
+5  def split_equally(total_cents, n):
+6      return [total_cents / n] * n</pre><p>2 buggy lines. Find them, then check.</p><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">The same payment’s status webhooks arrive as ACSC, then (late) ACSP. A naive “last write wins” handler does what, and why does it matter?</div><ol class="opts"><li><b>A.</b> Nothing, ACSP is fine</li><li><b>B.</b> Regresses a settled payment to “in process”, which could trigger a duplicate payout or confusing notifications</li><li><b>C.</b> Crashes</li><li><b>D.</b> Deletes the payment</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A teammate stores a 19.99 EUR charge as the float 19.99 with no currency field. What is wrong and what is the fix?</div><ol class="opts"><li><b>A.</b> Store integer minor units (1999) plus the ISO 4217 currency, define one rounding rule, and never mix currencies</li><li><b>B.</b> Floats are fine as long as you round on display</li><li><b>C.</b> Store the amount as a string with the currency symbol attached</li><li><b>D.</b> Multiply by 100 only for Japanese yen</li></ol><p class="tolink" id="q7"><a href="#a7">answer 7 ↓</a></p></div>
+<div class="box"><div class="q">2. A duplicate webhook replays a settled transfer and your handler inserts a second ledger row for it. What is the correct ledger discipline?</div><ol class="opts"><li><b>A.</b> Delete the older row so only the newest remains</li><li><b>B.</b> Update the old row in place with the new status</li><li><b>C.</b> Keep the ledger append-only: deduplicate with idempotency keys and fix mistakes with reversing entries, never edits or deletes</li><li><b>D.</b> Ignore all webhooks after the first one</li></ol><p class="tolink" id="q8"><a href="#a8">answer 8 ↓</a></p></div>
+<p class="nav"><a href="ob-security.html">← Consent, SCA &amp; security model</a> · <a href="ob-aggregator-eng.html">Engineering a multi-bank aggregator →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Floats and rounding in money code</b> <a href="#q1">back ↑</a></p><p><b>B.</b> 0.30000000000000004, 1998.9999999999998, 1999, 2 4</p><div>Binary floating point cannot represent most decimal fractions exactly, so <code>19.99 * 100</code> is <code>1998.9999999999998</code>. And Python&#39;s <code>round()</code> uses <b>banker&#39;s rounding</b> (round half to even): <code>round(2.5)</code> is 2 and <code>round(3.5)</code> is 4, which silently shifts money by a cent. Use integer cents or <code>Decimal</code> with an explicit rounding mode.</div></div>
+<div class="ans" id="a2"><p><b>2. IBAN validation (mod 97)</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> int(ch, 36) turns "0"-"9" and "A"-"Z" into 0–35, which is exactly the IBAN letter mapping. Join them into one string and take int(...) % 97. Use re.fullmatch with [0-9] (the \d class also matches non-ASCII digits).</p><p><b>Reference solution:</b></p><pre>import re
+
+LENGTHS = {'NO': 15, 'DE': 22, 'SE': 24, 'DK': 18, 'FI': 18, 'GB': 22}
+
+def is_valid_iban(iban):
+    if not isinstance(iban, str):
+        return False
+    s = iban.replace(' ', '').upper()
+    if not re.fullmatch(r'[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}', s):
+        return False
+    if LENGTHS.get(s[:2], len(s)) != len(s):
+        return False
+    rearranged = s[4:] + s[:4]
+    digits = ''.join(str(int(ch, 36)) for ch in rearranged)
+    return int(digits) % 97 == 1</pre><p>Validating the checksum proves the IBAN is well-formed, not that the account exists or belongs to the person. That is what an account-verification endpoint is for.</p></div>
+<div class="ans" id="a3"><p><b>3. Split money without losing a cent</b> <a href="#q3">back ↑</a></p><p><b>Hint:</b> Use fractions.Fraction so the shares are exact: Fraction(total) * Fraction(w) / Fraction(sum). int() floors a non-negative Fraction. Then sort indexes by (-remainder, index) and add 1 to the first `leftover` of them.</p><p><b>Reference solution:</b></p><pre>from fractions import Fraction
+
+def split_amount(total_minor, weights):
+    if not weights or any(w &lt; 0 for w in weights) or sum(weights) &lt;= 0:
+        raise ValueError('invalid weights')
+    ws = [Fraction(w) for w in weights]
+    total_weight = sum(ws)
+    exact = [Fraction(total_minor) * w / total_weight for w in ws]
+    parts = [int(x) for x in exact]
+    leftover = total_minor - sum(parts)
+    order = sorted(range(len(parts)), key=lambda i: (-(exact[i] - parts[i]), i))
+    for k in range(leftover):
+        parts[order[k % len(parts)]] += 1
+    return parts</pre><p>Money is integer minor units plus a currency code. Keep the allocation rule in the spec (for example fees go to the platform) and always test the invariant “parts sum to the total”.</p></div>
+<div class="ans" id="a4"><p><b>4. Merge payment status updates safely</b> <a href="#q4">back ↑</a></p><p><b>Hint:</b> A RANK dict and a TERMINAL set. Handle RJCT and CANC before the generic “higher rank wins” comparison.</p><p><b>Reference solution:</b></p><pre>RANK = {'RCVD': 0, 'PDNG': 1, 'ACTC': 2, 'ACCP': 3, 'ACSP': 4, 'ACSC': 5, 'ACCC': 6}
+TERMINAL = {'ACCC', 'RJCT', 'CANC'}
+
+def apply_status(current, incoming):
+    known = set(RANK) | {'RJCT', 'CANC'}
+    if current not in known or incoming not in known:
+        raise ValueError('unknown status')
+    if current in TERMINAL:
+        return current
+    if incoming == 'RJCT':
+        return current if RANK[current] &gt;= 5 else 'RJCT'
+    if incoming == 'CANC':
+        return 'CANC' if RANK[current] &lt;= 2 else current
+    return incoming if RANK[incoming] &gt; RANK[current] else current</pre><p>The design principle: status handling must be idempotent and monotonic, so replays, retries and out-of-order webhooks converge to the same state. Store the raw bank statuses too, for audit and debugging.</p></div>
+<div class="ans" id="a5"><p><b>5. Spot the money bugs</b> <a href="#q5">back ↑</a></p><p><b>Hint:</b> Both bugs are about numbers that cannot be represented as whole cents.</p><ul><li><b>Line 2:</b> Money as floating-point euros. <code>19.99 * 0.15</code> is not exactly representable, so totals drift by fractions of a cent. Use integer minor units (cents) or <code>decimal.Decimal</code>, and one documented rounding rule.</li><li><b>Line 6:</b> <code>/</code> is true division in Python 3, so <code>100 / 3</code> gives <code>33.333…</code>: fractional cents, and the parts do not add up to the total. Use <code>divmod</code> and hand the leftover cents out one at a time (largest remainder).</li></ul></div>
+<div class="ans" id="a6"><p><b>6. Quick check</b> <a href="#q6">back ↑</a></p><p><b>B.</b> Regresses a settled payment to “in process”, which could trigger a duplicate payout or confusing notifications</p><div>Out-of-order delivery is normal. Use monotonic state rules (or event versions) so late events cannot move state backwards.</div></div>
+<div class="ans" id="a7"><p><b>7. Check 1</b> <a href="#q7">back ↑</a></p><p><b>A.</b> Store integer minor units (1999) plus the ISO 4217 currency, define one rounding rule, and never mix currencies</p><div>Floats cannot represent most decimals exactly and drop the currency. Minor units plus ISO code plus a single rounding rule is the money rule.</div></div>
+<div class="ans" id="a8"><p><b>8. Check 2</b> <a href="#q8">back ↑</a></p><p><b>C.</b> Keep the ledger append-only: deduplicate with idempotency keys and fix mistakes with reversing entries, never edits or deletes</p><div>Ledger entries are append-only and payment creation uses idempotency keys, so replays are deduped and corrections are traceable reversals.</div></div>
+<p class="nav"><a href="ob-security.html">← Consent, SCA &amp; security model</a> · <a href="ob-aggregator-eng.html">Engineering a multi-bank aggregator →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dirty flag and caching · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdpatterns">Game Programming Patterns</a> · lesson 7 of 12 · 35 min</p>
+<h1>Dirty flag and caching</h1>
+<p class="sum">Do expensive work only when its inputs changed, and the cache-invalidation bugs that come with it.</p>
+<div class="sec">
+<h3>The problem</h3>
+<p>Some values are expensive to compute from other values: a node's world transform from its parents, a bounding box from its children, the shortest path from the map, the layout of a UI panel, the total weight of an inventory. Recomputing them every frame is wasteful when almost nothing changed. Computing them only when something <i>did</i> change is a cache, and the hard part of any cache is knowing when it is stale.</p>
+<h3>The pattern</h3>
+<p>Keep a boolean next to the cached value. <b>Every code path that changes an input sets the flag.</b> When someone reads the value: if the flag is clear, return the cache; otherwise recompute, store, clear the flag.</p>
+<pre><code># GDScript
+var _dirty := true
+var _cached_weight := 0.0
+
+func add_item(item):
+    items.append(item)
+    _dirty = true                     # the invariant: any change marks it dirty
+
+func total_weight() -> float:
+    if _dirty:
+        _cached_weight = items.reduce(func(a, i): return a + i.weight, 0.0)
+        _dirty = false
+    return _cached_weight</code></pre>
+<h3>Hierarchies: propagate the flag down</h3>
+<p>In a transform tree, moving a node changes the world transform of <b>all its descendants</b>. So <code>set_local</code> marks the node and every descendant dirty; reading a world value cleans only the nodes you actually read, parent first. Siblings and ancestors are not touched. This is exactly the structure in the drill, and the reason Godot's <code>Node2D.global_position</code> is cheap to read repeatedly.</p>
+<h3>When to clean: lazily or in a batch</h3>
+<ul><li><b>Lazy (on read):</b> pay only for what is used, but a read might unexpectedly be slow (a hitch the first time something is read after a big change).</li><li><b>Batch (once per frame at a known point):</b> predictable cost, but you may compute things nobody reads, and reads before the clean see stale data.</li></ul>
+<h3>The bugs</h3>
+<ul><li><b>Forgetting to set the flag</b> on one path (a second setter, a method that changes the data directly, loading a save). The symptom is "the value is wrong until something unrelated triggers a refresh". Funnel all writes through one function, or make the data private so only code that sets the flag can modify it.</li><li><b>Stale reads in the same frame</b> when cleaning is batched.</li><li><b>Cleaning too eagerly</b>: marking dirty on every write and recomputing on every read can be slower than no cache if reads and writes alternate. Measure.</li><li>The related patterns: <b>double buffering</b> (sequencing lesson) and <b>memoization</b> with an explicit key. A <b>version number</b> instead of a boolean ("recompute if my inputs' versions changed") avoids one-dirty-flag-per-reader when many consumers cache the same source.</li></ul>
+<h3>Where games use it</h3>
+<p>Transform hierarchies, physics shape updates, navmesh rebuilds, text and UI layout, lighting rebuilds, "the save is out of date" prompts, and shader parameter uploads. Rule: <b>if a value is derived and read more often than it changes, give it a dirty flag.</b></p></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Dirty flag: lazy world transforms</p><p>In a scene graph a node's <b>world</b> position is its parent's world position plus its own local offset (1-D here to keep it small). Recomputing every world value every frame is wasteful when almost nothing moved. Cache each node's world value with a <b>dirty flag</b>.</p>
+<ul><li><code>add(parent, local)</code> returns the new node's index. A parent always has a smaller index than its children.</li><li><code>setLocal(i, v)</code> changes the local value and marks <b>that node and all its descendants</b> dirty (their cached world values are now wrong).</li><li><code>world(i)</code> returns the world value. If the node is not dirty, return the cache. Otherwise compute it from the parent's (cached or recomputed) world value, store it, clear the flag and add one to <code>recomputes</code>.</li></ul>
+<p>The tests count <code>recomputes</code>: an unchanged scene must cost nothing, and changing a node must not recompute its ancestors or its siblings.</p><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub const Scene = struct {
+    const max = 8;
+
+    parent: [max]?usize = @splat(null),
+    local: [max]i32 = @splat(0),
+    cache: [max]i32 = @splat(0),
+    dirty: [max]bool = @splat(true),
+    n: usize = 0,
+    recomputes: u32 = 0,
+
+    pub fn add(self: *Scene, parent: ?usize, local: i32) usize {
+        _ = self;
+        _ = parent;
+        _ = local;
+        return 0;
+    }
+
+    pub fn setLocal(self: *Scene, i: usize, v: i32) void {
+        _ = self;
+        _ = i;
+        _ = v;
+    }
+
+    pub fn world(self: *Scene, i: usize) i32 {
+        _ = self;
+        _ = i;
+        return 0;
+    }
+};
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You moved a parent node, but a child's world position is still the old one until the next frame. Which is the most likely mistake?</div><ol class="opts"><li><b>A.</b> The child needs a bigger hitbox</li><li><b>B.</b> Moving the parent did not mark its descendants dirty, so their cached world transforms were reused</li><li><b>C.</b> Floating point error</li><li><b>D.</b> The GPU is late</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A dirty-flag cache sits next to a value that is written 1000 times a frame and read once a frame. Which is the better cleaning strategy?</div><ol class="opts"><li><b>A.</b> Recompute on every write</li><li><b>B.</b> Mark dirty on writes (cheap) and recompute lazily once, on the read</li><li><b>C.</b> Never cache</li><li><b>D.</b> Recompute on a timer</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Bug hunt: Spot the stale-cache bugs</p><p>A GDScript inventory with a cached total. Click the <b>2</b> lines that let the cache go stale.</p><pre> 1  var items := []
+ 2  var _dirty := true
+ 3  var _total := 0
+ 4  
+ 5  func add(item):
+ 6      items.append(item)
+ 7      _dirty = true
+ 8  
+ 9  func remove_at(i):
+10      items.remove_at(i)
+11  
+12  func load_from(data):
+13      items = data.items
+14      _dirty = false
+15  
+16  func total() -&gt; int:
+17      if _dirty:
+18          _total = items.reduce(func(a, it): return a + it.weight, 0)
+19          _dirty = false
+20      return _total</pre><p>2 buggy lines. Find them, then check.</p><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. An inventory total is correct at first, then stays wrong after some operations until an unrelated action refreshes it. What is the most likely cause and fix?</div><ol class="opts"><li><b>A.</b> The cache is too small, so allocate a bigger one</li><li><b>B.</b> A code path changes the inputs without setting the dirty flag; funnel all writes through one function or make the data private so only flag-setting code can modify it</li><li><b>C.</b> The CPU cache is full, so buy faster RAM</li><li><b>D.</b> Reading the value too often wears out the flag</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. A derived value is read every frame but its inputs change rarely, and occasionally a read hitches after a big change. You are cleaning lazily on read. What is the alternative and its trade-off?</div><ol class="opts"><li><b>A.</b> Clean in a batch once per frame at a known point: predictable cost, but you may compute things nobody reads and reads before the clean see stale data</li><li><b>B.</b> Never mark anything dirty again</li><li><b>C.</b> Recompute on every write even when nobody reads</li><li><b>D.</b> Delete the derived value and ask the player</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="pat-type-object.html">← Type object, prototype and data-driven design</a> · <a href="pat-component.html">Component, subclass sandbox and service locator →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Dirty flag: lazy world transforms</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Because a parent always has a smaller index than its children, one forward pass after setLocal is enough: for j in i+1..n, if the parent of j is dirty then mark j dirty. world(i) is recursive: base = parent ? world(parent) : 0.</p><p>Dirty Flag is cache invalidation with a boolean. The costs are (1) you must set the flag on every path that changes the input (miss one and you get stale data, the classic bug) and (2) you must decide when to clean: lazily on read, like here, or in a batch at a known point in the frame. Engines use it everywhere: transform hierarchies, bounding boxes, navmesh and lighting rebuilds, UI layout, "needs save" markers.</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Moving the parent did not mark its descendants dirty, so their cached world transforms were reused</p><div>A dirty flag only works if every change to an input invalidates every dependent cache, including the children.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Mark dirty on writes (cheap) and recompute lazily once, on the read</p><div>Writes only set a boolean; the expensive work happens once when the value is actually needed.</div></div>
+<div class="ans" id="a4"><p><b>4. Spot the stale-cache bugs</b> <a href="#q4">back ↑</a></p><p><b>Hint:</b> Look for the writers of items. One forgets the flag, one clears it by mistake.</p><ul><li><b>Line 10:</b> <code>remove_at</code> changes the inputs but never sets <code>_dirty</code>, so the total keeps counting the removed item.</li><li><b>Line 14:</b> Loading new items must <b>invalidate</b> the cache (<code>_dirty = true</code>); setting it to false claims the old total is still valid for the new data.</li></ul></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>B.</b> A code path changes the inputs without setting the dirty flag; funnel all writes through one function or make the data private so only flag-setting code can modify it</p><div>A cache is only correct if every input change invalidates it. One bypassing writer causes stale-until-coincidence bugs.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>A.</b> Clean in a batch once per frame at a known point: predictable cost, but you may compute things nobody reads and reads before the clean see stale data</p><div>Lazy pays only for what is used but can hitch; batching is predictable but may do wasted work or serve stale reads.</div></div>
+<p class="nav"><a href="pat-type-object.html">← Type object, prototype and data-driven design</a> · <a href="pat-component.html">Component, subclass sandbox and service locator →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

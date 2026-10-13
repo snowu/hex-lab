@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Integration and stability · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdphysics">Simulation &amp; Physics</a> · lesson 1 of 5 · 40 min</p>
+<h1>Integration and stability</h1>
+<p class="sum">How acceleration becomes motion, why the obvious method explodes, and which integrator to use.</p>
+<div class="sec">
+<h3>Simulating motion</h3>
+<p>Physics gives you <b>forces</b>, so accelerations: <code>a = F / m</code>. To get motion you must <b>integrate</b>: velocity is the integral of acceleration, position the integral of velocity. Computers do it in small steps of size <code>dt</code>, approximating the continuous curve with straight segments. How you take each step decides whether the simulation is accurate, stable, or blows up.</p>
+<h3>Explicit (forward) Euler</h3>
+<pre><code>position += velocity * dt
+velocity += acceleration * dt</code></pre>
+<p>The most natural code, and the worst. It uses the <i>old</i> velocity to move, so each step overshoots a little. For anything that oscillates (springs, orbits, pendulums, bouncing) the overshoot <b>adds energy every step</b>: the spring swings wider and wider until it explodes. The simulation below shows it.</p>
+<h3>Semi-implicit (symplectic) Euler</h3>
+<p>Swap the two lines: update the velocity first, then move with the <b>new</b> velocity.</p>
+<pre><code>velocity += acceleration * dt
+position += velocity * dt</code></pre>
+<p>Same cost, one line moved, and the energy stays bounded: it wobbles around the true value instead of growing. This is the default in most game engines (Box2D, Bullet, Godot's physics) and the right first choice. Note that for a jump under constant gravity the answer is slightly different from explicit Euler: how high you jump depends on the integrator and the step size. That is one more reason to fix the step (game loop lesson).</p>
+<h3>Velocity Verlet</h3>
+<p>Uses the average of the old and new acceleration, and is <b>second-order</b>: halving the step cuts the error by four, not two. It is the integrator behind ropes and cloth (next lessons) and molecular simulations.</p>
+<pre><code>position += velocity * dt + 0.5 * a_old * dt * dt
+a_new = acceleration(position)
+velocity += 0.5 * (a_old + a_new) * dt</code></pre>
+<h3>RK4 and friends</h3>
+<p><b>Runge-Kutta 4</b> evaluates the forces four times per step and is very accurate for smooth problems, but it is not symplectic (energy slowly drifts) and costs four force evaluations. It is used for orbits and vehicle simulations where accuracy per step matters more than cost. For most games, semi-implicit Euler or Verlet with a fixed step is the better trade.</p>
+<h3>Stability: stiff springs and large steps</h3>
+<p>Every integrator has a limit. A spring with stiffness <code>k</code> and unit mass oscillates with angular frequency <code>sqrt(k)</code>. Semi-implicit Euler is stable only while <code>dt * sqrt(k) &lt; 2</code>; beyond that it explodes whatever you do. That is why a very stiff spring (a character attached to a cursor, a hard suspension) needs a small step, <b>substeps</b> (run the physics 2 to 8 times per frame), or an <b>implicit</b> method that is unconditionally stable (it solves for the new state instead of extrapolating) at the price of a bit of artificial damping.</p>
+<h3>Damping and friction</h3>
+<p>Real systems lose energy. Simple damping: <code>velocity *= pow(damping_per_second, dt)</code> (not <code>velocity *= 0.99</code> per frame, which depends on the frame rate: see the smoothing lesson). Add it deliberately; do not rely on integration error to "calm things down", because then the behaviour changes with the step size.</p>
+<h3>Practical recipe</h3>
+<ol><li>Fixed timestep for the simulation (60 Hz is common).</li><li>Semi-implicit Euler by default; Verlet if you have constraints or want better accuracy.</li><li>Substep stiff parts instead of shrinking the global step.</li><li>Clamp or cap velocities to stay in the stable range and to prevent tunneling.</li><li>Test energy: simulate a frictionless spring or pendulum for 10,000 steps and see if it stays bounded. You will do exactly that in the drill.</li></ol></div>
+<div class="sec"><div class="box"><p class="kind">Simulation: Three integrators on the same spring</p><p>A frictionless spring should oscillate forever with constant energy. Pink is explicit Euler, amber semi-implicit Euler, cyan velocity Verlet, the dashed line is the exact answer.</p><p><b>Try this in the full app:</b></p><ul><li>At the default settings the pink curve grows without bound while the amber one stays near the exact curve: one swapped line of code.</li><li>Increase the <b>time step</b> to about 150 ms: even the stable methods now visibly drift in phase.</li><li>Raise <b>stiffness k</b> and the step together until amber also explodes: the stability limit <code>dt·√k &lt; 2</code>.</li><li>Compare how much more accurate cyan (Verlet) is at the same step as amber.</li></ul><p class="note">Interactive: needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Integrators: why the order of two lines matters</p><p>A spring with unit mass accelerates by <code>a = -k * x</code>. An <b>integrator</b> turns acceleration into motion one time step at a time. The obvious version (explicit Euler: <code>x += v*dt; v += a*dt</code>) <b>adds energy every step</b> and the spring slowly explodes. The starter does exactly that. Implement two better ones:</p>
+<ul><li><code>semiImplicit</code> (symplectic Euler): update the velocity first, then move using the <b>new</b> velocity. Same cost, but the energy stays bounded.</li><li><code>velocityVerlet</code>: <code>x += v*dt + a*dt*dt/2</code>, compute the new acceleration from the new position, then <code>v += (a_old + a_new) * dt / 2</code>. More accurate for the same step size.</li></ul>
+<p>The tests run 10,000 steps (k = 4, dt = 0.01) and check how far the total energy <code>v²/2 + k x²/2</code> drifts, and compare positions with the exact solution <code>cos(t)</code> for k = 1.</p><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub const State = struct { x: f64, v: f64 };
+
+// Spring with unit mass: acceleration = -k * x.
+// The starter is explicit Euler, which gains energy every step. Fix both functions.
+pub fn semiImplicit(s: State, k: f64, dt: f64) State {
+    const a = -k * s.x;
+    return .{ .x = s.x + s.v * dt, .v = s.v + a * dt };
+}
+
+pub fn velocityVerlet(s: State, k: f64, dt: f64) State {
+    const a = -k * s.x;
+    return .{ .x = s.x + s.v * dt, .v = s.v + a * dt };
+}
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You replace <code>position += velocity*dt; velocity += a*dt</code> with the same two lines in the opposite order. What changes?</div><ol class="opts"><li><b>A.</b> Nothing, it is the same maths</li><li><b>B.</b> It becomes semi-implicit Euler: the energy of oscillating systems stays bounded instead of growing</li><li><b>C.</b> It becomes slower</li><li><b>D.</b> It becomes Verlet</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A very stiff spring explodes even with semi-implicit Euler at 60 Hz. Which fix keeps the behaviour correct?</div><ol class="opts"><li><b>A.</b> Add random damping until it stops</li><li><b>B.</b> Run more physics substeps for that system (or use an implicit method) so dt·√k stays under the stability limit</li><li><b>C.</b> Lower the frame rate</li><li><b>D.</b> Clamp the position to zero</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Why is <code>velocity *= 0.99</code> every frame a bad way to add drag?</div><ol class="opts"><li><b>A.</b> It is too slow</li><li><b>B.</b> The amount of drag per second depends on the frame rate; use velocity *= pow(d, dt) or an exponential form</li><li><b>C.</b> It can make velocity negative</li><li><b>D.</b> It breaks collisions</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. RK4 evaluates forces four times per step and is very accurate on smooth orbits. Why is it still not the default for most game bodies?</div><ol class="opts"><li><b>A.</b> It costs four force evaluations per step and is not symplectic, so energy slowly drifts; semi-implicit Euler or Verlet with a fixed step is the better trade</li><li><b>B.</b> It is less accurate than explicit Euler</li><li><b>C.</b> It cannot handle gravity</li><li><b>D.</b> It only works on Tuesdays</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. You suspect your integrator is gaining energy. What is the prescribed test?</div><ol class="opts"><li><b>A.</b> Ship it and watch player reviews</li><li><b>B.</b> Simulate a frictionless spring or pendulum for 10,000 steps at a fixed timestep and check the motion stays bounded</li><li><b>C.</b> Halve the gravity and see if it looks nicer</li><li><b>D.</b> Count the frames per second</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="phy-impulses.html">Collision response with impulses →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Integrators: why the order of two lines matters</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> semiImplicit: v_new = v + (-k*x)*dt; x_new = x + v_new*dt. velocityVerlet: a = -k*x; x_new = x + v*dt + 0.5*a*dt*dt; a_new = -k*x_new; v_new = v + 0.5*(a + a_new)*dt.</p><p>Gaffer On Games, "Integration Basics", is the reference. Explicit Euler is first-order and unconditionally unstable for oscillators; semi-implicit Euler is also first-order but symplectic, which is why it is what most game physics engines (Box2D, Bullet, Godot) use. Verlet is second-order and the basis of rope and cloth. RK4 is more accurate per step but costs four force evaluations, usually not worth it for games. Whatever you pick, integrate with a fixed timestep (see the game loop lesson): a variable dt makes the energy behaviour unpredictable.</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> It becomes semi-implicit Euler: the energy of oscillating systems stays bounded instead of growing</p><div>Moving with the updated velocity makes the method symplectic. This tiny reorder is why most engines use it.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Run more physics substeps for that system (or use an implicit method) so dt·√k stays under the stability limit</p><div>Instability is a step-size problem. Substeps or an unconditionally stable method address the cause.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> The amount of drag per second depends on the frame rate; use velocity *= pow(d, dt) or an exponential form</p><div>0.99 per frame is 0.99^60 per second at 60 fps but 0.99^144 at 144 fps: different games on different machines.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>A.</b> It costs four force evaluations per step and is not symplectic, so energy slowly drifts; semi-implicit Euler or Verlet with a fixed step is the better trade</p><div>Accuracy per step is not the whole trade. Cost and bounded energy matter more for long game simulations.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>B.</b> Simulate a frictionless spring or pendulum for 10,000 steps at a fixed timestep and check the motion stays bounded</p><div>A conservative system must oscillate forever with constant energy. Growth proves a bad method or step.</div></div>
+<p class="nav"><a href="phy-impulses.html">Collision response with impulses →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

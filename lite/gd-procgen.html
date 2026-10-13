@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Procedural generation · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdcraft">Techniques &amp; Practice</a> · lesson 1 of 8 · 45 min</p>
+<h1>Procedural generation</h1>
+<p class="sum">Seeds, deterministic randomness, noise, cellular automata caves and the validation step everyone forgets.</p>
+<div class="sec">
+<h3>Seeds and determinism</h3>
+<p>Procedural content is a function of a <b>seed</b>: same seed, same world. That gives you shareable seeds, daily challenges, replays, and bugs you can reproduce. It only works if your random numbers are <b>yours</b>: a generator with explicit state that you create from the seed, not a global one that any system can advance. If a particle effect calls <code>random()</code> in the middle of level generation, every level after it changes. Keep one stream per concern (layout, loot, cosmetics). Implement a small LCG in the first drill to see exactly what state means.</p>
+<h3>Common techniques</h3>
+<ul><li><b>Random walk / drunkard's walk</b>: a digger wanders and carves floor. Cheap, organic caves and corridors.</li><li><b>Cellular automata</b>: random noise, then repeatedly apply a neighbour-counting rule. Creates cave-like blobs (second drill and the simulation).</li><li><b>Room and corridor / BSP</b>: split space into rooms recursively and connect them. Classic dungeons.</li><li><b>Noise</b> (Perlin, simplex, value noise): smooth randomness for terrain heights, biomes, clouds. Layer several scales (<i>octaves</i>) for detail.</li><li><b>Wave Function Collapse</b>: choose tiles so every neighbour pair is compatible, propagate constraints, collapse the lowest-entropy cell. Great for consistent local style.</li><li><b>Grammars and templates</b>: assemble hand-made chunks (Spelunky's level chunks) so quality stays high.</li></ul>
+<h3>The part that makes it playable</h3>
+<p>Randomness makes <i>content</i>; design makes it <i>fair</i>. Always add a validation and repair step:</p>
+<ul><li>Is the start connected to the exit? (Flood-fill. The simulation highlights disconnected pockets in amber.)</li><li>Are there enough resources, and not too many enemies at the spawn?</li><li>Reject-and-retry with the next seed, or repair by carving a tunnel.</li><li>Constrain the randomness. Pure noise is boring; <i>authored rules plus randomness</i> is what produces memorable levels.</li></ul></div>
+<div class="sec"><div class="box"><p class="kind">Drill: A seeded random number generator</p><p>Procedural levels, replays and "daily seeds" need a deterministic RNG you control. Implement a linear congruential generator. The state update is <code>state = (1103515245 * state + 12345) mod 2^31</code>, starting from <code>seed mod 2^31</code>.</p>
+<ul><li><code>next_int(n)</code>: update the state once, return <code>(state &gt;&gt; 16) % n</code>. The low bits of an LCG are weak, so use the high ones.</li><li><code>next_float()</code>: update the state once, return <code>state / 2^31</code> as a double.</li></ul><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub const Rng = struct {
+    state: u64,
+
+    pub fn init(seed: u64) Rng {
+        _ = seed;
+        return .{ .state = 0 };
+    }
+
+    pub fn nextInt(self: *Rng, n: u32) u32 {
+        _ = self;
+        _ = n;
+        return 0;
+    }
+
+    pub fn nextFloat(self: *Rng) f64 {
+        _ = self;
+        return 0;
+    }
+};
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Simulation: Cellular automata caves</p><p>Random noise is smoothed with the rule “become a wall if 5 or more of the 8 neighbours are walls”. Press <b>smooth</b> a few times.</p><p><b>Try this in the full app:</b></p><ul><li>Start with ~45% walls and press smooth 4 to 5 times: caves emerge from static.</li><li>Raise the fill to 55%: more solid, more disconnected pockets (amber).</li><li>Lower it to 35%: huge open areas, almost no structure.</li><li>Press <b>keep largest cave</b> to apply the usual repair: delete everything unreachable.</li><li>Press <b>new seed</b> and compare; same parameters, different map.</li></ul><p class="note">Interactive: needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Cave generation: one smoothing step</p><p>Cellular-automata caves start from random noise and repeatedly apply one rule. Write <code>smooth</code>: the map is a grid of <code>'#'</code> (wall) and <code>'.'</code> (floor). A cell of the next generation is a wall if <b>5 or more of its 8 neighbours</b> are walls, otherwise floor. Cells outside the map count as walls. Read only from the old generation. Try the same rule in the cave simulation above.</p>
+<p>Zig: the map is a flat <code>w * h</code> byte slice, write the result into <code>dst</code>. C++: rows as strings, return the new grid.</p><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+/// src and dst are w*h bytes, row-major. '#' wall, '.' floor.
+pub fn smooth(src: []const u8, w: usize, h: usize, dst: []u8) void {
+    _ = w;
+    _ = h;
+    @memcpy(dst, src);
+}
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A seeded dungeon changes after you add a particle effect that calls the global <code>random()</code>. Why?</div><ol class="opts"><li><b>A.</b> Particles use too much memory</li><li><b>B.</b> The effect advances the shared random stream, shifting every later number used by generation</li><li><b>C.</b> Seeds expire</li><li><b>D.</b> The GPU interferes</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Which step is essential after cellular-automata generation before shipping the level?</div><ol class="opts"><li><b>A.</b> Increase the number of smoothing steps</li><li><b>B.</b> Check connectivity (flood fill) between start, exit and key areas, and repair or reject</li><li><b>C.</b> Convert to a PNG</li><li><b>D.</b> Nothing</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. You want shareable seeds and reproducible bug reports for generated levels. What must be true of the random numbers?</div><ol class="opts"><li><b>A.</b> They must come from explicit per-concern generator state created from the seed, so cosmetics cannot advance gameplay numbers</li><li><b>B.</b> They must come from the fastest global generator available</li><li><b>C.</b> They must be reseeded from the wall clock every room</li><li><b>D.</b> They must never be reused across seeds</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. Cellular automata produced great-looking caves, but some runs trap the player away from the exit. What is the required next step?</div><ol class="opts"><li><b>A.</b> Run more smoothing steps until every map connects</li><li><b>B.</b> Flood-fill between start, exit and key areas, then repair with a tunnel or reject and retry the next seed</li><li><b>C.</b> Ship it: unreachable pockets add mystery</li><li><b>D.</b> Convert the map to an image to inspect it visually</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="gd-noise.html">Noise, terrain and Wave Function Collapse →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. A seeded random number generator</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Use 64-bit integers: 1103515245 * (2^31 - 1) is about 2.4e18, which fits in u64 / uint64_t without overflow, so you can take the modulo afterwards.</p><p>Never use a global random for gameplay: you cannot replay it, and any extra call (a particle spawn!) shifts every later result. Keep separate streams per concern (loot, level generation, cosmetic effects). Godot has RandomNumberGenerator with a seed; PCG and xoshiro are far better generators than this LCG, which is for teaching. Zig ships std.Random.DefaultPrng (xoshiro) and C++ has <random>.</p></div>
+<div class="ans" id="a2"><p><b>2. Cave generation: one smoothing step</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> For every cell loop dr, dc over -1..1 except (0,0). A neighbour outside the grid counts as a wall. Compare the count with 5. Never write into the grid you are reading from. Note a 2x2 map: every cell has 5 outside neighbours, so all four become walls.</p><p>Typical recipe: fill about 45% walls, run 4 or 5 smoothing steps, then flood-fill to find the caves and either keep the biggest or tunnel between them. Other generators: random-walk "drunkard" digging, BSP rooms, Wave Function Collapse for tile consistency.</p></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> The effect advances the shared random stream, shifting every later number used by generation</p><div>Use separate RNG instances per system so cosmetic randomness cannot disturb gameplay randomness.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Check connectivity (flood fill) between start, exit and key areas, and repair or reject</p><div>The rule makes caves, not guarantees. Validate reachability and difficulty.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>A.</b> They must come from explicit per-concern generator state created from the seed, so cosmetics cannot advance gameplay numbers</p><div>Determinism needs owned streams: one stream per concern keeps a particle effect from shifting every later level number.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>B.</b> Flood-fill between start, exit and key areas, then repair with a tunnel or reject and retry the next seed</p><div>The smoothing rule makes caves, not guarantees, so validation plus repair turns content into a fair level.</div></div>
+<p class="nav"><a href="gd-noise.html">Noise, terrain and Wave Function Collapse →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

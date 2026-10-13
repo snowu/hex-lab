@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Local-first apps and cross-device sync · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#fullstack">Full-Stack: Browser to Edge to Postgres</a> · lesson 5 of 6 · 65 min</p>
+<h1>Local-first apps and cross-device sync</h1>
+<p class="sum">Save locally first, sync with compare-and-swap, never silently overwrite.</p>
+<div class="sec">
+<p><b>Local-first</b> means the app works fully offline, writes to local storage immediately, and treats the cloud as optional sync. It is faster, more resilient, and the user never loses progress to a network error.</p>
+<h3>The coordinator pattern</h3>
+<ol>
+<li><b>Save locally, synchronously</b> at every save point. This must never depend on the network.</li>
+<li>Mark the snapshot <b>dirty</b>; <b>debounce</b> an upload (seconds), and flush at reliable checkpoints. Do not rely on <code>beforeunload</code> for network calls.</li>
+<li>Hash the serialised snapshot and <b>skip uploads that changed nothing</b>.</li>
+<li>Retry with backoff when offline; show a quiet status (“Saved on this device”, “Synced”).</li>
+</ol>
+<h3>Ordering with a server-side generation</h3>
+<p>Every cloud row has a <b>monotonic generation</b> controlled by the server. An upload says <i>“I am replacing generation N”</i>. The database applies it only if N is still current (<code>UPDATE ... WHERE generation = N</code>), otherwise it reports a <b>conflict</b>. The server, not a device clock, decides the order, and a stale device is told rather than allowed to overwrite newer data. This is compare-and-swap, the same idea as <code>If-Match</code>.</p>
+<h3>Conflicts</h3>
+<ul>
+<li><b>Last write wins</b> by timestamp loses data and trusts clocks that disagree. Avoid it for anything valuable.</li>
+<li><b>Never auto-pick “the bigger one”</b> (more XP, higher level, later day): any of those can legitimately go backwards.</li>
+<li>When both sides changed since the last sync, <b>show both and let the person choose</b> (continue this device / use the cloud / keep offline).</li>
+<li>Field-level <b>merge</b> or <b>CRDTs</b> work when data has no cross-field invariants (collaborative text, counters). For a snapshot with invariants, merge only if you can prove they hold.</li>
+<li>Never replace state that is in active use (mid-game, mid-edit). Resolve at a safe point.</li>
+</ul>
+<h3>Details that bite</h3>
+<ul>
+<li><b>Resetting</b> must also go through the sync path, or an older cloud snapshot comes back on the next load.</li>
+<li>A <b>stale client</b> (older format) must not overwrite a newer format: store a format/schema version and enforce it server-side.</li>
+<li>Persist a random <b>device id</b> separately from the data. Reconcile on account switch rather than uploading the previous account’s data.</li>
+<li><b>Be careful with strict constraints</b> on columns clients write (an over-tight regex on a hash broke real installs once). Keep integrity limits to what you must enforce, such as a payload size cap.</li>
+<li>Installed web apps (PWAs) keep running old code: keep a compatibility shim for the previous API shape until old clients are gone.</li>
+<li>Passwordless sign-in by typed email code works across devices; magic links may not.</li>
+</ul>
+<h3>Service workers and storage</h3>
+<p>A service worker intercepts fetches to serve cached assets offline (cache-first for static files, network-first or stale-while-revalidate for data). <code>localStorage</code> is synchronous and small (a few MB); use IndexedDB for larger data. Browsers may evict storage under pressure unless you request persistence.</p></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Compare-and-swap cloud saves</p><p>A study app (or a game) keeps one progress snapshot per user in the cloud and syncs from several devices. The <b>server's generation counter</b> (never a device clock) decides ordering. Implement <code>class SaveStore</code> with <code>save(user, expected_generation, state, format_version, content_hash)</code> returning <code>{'status', 'generation'}</code>, and <code>load(user)</code> returning the stored state or <code>None</code>. Rules, in order:</p>
+<ol><li>No row yet: if <code>expected_generation</code> is <code>None</code> insert at generation 1 → <code>'ok'</code>; otherwise <code>'conflict'</code> (generation <code>None</code>).</li><li>The caller's <code>format_version</code> is older than the row's → <code>'stale_client'</code> (the current generation; never overwrite a newer format).</li><li>The row already has the same <code>content_hash</code> → <code>'unchanged'</code> (nothing written, generation unchanged).</li><li><code>expected_generation</code> differs from the current generation → <code>'conflict'</code> with the <b>current</b> generation.</li><li>Otherwise store it, increment the generation → <code>'ok'</code> with the new generation.</li></ol><p>Users are fully isolated from each other.</p><p><b>Starter:</b></p><pre>class SaveStore:
+    def __init__(self):
+        pass
+
+    def save(self, user, expected_generation, state, format_version, content_hash):
+        pass
+
+    def load(self, user):
+        pass
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Decide what a sync should do</p><p>The client has a local snapshot hash (<code>None</code> if nothing is saved locally), the hash it last synced successfully (<code>last_synced_hash</code>), the cloud generation it last saw (<code>last_generation</code>, <code>None</code> on a first sign-in), and the current cloud row <code>cloud</code> (<code>None</code> if there is none, otherwise <code>{'generation': int, 'hash': str}</code>). Write <code>decide_sync(local_hash, last_synced_hash, last_generation, cloud)</code> returning one of <code>'none'</code>, <code>'upload'</code>, <code>'download'</code>, <code>'conflict'</code>:</p>
+<ul><li>No cloud row: <code>'upload'</code> if there is local data, else <code>'none'</code>.</li><li>Cloud row but nothing local: <code>'download'</code>.</li><li>Local and cloud hashes equal: <code>'none'</code>.</li><li>Otherwise, local changed = <code>local_hash != last_synced_hash</code>; cloud changed = <code>last_generation is None</code> or the generation differs from <code>last_generation</code>. Both changed → <code>'conflict'</code> (never pick automatically); only local → <code>'upload'</code>; only cloud → <code>'download'</code>; neither → <code>'none'</code>.</li></ul><p><b>Starter:</b></p><pre>def decide_sync(local_hash, last_synced_hash, last_generation, cloud):
+    pass
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Bug hunt: Spot the sync bugs</p><p>This is a first draft of a sync routine. Click the <b>2</b> lines that can silently destroy a user’s progress.</p><pre>1  def sync(local, cloud):
+2      remote = cloud.fetch()
+3      if remote.updated_at &gt; local.updated_at:
+4          local.replace(remote.state)
+5      else:
+6          cloud.upload(local.state, expected=remote.generation)</pre><p>2 buggy lines. Find them, then check.</p><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Two devices both edited offline and then reconnect. The cloud row has a newer generation than device A last saw, and A also has local edits. What should A do?</div><ol class="opts"><li><b>A.</b> Upload anyway: the latest device wins</li><li><b>B.</b> Report a conflict and let the user choose between this device and the cloud copy (never overwrite automatically)</li><li><b>C.</b> Download the cloud copy and discard local edits</li><li><b>D.</b> Merge the numbers field by field and upload</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A player resets their game on device A while signed in. Later device B (still holding the old cloud snapshot in its cache) syncs. What must the reset have done so the old data does not come back?</div><ol class="opts"><li><b>A.</b> Nothing, deleting local data is enough</li><li><b>B.</b> Written the new empty state through the compare-and-swap path (or a tombstone), so the cloud generation moved on</li><li><b>C.</b> Cleared the browser cache on device B</li><li><b>D.</b> Waited one hour</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Why hash the snapshot and skip the upload when the hash has not changed?</div><ol class="opts"><li><b>A.</b> Hashes are encrypted</li><li><b>B.</b> UI-only changes often hit the same save path; skipping identical uploads saves generations, bandwidth and battery, and avoids pointless conflicts</li><li><b>C.</b> The database cannot store duplicates</li><li><b>D.</b> It makes uploads atomic</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Device clocks disagree by minutes. How should the server order uploads from offline devices?</div><ol class="opts"><li><b>A.</b> Compare updated_at timestamps across devices and keep the newest</li><li><b>B.</b> Let the last device to finish always win</li><li><b>C.</b> Use a server-side monotonic generation with compare-and-swap, telling stale devices of conflicts instead of overwriting</li><li><b>D.</b> Merge numeric fields by picking the larger value</li></ol><p class="tolink" id="q7"><a href="#a7">answer 7 ↓</a></p></div>
+<div class="box"><div class="q">2. An old app version with a previous data format syncs after a newer client upgraded the cloud snapshot. What prevents corruption?</div><ol class="opts"><li><b>A.</b> A format version check enforced server-side that rejects writes from stale formats</li><li><b>B.</b> A faster network on newer clients</li><li><b>C.</b> Longer debounce intervals before uploading</li><li><b>D.</b> Storing data in localStorage instead of IndexedDB</li></ol><p class="tolink" id="q8"><a href="#a8">answer 8 ↓</a></p></div>
+<p class="nav"><a href="fs-edge.html">← Edge and serverless: Cloudflare Workers, KV, Durable Objects</a> · <a href="fs-frontend.html">Frontend fundamentals for backend engineers →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Compare-and-swap cloud saves</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Keep rows = {user: {state, generation, format_version, content_hash}}. Follow the five rules in order: missing row first, then the format check, then the unchanged check, then the generation check, then the update. Deep-copy the state on the way in.</p><p><b>Reference solution:</b></p><pre>import copy
+
+class SaveStore:
+    def __init__(self):
+        self.rows = {}
+
+    def save(self, user, expected_generation, state, format_version, content_hash):
+        row = self.rows.get(user)
+        if row is None:
+            if expected_generation is not None:
+                return {'status': 'conflict', 'generation': None}
+            self.rows[user] = {'state': copy.deepcopy(state), 'generation': 1, 'format_version': format_version, 'content_hash': content_hash}
+            return {'status': 'ok', 'generation': 1}
+        if format_version &lt; row['format_version']:
+            return {'status': 'stale_client', 'generation': row['generation']}
+        if row['content_hash'] == content_hash:
+            return {'status': 'unchanged', 'generation': row['generation']}
+        if expected_generation != row['generation']:
+            return {'status': 'conflict', 'generation': row['generation']}
+        row.update(state=copy.deepcopy(state), generation=row['generation'] + 1, format_version=format_version, content_hash=content_hash)
+        return {'status': 'ok', 'generation': row['generation']}
+
+    def load(self, user):
+        row = self.rows.get(user)
+        return copy.deepcopy(row['state']) if row else None</pre><p>In Postgres this is a function that does the same update with WHERE generation = $expected, so the check and the write are one atomic statement. The key properties: the server decides ordering, a stale device is told rather than allowed to flatten newer data, and identical uploads cost nothing. Do not resolve a real conflict automatically by timestamps or by "bigger number wins": let the person choose.</p></div>
+<div class="ans" id="a2"><p><b>2. Decide what a sync should do</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> Handle the three easy cases first (no cloud, no local, equal hashes). Then compute the two booleans and return based on the four combinations. Note that the conflict case must never auto-resolve.</p><p><b>Reference solution:</b></p><pre>def decide_sync(local_hash, last_synced_hash, last_generation, cloud):
+    if cloud is None:
+        return 'none' if local_hash is None else 'upload'
+    if local_hash is None:
+        return 'download'
+    if local_hash == cloud['hash']:
+        return 'none'
+    local_changed = local_hash != last_synced_hash
+    cloud_changed = last_generation is None or cloud['generation'] != last_generation
+    if local_changed and cloud_changed:
+        return 'conflict'
+    if local_changed:
+        return 'upload'
+    if cloud_changed:
+        return 'download'
+    return 'none'</pre><p>This is the three-way comparison at the heart of every sync engine (git does the same with a merge base). Comparing hashes instead of timestamps avoids device clock skew. A real client also refuses to apply remote state during a critical section, and offers an explicit "keep this device / use the cloud" choice on conflict.</p></div>
+<div class="ans" id="a3"><p><b>3. Spot the sync bugs</b> <a href="#q3">back ↑</a></p><p><b>Hint:</b> One line trusts something that cannot be trusted to order events. The other replaces data nobody agreed to replace.</p><ul><li><b>Line 3:</b> Decides by comparing <b>wall-clock timestamps from different devices</b>. Clocks disagree, and a newer timestamp does not mean more or better progress. Compare content hashes and generations, and only the server’s generation orders writes.</li><li><b>Line 4:</b> Overwrites local state <b>silently</b>, even if it has unsynced changes (and possibly while it is in use). If both sides changed, this destroys the local progress. A real conflict needs an explicit choice at a safe moment.</li></ul></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Report a conflict and let the user choose between this device and the cloud copy (never overwrite automatically)</p><div>Both sides changed, so neither automatic choice is safe. Compare hashes, detect the conflict with the generation, and ask. Merge only when you can prove the invariants.</div></div>
+<div class="ans" id="a5"><p><b>5. Quick check</b> <a href="#q5">back ↑</a></p><p><b>B.</b> Written the new empty state through the compare-and-swap path (or a tombstone), so the cloud generation moved on</p><div>If the reset is only local, the unchanged cloud snapshot is still the newest thing the server knows and reappears. Reset must be a normal, ordered write.</div></div>
+<div class="ans" id="a6"><p><b>6. Quick check</b> <a href="#q6">back ↑</a></p><p><b>B.</b> UI-only changes often hit the same save path; skipping identical uploads saves generations, bandwidth and battery, and avoids pointless conflicts</p><div>Idempotent, content-addressed uploads are cheap to retry and keep the server’s generation meaningful.</div></div>
+<div class="ans" id="a7"><p><b>7. Check 1</b> <a href="#q7">back ↑</a></p><p><b>C.</b> Use a server-side monotonic generation with compare-and-swap, telling stale devices of conflicts instead of overwriting</p><div>Wall clocks cannot order events across devices; only the server generation gives a single comparable order.</div></div>
+<div class="ans" id="a8"><p><b>8. Check 2</b> <a href="#q8">back ↑</a></p><p><b>A.</b> A format version check enforced server-side that rejects writes from stale formats</p><div>Format versions checked by the server stop outdated clients from overwriting newer shapes they do not understand.</div></div>
+<p class="nav"><a href="fs-edge.html">← Edge and serverless: Cloudflare Workers, KV, Durable Objects</a> · <a href="fs-frontend.html">Frontend fundamentals for backend engineers →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

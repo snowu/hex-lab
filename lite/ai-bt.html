@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>From state machines to behaviour trees · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdai">Game AI</a> · lesson 1 of 5 · 35 min</p>
+<h1>From state machines to behaviour trees</h1>
+<p class="sum">Why hand-wired state machines stop scaling, and how a tree of small reusable nodes decides what to do every tick.</p>
+<div class="sec">
+<h3>Game AI is not machine learning</h3>
+<p>In games "AI" almost always means <b>decision making and movement for non-player characters</b>: the enemy that flanks, the shopkeeper that walks home at night, the ally that follows you. The goal is not to be intelligent but to be <b>believable and fun</b>: readable, fair, interesting to fight, and cheap enough to run for hundreds of characters. Techniques are old, well understood and mostly simple. This track covers the ones you will meet.</p>
+<h3>The limits of the state machine</h3>
+<p>A state machine (patterns track) is great to manage <i>what an agent is doing</i>. As an AI brain it scales badly: every state needs explicit transitions to others, and 30 states have up to 870 possible arrows. Adding "if low health, flee" means adding a transition from <b>every</b> state. Reusing "attack" in a different enemy means copying its wiring.</p>
+<h3>Behaviour trees</h3>
+<p>A <b>behaviour tree</b> (BT) makes the brain a tree of small nodes. Every tick the root is evaluated and each node returns one of three results: <code>success</code>, <code>failure</code> or <code>running</code> (still doing it, ask me again next tick). Because it is re-evaluated from the top, high-priority behaviour naturally interrupts low-priority behaviour.</p>
+<ul><li><b>Leaf nodes</b>: <i>conditions</i> ("can I see the player?", "is health below 30%?") and <i>actions</i> ("move to the target", "play the attack animation"). Actions that take time return <code>running</code>.</li><li><b>Sequence</b> (a logical AND): run children in order; stop at the first one that is not success. "Can see player AND in range AND attack."</li><li><b>Selector</b> or fallback (a logical OR): run children in order; stop at the first one that is not failure. "Attack, otherwise chase, otherwise patrol": a priority list.</li><li><b>Decorators</b> wrap one child and change its result or behaviour: <i>inverter</i> (swap success and failure), <i>cooldown</i> (fail for a while after success), <i>repeat</i>, <i>until success</i>, <i>timeout</i>, a <i>condition guard</i>.</li><li><b>Parallel</b>: run several children at once (move <i>and</i> shoot).</li></ul>
+<pre><code>Selector
+├── Sequence                 # 1. flee when hurt
+│   ├── Condition: health below 30%
+│   └── Action: run to cover
+├── Sequence                 # 2. fight when the player is near
+│   ├── Condition: can see player
+│   ├── Selector
+│   │   ├── Sequence [in range, Cooldown(1.5 s, Action: shoot)]
+│   │   └── Action: move toward player
+└── Action: patrol           # 3. otherwise do the idle thing</code></pre>
+<p>Notice the order is the <b>priority</b>: fleeing outranks fighting outranks patrolling, and there is no wiring between behaviours. To make another enemy that never flees, delete the first branch. In the drill you implement the tick for these nodes.</p>
+<h3>The running state and memory</h3>
+<p>A walking action returns <code>running</code> over many ticks. A plain sequence would restart from its first child each tick (re-checking conditions every time, which keeps the AI reactive). That is the default and usually what you want. When a sequence must <b>resume at the running child</b> (do step 1, 2 and 3 in order without re-running step 1) use a sequence <b>with memory</b>, at the cost of being less reactive. Know which one your library uses.</p>
+<h3>Blackboard</h3>
+<p>Nodes need shared facts: the current target, last known player position, ammo. A <b>blackboard</b> is a small key-value store that the tree reads and writes. Sensors write to it ("target = player"), conditions read it. It keeps nodes independent of each other and of the game's types.</p>
+<h3>Why BTs caught on (and when they do not fit)</h3>
+<ul><li>Modular and reusable: a "shoot at target" subtree is shared by all enemies.</li><li>Priorities and interruptions are structural.</li><li>Designers can edit them visually; programmers write the leaves.</li><li>Debuggable: highlight the path that succeeded this tick.</li></ul>
+<p>Drawbacks: state is implicit (hard to express "I have already done X"), they can be awkward for tasks where goals must be <i>planned</i> (the next lesson), and big trees need discipline (subtrees, naming). Many games combine: a state machine for animation/movement modes and a BT for decisions.</p>
+<h3>Implementation notes</h3>
+<ul><li>Tick at a lower rate than rendering (4 to 10 times a second is plenty) and stagger agents across frames.</li><li>Keep leaf actions short and let the tree compose them.</li><li>Godot has community addons (LimboAI, Beehave); Unreal has built-in behaviour trees; the idea is simple enough to write in a day.</li><li>Always build the <b>debug view</b> first: a way to see each agent's current path through the tree and its blackboard values.</li></ul></div>
+<div class="sec"><div class="box"><p class="kind">Drill: A behaviour tree tick</p><p>A <b>behaviour tree</b> decides what an enemy does by asking a tree of nodes, every tick, "can you do your job?". Each node answers <code>success</code>, <code>failure</code> or <code>running</code> (still busy, ask me again next tick). Implement <code>tick</code> for four kinds of node:</p>
+<ul><li><b>leaf</b>: the answer comes from <code>results[leaf_id]</code> (in a real game it would run a condition or action).</li><li><b>sequence</b> ("and"): tick children in order. The first one that is not <code>success</code> decides the answer (<code>failure</code> or <code>running</code>). All succeeded (or no children): <code>success</code>.</li><li><b>selector</b> ("or", a fallback list): tick children in order. The first one that is not <code>failure</code> decides the answer. All failed (or none): <code>failure</code>.</li><li><b>inverter</b>: swaps success and failure, passes <code>running</code> through.</li></ul>
+<p>Nodes live in an array. A leaf stores its result index in <code>a</code>. A sequence or selector stores the start of its children in <code>a</code> and the count in <code>b</code>; the children's node indices are in the <code>kids</code> array. An inverter stores its child's node index in <code>a</code>. The tree is re-evaluated from the root every tick (no memory), which keeps it reactive: if the enemy loses sight of the player, the chase branch fails on the next tick.</p><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub const Status = enum { success, failure, running };
+pub const Kind = enum { leaf, sequence, selector, inverter };
+pub const Node = struct { kind: Kind, a: usize = 0, b: usize = 0 };
+
+/// leaf: a = index into results. sequence/selector: children are kids[a .. a + b]. inverter: a = child node index.
+pub fn tick(nodes: []const Node, kids: []const usize, results: []const Status, root: usize) Status {
+    _ = nodes;
+    _ = kids;
+    _ = results;
+    _ = root;
+    return .failure;
+}
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You want an enemy to flee when its health is low, no matter what else it is doing. In a behaviour tree, where do you put that behaviour?</div><ol class="opts"><li><b>A.</b> At the end of the root selector</li><li><b>B.</b> As the first (highest priority) child of the root selector, guarded by a health condition</li><li><b>C.</b> Inside the patrol action</li><li><b>D.</b> In the animation controller</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">What does a <code>cooldown</code> decorator on the "shoot" action do?</div><ol class="opts"><li><b>A.</b> Makes it faster</li><li><b>B.</b> Fails (or skips) the action for a set time after it succeeds, so the enemy cannot fire every tick</li><li><b>C.</b> Delays the whole tree</li><li><b>D.</b> Removes the action</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Why is it normally fine to tick AI at 5 to 10 Hz instead of every frame?</div><ol class="opts"><li><b>A.</b> Players do not notice, and human reaction time is much slower; it saves CPU and can be staggered across agents</li><li><b>B.</b> Behaviour trees cannot run faster</li><li><b>C.</b> It makes the AI smarter</li><li><b>D.</b> The renderer needs the time</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. An enemy should attack only when it can see the player AND is in range. Which node composes those two conditions?</div><ol class="opts"><li><b>A.</b> A decorator</li><li><b>B.</b> A parallel node</li><li><b>C.</b> A sequence: it runs children in order and stops at the first non-success</li><li><b>D.</b> The blackboard</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. A sight sensor spots the player and a movement action needs that position on later ticks. Where should the position live?</div><ol class="opts"><li><b>A.</b> On a shared blackboard: sensors write facts like the target and last known position, conditions and actions read them</li><li><b>B.</b> Inside the patrol action only</li><li><b>C.</b> In the renderer</li><li><b>D.</b> In a local variable of the sensor</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="ai-planning.html">Utility AI and planners →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. A behaviour tree tick</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> A recursive function with a switch on the node kind. For a sequence: for each child index in kids[a..a+b], r = tick(child); if r != success return r. After the loop return success. A selector is the mirror image with failure.</p><p>Behaviour trees replaced big finite state machines in many games (Halo 2 popularised them) because they compose: you build "attack" once and reuse it under different parents, and adding a behaviour is adding a branch, not rewiring transitions. Real implementations add decorators (cooldown, repeat, "until success"), parallel nodes, a blackboard for shared data, and a memory variant so a sequence resumes at the running child. Godot has the LimboAI addon and the Beehave addon. The cost: debugging "why did it do that?" needs good tooling (highlight the active path).</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> As the first (highest priority) child of the root selector, guarded by a health condition</p><div>A selector tries children in order, so earlier children outrank later ones. Putting the flee branch first interrupts anything below it each tick.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Fails (or skips) the action for a set time after it succeeds, so the enemy cannot fire every tick</p><div>It is the standard way to rate-limit an action without a timer variable in the action itself.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>A.</b> Players do not notice, and human reaction time is much slower; it saves CPU and can be staggered across agents</p><div>A decision delay of 100 to 200 ms looks like human reaction time. Movement and animation still update every frame; only the decision rate is low.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>C.</b> A sequence: it runs children in order and stops at the first non-success</p><div>Sequence is a logical AND over children, so all three steps (see, in range, shoot) must succeed.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>A.</b> On a shared blackboard: sensors write facts like the target and last known position, conditions and actions read them</p><div>The blackboard decouples nodes: writers and readers share facts without depending on each other.</div></div>
+<p class="nav"><a href="ai-planning.html">Utility AI and planners →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

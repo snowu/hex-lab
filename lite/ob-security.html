@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consent, SCA &amp; security model · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#openbanking">Neonomics &amp; Open Banking</a> · lesson 2 of 5 · 6 min</p>
+<h1>Consent, SCA &amp; security model</h1>
+<p class="sum">SCA flavours, eIDAS certificates, signing, consent lifetime, GDPR.</p>
+<div class="sec">
+<h3>SCA flows</h3>
+<ul>
+<li><b>Redirect</b>: user is sent to the bank’s site/app to authenticate (most common).</li>
+<li><b>Decoupled</b>: you start it, the user approves in their banking app (push), you poll or get a callback.</li>
+<li><b>Embedded</b>: you collect credentials: rare and discouraged, security-heavy.</li>
+</ul>
+<h3>Certificates &amp; request security</h3>
+<ul>
+<li><b>eIDAS certificates</b> identify a TPP to banks. <b>QWAC</b> (website authentication certificate) is used for mutual TLS; <b>QSealC</b> (seal certificate) is used to <b>sign requests</b> (message-level integrity and non-repudiation). Neonomics’ docs refer to QSeal signature headers.</li>
+<li>Know the difference: <b>mTLS</b> secures the channel and identifies the party; a <b>signature</b> proves a specific message was not altered and came from the key holder, even through proxies.</li>
+<li><b>Private key handling</b>: HSM/KMS, no keys in repos or images, rotation plan, and monitoring on certificate expiry (an expired cert = every bank call fails).</li>
+</ul>
+<h3>Consent lifetime</h3>
+<p>Under the PSD2 RTS, unattended AIS access (user not present) is limited to <b>4 requests per 24 hours</b> per account per TPP, and the SCA exemption for repeat account-information access was extended from 90 to <b>180 days</b> in 2023, so users must re-authenticate periodically. Product impact: cache sensibly, refresh in batches, and design a graceful “reconnect your bank” UX. Banks may implement the details differently, so verify per bank.</p>
+<h3>Data protection</h3>
+<p>Financial data is personal data (GDPR): purpose limitation, data minimisation, retention limits, encryption at rest and in transit, access logging, deletion on consent withdrawal. Never log tokens, full IBANs or transaction descriptions in plain application logs.</p></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Which certificate type would you use to <b>digitally sign API request bodies</b> in a PSD2 integration?</div><ol class="opts"><li><b>A.</b> QWAC</li><li><b>B.</b> QSealC</li><li><b>C.</b> A self-signed TLS cert</li><li><b>D.</b> An OAuth client secret</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">At 03:00 every call to every bank starts failing with TLS handshake errors. No deploy happened. What is a plausible common cause worth checking first?</div><ol class="opts"><li><b>A.</b> Cosmic rays</li><li><b>B.</b> Expired or revoked TPP certificate (or an intermediate CA change)</li><li><b>C.</b> The banks all upgraded at once</li><li><b>D.</b> The database is full</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><h3>Question to expect: “A user withdraws consent. What happens in your system?”</h3><ul><li>Revoke on the bank side if an API exists; delete the session/consent record.</li><li>Stop all scheduled refreshes for that consent immediately (this is a correctness issue, not cleanup).</li><li>Delete or anonymise stored account data per policy, keeping only what law requires (audit trail).</li><li>Make deletion idempotent and observable (an audit event), and propagate to caches, backups policy, analytics and downstream customers.</li></ul></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A signed payment request passes through two proxies before reaching the bank. Why is the QSeal signature still verifiable while the TLS session is not?</div><ol class="opts"><li><b>A.</b> TLS sessions are stored in the database and expire</li><li><b>B.</b> QSeal certificates are self-signed so proxies skip them</li><li><b>C.</b> Signatures are slower and therefore more secure than encryption</li><li><b>D.</b> The signature proves that exact message was unaltered by the key holder end to end, while mTLS only secures each channel hop and identifies the party</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<div class="box"><div class="q">2. Your nightly job refreshes every consented account once an hour with no user present, and logs full IBANs for debugging. What are the two violations?</div><ol class="opts"><li><b>A.</b> The job runs at night instead of during business hours, and logs are too verbose</li><li><b>B.</b> Hourly unattended refreshes exceed the roughly 4-requests-per-24h limit, and full IBANs in plain logs breach data minimisation</li><li><b>C.</b> OAuth tokens expire too fast, and IBANs should be uppercase</li><li><b>D.</b> QWAC and QSealC are swapped, and the job needs more CPU</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<p class="nav"><a href="ob-landscape.html">← The open banking landscape</a> · <a href="ob-payments-money.html">Payments &amp; money handling →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> QSealC</p><div>QSealC is for signing messages. QWAC authenticates the TLS connection (mTLS). Some banks and aggregators need both.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Expired or revoked TPP certificate (or an intermediate CA change)</p><div>Simultaneous failure across independent banks points to something on your side shared by all of them: your certificate. That is why you alert on expiry weeks ahead and keep a renewal runbook.</div></div>
+<div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>D.</b> The signature proves that exact message was unaltered by the key holder end to end, while mTLS only secures each channel hop and identifies the party</p><div>mTLS secures the channel and authenticates the party; a QSealC signature gives message-level integrity and non-repudiation through intermediaries.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Hourly unattended refreshes exceed the roughly 4-requests-per-24h limit, and full IBANs in plain logs breach data minimisation</p><div>Unattended AIS access is quota-limited, so cache, batch, and design a reconnect UX; financial data is GDPR personal data, so minimise logging.</div></div>
+<p class="nav"><a href="ob-landscape.html">← The open banking landscape</a> · <a href="ob-payments-money.html">Payments &amp; money handling →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

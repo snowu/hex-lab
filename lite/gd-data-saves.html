@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data-driven design and save files · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdcraft">Techniques &amp; Practice</a> · lesson 4 of 8 · 30 min</p>
+<h1>Data-driven design and save files</h1>
+<p class="sum">Keep tuning numbers out of code, and write saves that survive updates and corruption.</p>
+<div class="sec">
+<h3>Data-driven design</h3>
+<p>Enemy HP, weapon damage, loot tables and level layouts are <i>data</i>. Put them in files (Godot <code>Resource</code> files, JSON, CSV) and load them, instead of hard-coding constants across scripts. Benefits: designers (or you at 2 am) tweak without recompiling, hot reload speeds iteration, mod support gets easier, and the numbers can be balanced in a spreadsheet. The rule: <b>code defines behaviour, data defines instances</b>.</p>
+<ul><li>Validate data on load and fail loudly, with the file and field name in the error.</li><li>Reference things by stable string ids (<code>"iron_sword"</code>), never by array index, or reordering breaks saves.</li><li>Keep derived values (DPS, total cost) computed, not stored.</li></ul>
+<h3>Save files</h3>
+<ul><li><b>Version everything</b> with a number from the first release, and keep one migration function per version step. Never edit an old step.</li><li><b>Save the state, not the objects</b>: ids, positions, counters, so the format is independent from your class layout.</li><li><b>Atomic writes</b>: write to a temp file, flush, then rename over the real save. A crash mid-write then leaves the previous save intact. Keep one backup.</li><li><b>Never trust the file</b>: validate lengths, ranges and checksums. A corrupt or hand-edited file must produce a friendly error, not a crash or an out-of-bounds read.</li><li>Text (JSON) saves are debuggable and easy to migrate; binary saves are compact and fast but need explicit layout, endianness and versioning, as in the drill.</li><li><b>Cloud saves</b> add conflict handling: compare timestamps or play time, or ask the player when both changed.</li></ul>
+<h3>Determinism and replays</h3>
+<p>If simulation is deterministic (fixed step, seeded RNG, no wall-clock reads), a replay is just <i>seed + inputs per frame</i>. That powers demos, bug reports (“attach the replay”), speedrun verification and rollback netcode.</p></div>
+<div class="sec"><div class="box"><p class="kind">Drill: A versioned binary save format</p><p>Saves outlive your code. Implement <code>encode</code> and <code>decode</code> for this layout (all multi-byte integers <b>little-endian</b>):</p>
+<table><tr><th>version</th><th>bytes</th></tr>
+<tr><td><b>2</b> (current, 9 bytes)</td><td><code>'S'</code> (0x53), <code>2</code>, coins u32, level u16, checksum</td></tr>
+<tr><td><b>1</b> (old, 6 bytes)</td><td><code>'S'</code>, <code>1</code>, coins <b>u16</b>, level <b>u8</b>, checksum</td></tr></table>
+<p>The checksum is the sum of all the bytes before it, modulo 256. <code>encode</code> always writes version 2. <code>decode</code> accepts both versions (migrating v1 to the current <code>Save</code> struct) and returns "nothing" for a wrong length, bad magic byte, unknown version or bad checksum. It must never read out of bounds.</p><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub const Save = struct { coins: u32, level: u16 };
+pub const size = 9;
+
+pub fn encode(s: Save) [size]u8 {
+    _ = s;
+    return @splat(0);
+}
+
+pub fn decode(bytes: []const u8) ?Save {
+    _ = bytes;
+    return null;
+}
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Your game crashes while writing the save file and the player's progress is gone. What should you have done?</div><ol class="opts"><li><b>A.</b> Write more often</li><li><b>B.</b> Write to a temporary file and atomically rename it over the old save (keeping a backup)</li><li><b>C.</b> Compress the save</li><li><b>D.</b> Encrypt the save</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Why reference items in saves by a string id such as <code>"iron_sword"</code> instead of their index in the item list?</div><ol class="opts"><li><b>A.</b> Strings are faster</li><li><b>B.</b> Reordering or inserting items in the data would silently change what every saved index means</li><li><b>C.</b> It saves space</li><li><b>D.</b> Indices cannot be saved</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Version 3 of your game must still load saves from versions 1 and 2. How should migrations be organised?</div><ol class="opts"><li><b>A.</b> Keep a version number from the first release plus one migration function per version step, never editing an old step</li><li><b>B.</b> Edit the old migration steps so they jump straight to the newest format</li><li><b>C.</b> Delete old saves on update and start fresh</li><li><b>D.</b> Store the game code version inside each entity instead</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. Your simulation uses a fixed step and seeded RNG with no wall-clock reads. What is the cheapest correct replay format?</div><ol class="opts"><li><b>A.</b> A video capture of each session</li><li><b>B.</b> The seed plus the inputs per frame, re-simulated deterministically</li><li><b>C.</b> A full snapshot of every object every frame</li><li><b>D.</b> The wall-clock timestamps of each frame</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="gd-camera.html">← Cameras, screen shake and parallax</a> · <a href="gd-godot.html">Godot field guide →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. A versioned binary save format</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Check the length first, then the magic byte, then the version, then the checksum. Zig: std.mem.writeInt(u32, buf[2..6], value, .little) and std.mem.readInt(u32, bytes[2..6], .little). C++: shift and mask yourself.</p><p>Always write a version number from day one. Never edit an old migration step, only append new ones, and keep a test fixture per historical version. Write saves to a temp file and rename it over the old one so a crash mid-write cannot destroy the player's progress. Never trust the bytes: a corrupt or hand-edited save must fail cleanly, not crash or read past the buffer (this is also how most real-world game exploits start).</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Write to a temporary file and atomically rename it over the old save (keeping a backup)</p><div>Write-then-rename means the old file is never half-overwritten.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Reordering or inserting items in the data would silently change what every saved index means</p><div>Stable ids survive content changes. Indices turn a harmless data edit into corrupted saves.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>A.</b> Keep a version number from the first release plus one migration function per version step, never editing an old step</p><div>Immutable per-step migrations chain any old save forward without breaking saves that already migrated.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>B.</b> The seed plus the inputs per frame, re-simulated deterministically</p><div>Determinism makes seed plus inputs sufficient to rebuild the run, powering demos, bug reports and rollback.</div></div>
+<p class="nav"><a href="gd-camera.html">← Cameras, screen shake and parallax</a> · <a href="gd-godot.html">Godot field guide →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

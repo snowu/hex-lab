@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cameras, screen shake and parallax · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdcraft">Techniques &amp; Practice</a> · lesson 3 of 8 · 5 min</p>
+<h1>Cameras, screen shake and parallax</h1>
+<p class="sum">A 2D camera that follows well, shakes with “trauma”, and does not make pixel art shimmer.</p>
+<div class="sec">
+<h3>Follow cameras</h3>
+<ul><li><b>Locked</b> to the player: simple, but every micro-movement jitters the whole screen.</li><li><b>Dead zone</b>: the camera only moves when the player leaves a box in the middle.</li><li><b>Look-ahead</b>: shift the target in the direction of motion so the player sees more of where they are going.</li><li><b>Smoothing</b>: use the frame-rate independent exponential from the interpolation lesson, not a fixed lerp factor.</li><li><b>Room cameras</b> (Celeste, Zelda): snap or slide between fixed rooms; the design controls what the player sees.</li><li><b>Limits</b>: clamp to the map bounds so the camera never shows outside the level.</li></ul>
+<h3>Screen shake with trauma</h3>
+<p>A good model (from Squirrel Eiserloh's GDC talk on juicing cameras): keep a <b>trauma</b> value from 0 to 1. Events add to it, it decays linearly over time, and the shake amount is <code>trauma²</code> or <code>trauma³</code>, so small hits barely register and big ones hit hard. Drive offset (and a little rotation) with smooth noise rather than pure random to avoid a harsh buzz. Add a setting to scale or disable it.</p>
+<h3>Parallax</h3>
+<p>Layers further away move slower than the camera. Move each by <code>camera_x * (1 - depth)</code> (depth 0 is foreground, 1 is infinitely far, stationary). Keep layers on whole pixels for pixel art.</p>
+<h3>Pixel art cameras</h3>
+<p>If the game renders at a small base resolution and is scaled up (see the pixel art lessons), keep the camera on integer coordinates or sprites will “swim” as they cross sub-pixel boundaries. Smooth in float, then <b>round for rendering</b>. Godot: enable pixel snapping for 2D transforms and the nearest texture filter.</p></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Why use trauma squared (or cubed) for the shake magnitude instead of trauma itself?</div><ol class="opts"><li><b>A.</b> It is cheaper to compute</li><li><b>B.</b> Small values give almost no shake and large values ramp up quickly, so a series of small hits does not rattle the screen but a big one does</li><li><b>C.</b> It avoids division by zero</li><li><b>D.</b> It makes the shake slower</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Your pixel art sprites flicker when the camera follows the player slowly. A likely fix?</div><ol class="opts"><li><b>A.</b> Increase texture size</li><li><b>B.</b> Round the camera and sprite positions to whole pixels at render time and use nearest-neighbour filtering</li><li><b>C.</b> Add anti-aliasing</li><li><b>D.</b> Use a bigger window</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A camera locked exactly to the player jitters the whole screen on every micro-movement. Which follow technique calms it?</div><ol class="opts"><li><b>A.</b> A higher fixed lerp factor so it snaps harder</li><li><b>B.</b> A larger look-ahead in every direction at once</li><li><b>C.</b> A dead zone: the camera only moves once the player leaves a central box</li><li><b>D.</b> Removing the map limits so the camera never clamps</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<div class="box"><div class="q">2. Distant mountains currently scroll at the same speed as the player layer, which looks flat. How should the parallax offsets work?</div><ol class="opts"><li><b>A.</b> Move every layer by the full camera offset so nothing drifts</li><li><b>B.</b> Scale each layer by camera position times (1 minus depth), keeping far layers nearly stationary and snapping to whole pixels</li><li><b>C.</b> Move far layers faster than the foreground for drama</li><li><b>D.</b> Parent all layers to the player node directly</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<p class="nav"><a href="gd-noise.html">← Noise, terrain and Wave Function Collapse</a> · <a href="gd-data-saves.html">Data-driven design and save files →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Small values give almost no shake and large values ramp up quickly, so a series of small hits does not rattle the screen but a big one does</p><div>The nonlinearity gives a wide dynamic range from one number.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Round the camera and sprite positions to whole pixels at render time and use nearest-neighbour filtering</p><div>Sub-pixel positions sample different texels each frame. Snap to the pixel grid.</div></div>
+<div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>C.</b> A dead zone: the camera only moves once the player leaves a central box</p><div>A dead zone absorbs small motion so idle shuffling does not swing the entire view.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Scale each layer by camera position times (1 minus depth), keeping far layers nearly stationary and snapping to whole pixels</p><div>Parallax sells depth by slowing far layers with depth; whole-pixel placement keeps pixel art from swimming.</div></div>
+<p class="nav"><a href="gd-noise.html">← Noise, terrain and Wave Function Collapse</a> · <a href="gd-data-saves.html">Data-driven design and save files →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

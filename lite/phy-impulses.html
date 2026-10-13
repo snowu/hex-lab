@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Collision response with impulses · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdphysics">Simulation &amp; Physics</a> · lesson 2 of 5 · 35 min</p>
+<h1>Collision response with impulses</h1>
+<p class="sum">What happens after two bodies touch: impulses, restitution, friction, mass, and why stacks of boxes are hard.</p>
+<div class="sec">
+<h3>From "they overlap" to "they bounce"</h3>
+<p>Detection (collision lesson) tells you <i>that</i> two shapes touch and gives a <b>contact normal</b> <code>n</code> (the direction to push them apart) and a <b>penetration depth</b>. <b>Response</b> decides the new velocities. Modern engines use <b>impulses</b>: an instantaneous change of momentum <code>J</code>. Applying an impulse to a body changes its velocity by <code>J / mass</code>. The unknown is how big the impulse must be.</p>
+<h3>The normal impulse</h3>
+<p>Take the relative velocity of body 2 with respect to body 1 along the normal: <code>v_n = (v2 - v1) · n</code>. If <code>v_n &gt; 0</code> they are already separating: do nothing. Otherwise the impulse that reverses the approach, scaled by the <b>restitution</b> <code>e</code> (0 = no bounce, 1 = perfectly elastic), is</p>
+<pre><code>j = -(1 + e) * v_n / (1/m1 + 1/m2)
+v1 -= (j / m1) * n
+v2 += (j / m2) * n</code></pre>
+<p>That is the same formula as the 1-D drill, just along an arbitrary direction. Using <b>inverse mass</b> (<code>1/m</code>) makes immovable bodies trivial: give a wall inverse mass 0 and it never moves, and the formula still works. The complete function below resolves two circles; its test checks that momentum is conserved and the bodies separate.</p>
+<pre><code data-check="zig">const std = @import("std");
+
+const Body = struct { x: f32, y: f32, vx: f32, vy: f32, inv_mass: f32, r: f32 };
+
+/// Resolve a collision between two circles: an impulse along the contact normal with restitution e.
+fn resolve(a: *Body, b: *Body, e: f32) bool {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const dist = @sqrt(dx * dx + dy * dy);
+    if (dist == 0 or dist &gt;= a.r + b.r) return false; // not touching
+    const nx = dx / dist;
+    const ny = dy / dist;
+    const vn = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
+    if (vn &gt; 0) return false; // already separating
+    const j = -(1 + e) * vn / (a.inv_mass + b.inv_mass);
+    a.vx -= j * a.inv_mass * nx;
+    a.vy -= j * a.inv_mass * ny;
+    b.vx += j * b.inv_mass * nx;
+    b.vy += j * b.inv_mass * ny;
+    return true;
+}
+
+test "equal masses along x swap velocities when e = 1" {
+    var a = Body{ .x = 0, .y = 0, .vx = 3, .vy = 0, .inv_mass = 1, .r = 1 };
+    var b = Body{ .x = 1.5, .y = 0, .vx = 0, .vy = 0, .inv_mass = 1, .r = 1 };
+    try std.testing.expect(resolve(&amp;a, &amp;b, 1));
+    try std.testing.expectApproxEqAbs(@as(f32, 0), a.vx, 1e-5);
+    try std.testing.expectApproxEqAbs(@as(f32, 3), b.vx, 1e-5);
+}
+
+test "momentum is conserved in an off-centre hit, and a wall (inverse mass 0) does not move" {
+    var a = Body{ .x = 0, .y = 0, .vx = 2, .vy = 1, .inv_mass = 1.0 / 2.0, .r = 1 };
+    var b = Body{ .x = 1.2, .y = 1.0, .vx = -1, .vy = 0, .inv_mass = 1.0 / 3.0, .r = 1 };
+    const px = 2.0 * a.vx + 3.0 * b.vx;
+    const py = 2.0 * a.vy + 3.0 * b.vy;
+    try std.testing.expect(resolve(&amp;a, &amp;b, 0.5));
+    try std.testing.expectApproxEqAbs(px, 2.0 * a.vx + 3.0 * b.vx, 1e-5);
+    try std.testing.expectApproxEqAbs(py, 2.0 * a.vy + 3.0 * b.vy, 1e-5);
+    var ball = Body{ .x = 0, .y = 0, .vx = 5, .vy = 0, .inv_mass = 1, .r = 1 };
+    var wall = Body{ .x = 1.9, .y = 0, .vx = 0, .vy = 0, .inv_mass = 0, .r = 1 };
+    try std.testing.expect(resolve(&amp;ball, &amp;wall, 1));
+    try std.testing.expectEqual(@as(f32, 0), wall.vx);
+    try std.testing.expectApproxEqAbs(@as(f32, -5), ball.vx, 1e-5);
+}</code></pre>
+<h3>Friction</h3>
+<p>Along the contact <b>tangent</b> <code>t</code> (perpendicular to <code>n</code>) apply a second impulse that opposes sliding: <code>jt = -(v_rel · t) / (1/m1 + 1/m2)</code>, but <b>clamped</b> by Coulomb's law: <code>|jt| &lt;= μ * j</code>. So friction can never exceed the friction coefficient times the normal impulse: heavy pressing means strong friction, and a surface can stop sliding completely (static friction) only up to that limit. Engines blend the two bodies' friction values (often by multiplying or taking the geometric mean).</p>
+<h3>Positional correction</h3>
+<p>Impulses fix velocities but not <b>overlap</b> that already exists (sinking into the floor, caused by large steps, or by solver error). Push the bodies apart along <code>n</code> a fraction (0.2 to 0.8) of the penetration beyond a small tolerance (the <b>slop</b>, say 0.01 units), split by inverse mass: <code>correction = max(depth - slop, 0) / (1/m1 + 1/m2) * percent</code>. Correcting fully every frame makes objects jitter; ignoring it makes them sink.</p>
+<h3>Resting contact and stacking: why it is hard</h3>
+<p>One body resting on another is a contact that must be resolved <i>every</i> step without bouncing. A stack of five boxes couples ten contacts: resolving one disturbs its neighbours. The standard answer is <b>sequential impulses</b> (Erin Catto's Box2D solver): loop over all contacts several times (4 to 10 iterations), each time applying the impulse that makes that contact's relative velocity zero, <b>accumulating</b> impulses and clamping the accumulated total (so a contact can never pull), and reusing last frame's impulses as a starting guess (<b>warm starting</b>). More iterations means stiffer, more stable stacks and more CPU.</p>
+<h3>Other pieces you will hear about</h3>
+<ul><li><b>Restitution threshold</b>: below a small closing speed set <code>e = 0</code>, or resting objects micro-bounce forever.</li><li><b>Sleeping</b>: bodies that have barely moved for half a second stop being simulated until something touches them. Huge saving, and the reason stacks stay still.</li><li><b>Rotation</b>: for shapes that spin, the impulse also changes angular velocity (torque from the contact point), and the denominator gains a term with the moment of inertia. The structure of the formula is identical.</li><li><b>Material combination</b>: pairs of materials (ice on metal) need a rule for friction and bounce; most engines combine per-body values.</li></ul></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Collision response with impulses</p><p>Two balls roll along a line and touch. Body 1 is on the <b>left</b> of body 2. Write <code>collide(m1, v1, m2, v2, e)</code> returning their velocities after the hit, where <code>e</code> is the <b>restitution</b> (0 = they stick together, 1 = perfectly bouncy).</p>
+<p>If they are not approaching (<code>v1 &lt;= v2</code>) nothing happens: return the velocities unchanged. Otherwise momentum is conserved and the relative speed after the hit is <code>e</code> times the relative speed before, reversed:</p>
+<pre><code>v1' = (m1*v1 + m2*v2 + m2*e*(v2 - v1)) / (m1 + m2)
+v2' = (m1*v1 + m2*v2 + m1*e*(v1 - v2)) / (m1 + m2)</code></pre><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub const Pair = struct { v1: f64, v2: f64 };
+
+/// Body 1 is on the left of body 2 and they touch. e = restitution.
+pub fn collide(m1: f64, v1: f64, m2: f64, v2: f64, e: f64) Pair {
+    _ = m1;
+    _ = m2;
+    _ = e;
+    return .{ .v1 = v1, .v2 = v2 };
+}
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Why do engines store <i>inverse</i> mass instead of mass?</div><ol class="opts"><li><b>A.</b> It saves memory</li><li><b>B.</b> Static bodies get inverse mass 0 and automatically never move, with no special cases in the solver</li><li><b>C.</b> Division is slow</li><li><b>D.</b> Mass is not needed</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A box slides down a ramp and should stop when friction is high enough. Which limit applies to the friction impulse?</div><ol class="opts"><li><b>A.</b> It is unlimited</li><li><b>B.</b> It is clamped to μ times the normal impulse (Coulomb friction)</li><li><b>C.</b> It equals the gravity impulse</li><li><b>D.</b> It is always zero</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A stack of boxes slowly sinks and wobbles. Which two changes most directly help?</div><ol class="opts"><li><b>A.</b> Larger boxes and fewer frames</li><li><b>B.</b> More solver iterations (and warm starting), plus positional correction with a small slop</li><li><b>C.</b> Disable gravity</li><li><b>D.</b> Increase restitution</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Two overlapping circles have a relative velocity along the contact normal pointing apart (v_n > 0). What should the solver do?</div><ol class="opts"><li><b>A.</b> Apply the full bounce impulse anyway so something happens</li><li><b>B.</b> Do nothing for this contact: they are already separating, so no impulse is needed</li><li><b>C.</b> Double gravity to pull them back together</li><li><b>D.</b> Delete the lighter body</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. Boxes resting in a pile micro-bounce forever instead of settling. Which fix addresses the cause?</div><ol class="opts"><li><b>A.</b> Raise restitution so they bounce higher</li><li><b>B.</b> Remove friction from every material</li><li><b>C.</b> Increase the render frame rate</li><li><b>D.</b> Set restitution to zero below a small closing speed (a restitution threshold), and let sleeping bodies stop simulating until touched</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="phy-integration.html">← Integration and stability</a> · <a href="phy-constraints.html">Constraints, ropes and cloth →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Collision response with impulses</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Check approaching first (v1 > v2). Then it is just the two formulas. The tests verify momentum conservation, energy conservation at e = 1, sticking at e = 0, and the "wall" limit (one body so heavy it does not move).</p><p>Real engines (Box2D, Bullet, Godot Physics) solve this with impulses along the contact normal, adding friction along the tangent, and iterate over all contacts several times ("sequential impulses") because resolving one pair disturbs another. A stack of boxes is hard exactly because of that coupling. The e value is usually blended from the two materials (the larger or the product), and below a small closing speed e is forced to 0 so resting objects stop jittering. Erin Catto's GDC "Understanding Constraints" talk is the next step.</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Static bodies get inverse mass 0 and automatically never move, with no special cases in the solver</p><div>Infinite mass is not representable but zero inverse mass is, and all formulas just work.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> It is clamped to μ times the normal impulse (Coulomb friction)</p><div>Friction scales with how hard the surfaces press together. The clamp is what makes sliding start and stop correctly.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> More solver iterations (and warm starting), plus positional correction with a small slop</p><div>Stacks need the coupled contacts solved to convergence, and leftover overlap corrected gently.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>B.</b> Do nothing for this contact: they are already separating, so no impulse is needed</p><div>Impulses only oppose approach. Separating contacts need no response, which also prevents jitter.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>D.</b> Set restitution to zero below a small closing speed (a restitution threshold), and let sleeping bodies stop simulating until touched</p><div>Tiny impacts should be perfectly inelastic, and idle bodies should sleep so stacks stay still.</div></div>
+<p class="nav"><a href="phy-integration.html">← Integration and stability</a> · <a href="phy-constraints.html">Constraints, ropes and cloth →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

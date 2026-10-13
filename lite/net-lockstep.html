@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deterministic lockstep and rollback · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdnet">Multiplayer &amp; Networking</a> · lesson 3 of 4 · 15 min</p>
+<h1>Deterministic lockstep and rollback</h1>
+<p class="sum">Send only inputs and make every machine compute the same world: how RTS games and fighting games work, and what determinism demands.</p>
+<div class="sec">
+<h3>The idea</h3>
+<p>If two machines start from the same state and apply the same inputs in the same order with a <b>deterministic</b> simulation, they end in the same state, with no need to send the state. A game with 1,000 units sends only a few bytes of commands per player per tick. This is why real-time strategy games (Age of Empires, StarCraft) with thousands of units are networked this way, and why replays are tiny.</p>
+<h3>Lockstep</h3>
+<p>Every tick, each player's input is sent to all others. The simulation advances to tick <i>t</i> only when it has the inputs of <b>every</b> player for tick <i>t</i>. Commands are scheduled to execute a few ticks in the future (<b>input delay</b>) so there is time for them to arrive. Consequences: the whole game runs at the speed of the slowest connection, one stalled player pauses everyone, and the delay between clicking and the action happening is the input delay (RTS players accept 100 to 200 ms; a fighting game cannot).</p>
+<h3>Rollback netcode</h3>
+<p>Fighting games need zero perceived input delay. <b>Rollback</b> (GGPO, popularised for fighting games; used by Street Fighter, Skullgirls and many others) predicts instead of waiting:</p>
+<ol><li>Each frame, run the simulation immediately with <b>your</b> input and a <b>guess</b> for the opponent's (usually "same as their last input").</li><li>Save the game state every frame in a ring buffer.</li><li>When the real input for a past frame arrives and it differs from the guess: <b>roll back</b> to the saved state of that frame, apply the correct input, and <b>re-simulate</b> all frames up to the present, fast and invisibly.</li><li>Corrections are usually tiny (a character shifts a pixel); with low latency they are rare.</li></ol>
+<p>It feels like playing offline, at the cost of: the game being able to re-simulate several frames in one frame's time (so the simulation must be cheap), cheap state save/load, and effects (sounds, particles) that must not fire twice when frames are replayed.</p>
+<pre><code data-check="zig">const std = @import("std");
+
+/// A tiny deterministic game: two players push a counter around. The state is small and plain data, so saving it is a copy.
+const State = struct {
+    frame: u32 = 0,
+    x: [2]i32 = .{ 0, 0 },
+    score: u32 = 0,
+
+    fn step(self: *State, inputs: [2]i8) void {
+        for (0..2) |p| self.x[p] += inputs[p];
+        if (self.x[0] == self.x[1]) self.score += 1; // an "event" that depends on both players
+        self.frame += 1;
+    }
+};
+
+const MAX_ROLLBACK = 8;
+
+const Rollback = struct {
+    state: State = .{},
+    saved: [MAX_ROLLBACK]State = undefined, // saved[f % MAX] is the state at the START of frame f
+    used: [MAX_ROLLBACK][2]i8 = undefined, // the inputs we actually simulated that frame (with guesses)
+    resimulated: u32 = 0,
+
+    fn advance(self: *Rollback, local: i8, remote_guess: i8) void {
+        const f = self.state.frame;
+        self.saved[f % MAX_ROLLBACK] = self.state;
+        self.used[f % MAX_ROLLBACK] = .{ local, remote_guess };
+        self.state.step(.{ local, remote_guess });
+    }
+
+    /// The real remote input for an old frame arrived. If it differs from our guess, rewind and replay.
+    fn correct(self: *Rollback, frame: u32, real_remote: i8) void {
+        const slot = frame % MAX_ROLLBACK;
+        if (self.used[slot][1] == real_remote) return; // guessed right: nothing to do
+        const now = self.state.frame;
+        self.used[slot][1] = real_remote;
+        self.state = self.saved[slot]; // roll back
+        var f = frame;
+        while (f &lt; now) : (f += 1) {
+            self.saved[f % MAX_ROLLBACK] = self.state;
+            self.state.step(self.used[f % MAX_ROLLBACK]); // replay with the corrected input
+            self.resimulated += 1;
+        }
+    }
+};
+
+test "rolling back and replaying gives exactly the state of a game that had the real input all along" {
+    const local = [_]i8{ 1, 1, 0, 1, 1, 0, 0, 1 };
+    const remote = [_]i8{ 0, 1, 1, 1, 0, 1, 1, 0 }; // what the remote player really pressed
+
+    // the "ground truth": a simulation that knew every input in time
+    var truth = State{};
+    for (0..8) |i| truth.step(.{ local[i], remote[i] });
+
+    // the rollback client: guesses "remote repeats its last input" (starting from 0), corrected as real inputs arrive late
+    var rb = Rollback{};
+    var last_real: i8 = 0;
+    for (0..8) |i| {
+        rb.advance(local[i], last_real);
+        if (i &gt;= 2) { // the real input for frame i-2 arrives two frames late
+            rb.correct(@intCast(i - 2), remote[i - 2]);
+            last_real = remote[i - 2];
+        }
+    }
+    rb.correct(6, remote[6]);
+    rb.correct(7, remote[7]);
+
+    try std.testing.expectEqual(truth, rb.state);
+    try std.testing.expect(rb.resimulated &gt; 0); // it really did rewind at least once
+}</code></pre>
+<h3>What determinism demands</h3>
+<ul><li><b>Same inputs, same order, same step</b>: fixed timestep, inputs applied by tick number, never by wall-clock arrival.</li><li><b>Seeded random numbers</b>: one RNG in the simulation, advanced only by simulation code (the procgen lesson). A particle effect that draws from it desyncs the game.</li><li><b>No uninitialised memory, no pointer addresses, no hash-map iteration order</b> in anything that affects state; iterate in a defined order (sort by id).</li><li><b>Floating point</b>: results can differ between CPUs, compilers and optimisation flags (fused multiply-add, x87 vs SSE, different libm). Safe options: <b>fixed-point integers</b> for the simulation (most RTS and fighting games), or the same binary and strict flags on identical architectures. Never assume that a float simulation on a phone matches a PC.</li><li><b>No dependence on frame rate, locale, thread timing or filesystem order.</b></li><li><b>Everything that influences the simulation is part of the state</b> that gets saved and checksummed.</li></ul>
+<h3>Desyncs</h3>
+<p>When two machines drift apart (a "desync"), everything after is garbage and it is silent. Detect it by exchanging a <b>checksum of the state</b> every few frames; when they differ, log the frame and dump the state to find the first divergent value. Replays that diverge on playback are the same bug.</p>
+<h3>Choosing a model</h3>
+<table><tr><th>Game</th><th>Fits</th><th>Why</th></tr>
+<tr><td>RTS with thousands of units</td><td>Lockstep</td><td>State is huge, inputs are tiny; delay tolerated</td></tr>
+<tr><td>Fighting game, 2 players</td><td>Rollback</td><td>Zero input delay matters; state is small</td></tr>
+<tr><td>Shooter with many players, cheating a concern</td><td>Authoritative server + prediction</td><td>Server owns the truth; clients cannot be trusted</td></tr>
+<tr><td>Turn-based or card game</td><td>Simple request/response to a server</td><td>Latency hardly matters</td></tr>
+<tr><td>Co-op physics game</td><td>Host authority + interpolation</td><td>Floating-point physics is not deterministic across machines</td></tr></table></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Two machines running a lockstep RTS slowly drift apart without any error message. What is the most likely cause?</div><ol class="opts"><li><b>A.</b> Packet loss</li><li><b>B.</b> A source of non-determinism: floating point differences, a shared RNG advanced by non-simulation code, or hash-map ordering</li><li><b>C.</b> Too many units</li><li><b>D.</b> A slow monitor</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">In rollback netcode, a remote input for frame 100 arrives while you are at frame 103 and it differs from your guess. What happens?</div><ol class="opts"><li><b>A.</b> The input is ignored</li><li><b>B.</b> The game restores the saved state of frame 100, applies the real input and re-simulates frames 100 to 103 immediately</li><li><b>C.</b> The game pauses until frame 100 is replayed in real time</li><li><b>D.</b> A desync is declared</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Why must sounds and particles be handled carefully in a rollback game?</div><ol class="opts"><li><b>A.</b> They use too much bandwidth</li><li><b>B.</b> Re-simulated frames would trigger them again; effects must be tied to confirmed events or de-duplicated</li><li><b>C.</b> They are not deterministic</li><li><b>D.</b> They cannot be saved</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. In a 4-player lockstep RTS, one player on a slow link stalls and the whole match freezes for everyone. Why?</div><ol class="opts"><li><b>A.</b> The renderer is too slow</li><li><b>B.</b> The simulation advances to a tick only when every input for that tick has arrived, so the slowest connection sets the pace</li><li><b>C.</b> The checksum failed</li><li><b>D.</b> The map is too large</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. The same float simulation runs on a phone and a PC and the two games desync. What is the safe fix the lesson names?</div><ol class="opts"><li><b>A.</b> Tick faster</li><li><b>B.</b> Use larger floats</li><li><b>C.</b> Send state instead of inputs always</li><li><b>D.</b> Use fixed-point integers for the simulation, or identical binaries and strict flags on identical architectures</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="net-prediction.html">← Prediction, interpolation and lag compensation</a> · <a href="net-security.html">Cheating, trust and hostile input →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> A source of non-determinism: floating point differences, a shared RNG advanced by non-simulation code, or hash-map ordering</p><div>Lockstep only sends inputs. Any difference in how the simulation computes the result makes the states diverge, and nothing in the network layer will notice.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> The game restores the saved state of frame 100, applies the real input and re-simulates frames 100 to 103 immediately</p><div>That is the rollback: load the state, correct the input, fast-forward back to the present within one frame's time.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Re-simulated frames would trigger them again; effects must be tied to confirmed events or de-duplicated</p><div>Replaying frames re-runs game logic, which would re-emit effects. Cosmetic output must be decoupled from the replayed simulation.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>B.</b> The simulation advances to a tick only when every input for that tick has arrived, so the slowest connection sets the pace</p><div>Lockstep trades bandwidth for synchrony: no machine may run ahead of the slowest input.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>D.</b> Use fixed-point integers for the simulation, or identical binaries and strict flags on identical architectures</p><div>Floating-point results can differ across CPUs and compilers, so deterministic games avoid relying on them.</div></div>
+<p class="nav"><a href="net-prediction.html">← Prediction, interpolation and lag compensation</a> · <a href="net-security.html">Cheating, trust and hostile input →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

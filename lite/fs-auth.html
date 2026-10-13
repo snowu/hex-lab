@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auth: sessions, JWTs, OAuth and row-level security · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#fullstack">Full-Stack: Browser to Edge to Postgres</a> · lesson 2 of 6 · 40 min</p>
+<h1>Auth: sessions, JWTs, OAuth and row-level security</h1>
+<p class="sum">Authentication vs authorisation, verifying tokens correctly, and letting the database enforce tenancy.</p>
+<div class="sec">
+<p><b>Authentication</b> answers “who are you?”; <b>authorisation</b> answers “what may you do?”. Most real breaches are authorisation bugs (the BOLA/IDOR from the code-review lesson), not broken login.</p>
+<h3>Sessions vs tokens</h3>
+<table><tr><th></th><th>Server session (cookie id)</th><th>Signed token (JWT)</th></tr>
+<tr><td>State</td><td>stored on the server</td><td>self-contained, stateless to verify</td></tr>
+<tr><td>Revocation</td><td>delete the session: instant</td><td>hard: valid until it expires</td></tr>
+<tr><td>Scaling</td><td>needs a shared session store</td><td>any service with the key can verify</td></tr>
+<tr><td>Typical fit</td><td>one web app and its backend</td><td>many services, mobile, third-party APIs</td></tr></table>
+<h3>Verifying a JWT correctly</h3>
+<ol>
+<li>Parse the three parts: <code>header.payload.signature</code> (base64url JSON).</li>
+<li><b>Choose the algorithm yourself</b>: never trust the header's <code>alg</code> (the <code>none</code> and algorithm-confusion attacks).</li>
+<li>Verify the signature (HMAC with a shared secret, or RSA/ECDSA with the issuer's public key from its <b>JWKS</b>, handling key rotation).</li>
+<li>Check the claims: <code>exp</code> (required), <code>nbf</code>, <code>iss</code>, <code>aud</code>, and a little clock skew.</li>
+<li>Only then read <code>sub</code>.</li>
+</ol>
+<p>Because a JWT cannot be revoked, keep access tokens <b>short-lived</b> and use a refresh token (stored more carefully, rotated on use) to get new ones.</p>
+<h3>OAuth 2.0 / OpenID Connect in one paragraph</h3>
+<p>For browser and mobile apps use the <b>authorization code flow with PKCE</b>: the app sends the user to the identity provider with a hashed <code>code_challenge</code>; after login the provider redirects back with a one-time <code>code</code>; the app exchanges it, proving possession with the original <code>code_verifier</code>, for tokens. PKCE means an intercepted code is useless. OIDC adds an <b>ID token</b> (who the user is) on top of OAuth's <b>access token</b> (what the app may call). Do not use the implicit flow.</p>
+<h3>Passwordless: email code vs magic link</h3>
+<p>A magic link with PKCE depends on a verifier stored in the browser that <i>requested</i> it, so opening the email on a different device fails. A <b>typed one-time code</b> works on whichever device you are on. (This is the reason a cross-device cloud save should sign in with a code.) Rate-limit code attempts and keep codes short-lived.</p>
+<h3>Row-level security: the database as the tenant boundary</h3>
+<p>With Supabase the browser holds a <b>publishable (anon) key</b> that only identifies the project, plus the user's own JWT. PostgREST sets the JWT claims for the query, and <b>RLS policies</b> decide which rows are visible:</p>
+<pre><code>alter table notes enable row level security;
+create policy "own rows" on notes
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);</code></pre>
+<ul>
+<li>Even if an API route forgets a <code>WHERE user_id = ...</code>, the database still refuses other tenants' rows. Defence in depth for BOLA.</li>
+<li>The <b>service-role key bypasses RLS</b>: never ship it to a browser or commit it. Only a trusted server may hold it.</li>
+<li>A common pattern: a thin backend (a Worker) that holds secrets and <b>forwards the user's JWT</b> to the database, so RLS still applies instead of the backend acting as an all-powerful user.</li>
+<li>Write functions as <code>security invoker</code> so they run with the caller's permissions, and <code>revoke execute ... from public, anon</code>.</li>
+</ul></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Verify a JWT (HS256)</p><p>Write <code>verify_jwt(token, secret, *, now, issuer=None, audience=None, leeway=0)</code> for HS256 tokens. Return the claims dict, or raise <code>ValueError</code> with exactly one of these messages:</p>
+<ul><li><code>'malformed token'</code>: not three dot-separated base64url parts holding JSON objects.</li><li><code>'unsupported alg'</code>: the header <code>alg</code> is anything but <code>HS256</code> (<b>including <code>none</code></b>: never let the token choose its own verification).</li><li><code>'bad signature'</code>: HMAC-SHA256 of <code>header.payload</code> does not match (compare in constant time).</li><li><code>'missing exp'</code>, <code>'token expired'</code> (when <code>now &gt;= exp + leeway</code>), <code>'token not yet valid'</code> (when <code>now &lt; nbf - leeway</code>).</li><li><code>'wrong issuer'</code> / <code>'wrong audience'</code> when you were given an expected value and the claim differs (<code>aud</code> may be a string or a list).</li></ul>
+<p>Check in that order. Times are in seconds.</p><p><b>Starter:</b></p><pre>import base64
+import hashlib
+import hmac
+import json
+
+def verify_jwt(token, secret, *, now, issuer=None, audience=None, leeway=0):
+    pass
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Bug hunt: Spot the token-handling mistakes</p><p>An assistant wrote this user lookup for a JWT bearer token. Click the <b>2</b> lines an attacker can abuse.</p><pre>1  def current_user(token):
+2      header = json.loads(b64d(token.split('.')[0]))
+3      claims = json.loads(b64d(token.split('.')[1]))
+4      if header['alg'] != 'none' and not verify(token, SECRET, header['alg']):
+5          raise Unauthorized()
+6      return claims['sub']</pre><p>2 buggy lines. Find them, then check.</p><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A user’s laptop is stolen. Their access token is a JWT valid for 24 hours and there is no server-side session list. What is the best mitigation going forward?</div><ol class="opts"><li><b>A.</b> Nothing can be done</li><li><b>B.</b> Use short-lived access tokens (minutes) plus revocable refresh tokens, so a stolen session expires quickly and can be cut off</li><li><b>C.</b> Make the JWT secret longer</li><li><b>D.</b> Store JWTs in localStorage</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Your Worker needs to read the signed-in user’s saved items from Postgres. Which design best contains a bug in your route code?</div><ol class="opts"><li><b>A.</b> Use the service-role key and filter by user_id in code</li><li><b>B.</b> Forward the user’s JWT to the database with the anon key so row-level security enforces user_id = auth.uid() even if the route forgets a filter</li><li><b>C.</b> Make the table public and hide the URL</li><li><b>D.</b> Read all rows and filter in the browser</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Why is the Supabase “anon / publishable” key safe to put in a public web page, while the service-role key is not?</div><ol class="opts"><li><b>A.</b> The anon key is encrypted</li><li><b>B.</b> The anon key only identifies the project and grants whatever RLS allows an unauthenticated or signed-in user; the service-role key bypasses RLS entirely</li><li><b>C.</b> The service-role key expires daily</li><li><b>D.</b> There is no difference</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A code path verifies a JWT signature using the alg named in the token header, then reads sub without checking exp or aud. What is wrong?</div><ol class="opts"><li><b>A.</b> Nothing, the header always tells the truth</li><li><b>B.</b> JWTs do not need expiry once they are signed</li><li><b>C.</b> The server must choose the algorithm itself and verify exp, nbf, iss, and aud before trusting sub</li><li><b>D.</b> The token should be moved to localStorage before verification</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<div class="box"><div class="q">2. A magic link with PKCE works on the requesting phone but fails when the user opens the email on a laptop. What should the team use instead?</div><ol class="opts"><li><b>A.</b> A typed one-time code that works on whichever device the user has, with rate limits and a short lifetime</li><li><b>B.</b> The legacy implicit OAuth flow</li><li><b>C.</b> A longer-lived access token embedded in the link</li><li><b>D.</b> The service-role key embedded in the link</li></ol><p class="tolink" id="q7"><a href="#a7">answer 7 ↓</a></p></div>
+<p class="nav"><a href="fs-web-basics.html">← HTTP, caching, CORS and cookies</a> · <a href="fs-api-design.html">API design that survives its clients →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Verify a JWT (HS256)</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Split into three parts, base64url-decode with padding fixed (part + "=" * (-len(part) % 4)), json.loads, check header["alg"] first, then recompute hmac.new(secret, f"{h}.{p}", sha256).digest() and compare with hmac.compare_digest, then the time and identity claims in the stated order.</p><p><b>Reference solution:</b></p><pre>import base64
+import hashlib
+import hmac
+import json
+
+def _b64d(part):
+    return base64.urlsafe_b64decode(part + '=' * (-len(part) % 4))
+
+def verify_jwt(token, secret, *, now, issuer=None, audience=None, leeway=0):
+    try:
+        header_b64, payload_b64, sig_b64 = token.split('.')
+        header = json.loads(_b64d(header_b64))
+        claims = json.loads(_b64d(payload_b64))
+        sig = _b64d(sig_b64)
+    except (ValueError, AttributeError, TypeError):
+        raise ValueError('malformed token')
+    if not isinstance(header, dict) or not isinstance(claims, dict):
+        raise ValueError('malformed token')
+    if header.get('alg') != 'HS256':
+        raise ValueError('unsupported alg')
+    expected = hmac.new(secret.encode(), f'{header_b64}.{payload_b64}'.encode(), hashlib.sha256).digest()
+    if not hmac.compare_digest(sig, expected):
+        raise ValueError('bad signature')
+    exp = claims.get('exp')
+    if not isinstance(exp, (int, float)):
+        raise ValueError('missing exp')
+    if now &gt;= exp + leeway:
+        raise ValueError('token expired')
+    nbf = claims.get('nbf')
+    if nbf is not None and now &lt; nbf - leeway:
+        raise ValueError('token not yet valid')
+    if issuer is not None and claims.get('iss') != issuer:
+        raise ValueError('wrong issuer')
+    if audience is not None:
+        aud = claims.get('aud')
+        if audience not in (aud if isinstance(aud, list) else [aud]):
+            raise ValueError('wrong audience')
+    return claims</pre><p>The attacks this blocks: alg=none, algorithm confusion (RS256 key used as an HS256 secret), tampered claims, replay after expiry, and tokens meant for another service. Real systems verify against the issuer’s public keys (JWKS) and handle key rotation. A JWT cannot be revoked before it expires, which is why access tokens are short-lived.</p></div>
+<div class="ans" id="a2"><p><b>2. Spot the token-handling mistakes</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> One line trusts the attacker for how verification works. The other trusts a token that may be stale or meant for someone else.</p><ul><li><b>Line 4:</b> The <b>token chooses its own algorithm</b>: <code>alg: none</code> skips verification entirely, and a forged header can steer you into a weaker or confused algorithm. The server must decide the algorithm (and the key) itself.</li><li><b>Line 6:</b> Returns <code>sub</code> without checking <code>exp</code>, <code>nbf</code>, <code>iss</code> or <code>aud</code>: expired tokens and tokens issued for another service are accepted forever.</li></ul></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Use short-lived access tokens (minutes) plus revocable refresh tokens, so a stolen session expires quickly and can be cut off</p><div>Stateless tokens cannot be revoked individually. Short lifetimes bound the damage, and the refresh token (server-tracked) is the revocation point.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Forward the user’s JWT to the database with the anon key so row-level security enforces user_id = auth.uid() even if the route forgets a filter</p><div>With the service-role key one missed WHERE clause leaks every tenant’s data. With the user’s JWT plus RLS the database refuses other tenants’ rows regardless of the route.</div></div>
+<div class="ans" id="a5"><p><b>5. Quick check</b> <a href="#q5">back ↑</a></p><p><b>B.</b> The anon key only identifies the project and grants whatever RLS allows an unauthenticated or signed-in user; the service-role key bypasses RLS entirely</p><div>Security comes from RLS policies, not from hiding the project key. The service-role key skips RLS, so leaking it hands over every row.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 1</b> <a href="#q6">back ↑</a></p><p><b>C.</b> The server must choose the algorithm itself and verify exp, nbf, iss, and aud before trusting sub</p><div>Trusting the header enables none and algorithm-confusion attacks, and skipping claims accepts expired or foreign tokens.</div></div>
+<div class="ans" id="a7"><p><b>7. Check 2</b> <a href="#q7">back ↑</a></p><p><b>A.</b> A typed one-time code that works on whichever device the user has, with rate limits and a short lifetime</p><div>PKCE binds the flow to the browser holding the verifier, so cross-device handoff fails; a typed code avoids that coupling.</div></div>
+<p class="nav"><a href="fs-web-basics.html">← HTTP, caching, CORS and cookies</a> · <a href="fs-api-design.html">API design that survives its clients →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

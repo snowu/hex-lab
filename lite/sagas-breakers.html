@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sagas, circuit breakers, timeouts · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#reliability">Distributed Systems &amp; Reliability</a> · lesson 2 of 3 · 30 min</p>
+<h1>Sagas, circuit breakers, timeouts</h1>
+<p class="sum">Coordinating steps across services, and protecting yourself from slow dependencies.</p>
+<div class="sec">
+<h3>Sagas</h3>
+<p>No distributed transaction? Model a business process as a series of local transactions, each with a <b>compensating action</b>. <i>Orchestration</i> (a coordinator drives the steps, easier to reason about and observe) vs <i>choreography</i> (services react to events, loosely coupled but the flow is implicit).</p>
+<pre><code>reserve funds -> initiate payment -> await bank status -> book ledger
+        on failure: release funds <- cancel payment <- ...</code></pre>
+<p>Compensation is <b>semantic</b>, not a rollback: you cannot unsend an email, you send a correction.</p>
+<h3>Circuit breaker</h3>
+<p>States: <b>closed</b> (normal) → after N failures → <b>open</b> (fail fast for a cooldown) → <b>half-open</b> (let one probe through; success closes, failure re-opens). It stops you from queueing up threads against a dead dependency and gives it room to recover.</p>
+<div class="callout"><b>Timeouts are the foundation.</b> Every outbound call needs one, shorter than your caller’s timeout (deadline propagation), or one slow bank will exhaust your connection pool.</div></div>
+<div class="sec"><div class="box"><p class="kind">Simulation: Circuit breaker state machine</p><p>A real breaker, running live. Break the dependency, watch it trip, then let it recover.</p><p><b>Try this in the full app:</b></p><ul><li>Set the dependency to <b>DOWN</b> and press <b>Send request</b> until the breaker opens.</li><li>While it is <b>OPEN</b> keep sending: requests are rejected instantly and the dependency is never touched.</li><li>Wait for the cooldown, bring the dependency <b>UP</b> and send once: the probe succeeds and the breaker closes.</li><li>Repeat, but leave the dependency down during the probe: it goes straight back to OPEN.</li></ul><p class="note">Interactive: needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Circuit breaker</p><p>Implement <code>class CircuitBreaker</code> with <code>__init__(failure_threshold=3, cooldown=1.0, now=time.monotonic)</code> and <code>async def call(fn)</code> (<code>fn</code> is an async function with no arguments).</p>
+<ul><li><b>Closed</b>: run <code>fn</code>. Count <b>consecutive</b> failures; a success resets the count. At <code>failure_threshold</code> failures → open.</li><li><b>Open</b>: raise <code>CircuitOpenError('circuit open')</code> immediately, without calling <code>fn</code>, until <code>cooldown</code> seconds have passed.</li><li>After the cooldown: <b>half-open</b>. Allow one trial call: success → closed, failure → open again (cooldown restarts).</li></ul><p><b>Starter:</b></p><pre>import time
+
+class CircuitOpenError(Exception):
+    pass
+
+class CircuitBreaker:
+    def __init__(self, failure_threshold=3, cooldown=1.0, now=time.monotonic):
+        pass
+
+    async def call(self, fn):
+        pass
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A saga step 3 of 5 fails permanently. What do you do?</div><ol class="opts"><li><b>A.</b> Roll back the database transaction</li><li><b>B.</b> Run compensating actions for steps 2 and 1 in reverse order, and make those compensations themselves idempotent and retryable</li><li><b>C.</b> Ignore it and alert</li><li><b>D.</b> Retry step 3 forever</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Your team debates saga styles for a checkout flow that must be easy to observe and reason about. Which do you pick and why?</div><ol class="opts"><li><b>A.</b> Choreography, because implicit event flows are easier to debug</li><li><b>B.</b> A two-phase commit across all services for atomicity</li><li><b>C.</b> Orchestration, where a coordinator drives the steps, because the flow is explicit and observable</li><li><b>D.</b> No coordinator and no events; hope each service guesses correctly</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<div class="box"><div class="q">2. The breaker for a slow bank dependency is open. A new payment request arrives. What happens, and what happens next?</div><ol class="opts"><li><b>A.</b> It queues behind the slow calls until a thread frees up</li><li><b>B.</b> It fails fast without calling the bank, and after a cooldown one probe goes through half-open to test recovery</li><li><b>C.</b> It bypasses the breaker for VIP customers</li><li><b>D.</b> It retries the bank immediately ten times</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<p class="nav"><a href="idempotency.html">← Idempotency &amp; exactly-once effects</a> · <a href="observability-incidents.html">Observability &amp; incident stories →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Circuit breaker</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Track a state ("closed" / "open" / "half"), the consecutive failure count, and the time it opened. In call(): if open and the cooldown has passed, move to half. In half-open, a failure opens the breaker immediately. Catch Exception, record, then re-raise.</p><p><b>Reference solution:</b></p><pre>import time
+
+class CircuitOpenError(Exception):
+    pass
+
+class CircuitBreaker:
+    def __init__(self, failure_threshold=3, cooldown=1.0, now=time.monotonic):
+        self.failure_threshold = failure_threshold
+        self.cooldown = cooldown
+        self.now = now
+        self.state = 'closed'
+        self.failures = 0
+        self.opened_at = 0.0
+
+    async def call(self, fn):
+        if self.state == 'open':
+            if self.now() - self.opened_at &lt; self.cooldown:
+                raise CircuitOpenError('circuit open')
+            self.state = 'half'
+        try:
+            result = await fn()
+        except Exception:
+            self.failures += 1
+            if self.state == 'half' or self.failures &gt;= self.failure_threshold:
+                self.state = 'open'
+                self.opened_at = self.now()
+            raise
+        self.state = 'closed'
+        self.failures = 0
+        return result</pre><p>Production breakers add: a single probe in half-open (limit concurrency), failure-rate windows instead of consecutive counts, slow-call thresholds, per-dependency instances (per bank!), and metrics on state changes.</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Run compensating actions for steps 2 and 1 in reverse order, and make those compensations themselves idempotent and retryable</p><div>Compensations run in reverse, must be idempotent (they may be retried), and the saga state must be persisted so it survives crashes.</div></div>
+<div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>C.</b> Orchestration, where a coordinator drives the steps, because the flow is explicit and observable</p><div>Orchestration centralises the flow in a coordinator, which is easier to reason about and observe; choreography is loosely coupled but the flow is implicit.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>B.</b> It fails fast without calling the bank, and after a cooldown one probe goes through half-open to test recovery</p><div>An open breaker fails fast so threads stop piling up against a dead dependency, then half-open lets one probe through; success closes it, failure re-opens it.</div></div>
+<p class="nav"><a href="idempotency.html">← Idempotency &amp; exactly-once effects</a> · <a href="observability-incidents.html">Observability &amp; incident stories →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

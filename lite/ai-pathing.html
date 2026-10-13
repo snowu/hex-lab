@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pathfinding in depth · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdai">Game AI</a> · lesson 4 of 5 · 15 min</p>
+<h1>Pathfinding in depth</h1>
+<p class="sum">A* properly: open and closed sets, heuristics, grids vs navmeshes, smoothing, hierarchies and budgeting path requests.</p>
+<div class="sec">
+<h3>A* in one paragraph</h3>
+<p>A* explores the map starting from the start node, always expanding the node with the smallest <code>f = g + h</code>, where <b>g</b> is the cost already paid to get there and <b>h</b> is a <b>heuristic</b> estimate of the cost still to go. Dijkstra is the same with <code>h = 0</code> (it spreads out evenly), breadth-first search is Dijkstra with unit costs. A good heuristic makes A* head toward the goal and expand far fewer nodes.</p>
+<h3>The data structures</h3>
+<ul><li><b>Open set</b>: nodes discovered but not expanded, ordered by <code>f</code>. A binary heap (priority queue) makes "take the best" O(log n). For tiny maps an array scan is fine.</li><li><b>Closed set</b> (or a per-node state): nodes already expanded. Use arrays indexed by node id, not hash sets, for speed on grids.</li><li><b>Parent links</b>: each node remembers where it was reached from, so the path is rebuilt backwards from the goal.</li><li><b>g scores</b>: if a cheaper route to a node is found later, update its g and parent (and its position in the heap).</li></ul>
+<h3>Heuristics</h3>
+<table><tr><th>Movement</th><th>Admissible heuristic</th></tr>
+<tr><td>4 directions, cost 1</td><td>Manhattan distance <code>|dx| + |dy|</code></td></tr>
+<tr><td>8 directions, diagonal cost √2</td><td>Octile distance: <code>max(dx,dy) + (√2 − 1)·min(dx,dy)</code></td></tr>
+<tr><td>Any direction (a navmesh)</td><td>Euclidean distance</td></tr></table>
+<p>The heuristic must <b>never overestimate</b> (be <i>admissible</i>) for the result to be the shortest path. Multiplying it by a weight above 1 ("weighted A*") finds paths faster that are at most that much longer, a very common game trade. A perfect-looking tie-break: prefer larger g among equal f to avoid expanding a plateau of equal-cost nodes.</p>
+<pre><code data-check="zig">const std = @import("std");
+
+const W = 8;
+const H = 6;
+const INF = std.math.maxInt(u32);
+
+/// A* on a 4-connected grid with Manhattan distance. '#' is a wall. Returns the length of the shortest path, or null.
+/// (The open set is scanned linearly to keep the code short; a real implementation uses a binary heap.)
+fn astar(grid: []const []const u8, start: [2]usize, goal: [2]usize, expanded: *usize) ?u32 {
+    var g: [W * H]u32 = @splat(INF);
+    var closed: [W * H]bool = @splat(false);
+    var open: [W * H]bool = @splat(false);
+    const s = start[1] * W + start[0];
+    const t = goal[1] * W + goal[0];
+    g[s] = 0;
+    open[s] = true;
+    expanded.* = 0;
+    while (true) {
+        var cur: ?usize = null;
+        var best: u32 = INF;
+        for (0..W * H) |i| {
+            if (!open[i]) continue;
+            const x = i % W;
+            const y = i / W;
+            const h: u32 = @intCast(@abs(@as(i32, @intCast(x)) - @as(i32, @intCast(goal[0]))) + @abs(@as(i32, @intCast(y)) - @as(i32, @intCast(goal[1]))));
+            const f = g[i] + h;
+            if (f &lt; best or (f == best and g[i] &gt; g[cur.?])) {
+                best = f;
+                cur = i;
+            }
+        }
+        const c = cur orelse return null;
+        if (c == t) return g[c];
+        open[c] = false;
+        closed[c] = true;
+        expanded.* += 1;
+        const cx: i32 = @intCast(c % W);
+        const cy: i32 = @intCast(c / W);
+        for ([_][2]i32{ .{ 1, 0 }, .{ -1, 0 }, .{ 0, 1 }, .{ 0, -1 } }) |d| {
+            const nx = cx + d[0];
+            const ny = cy + d[1];
+            if (nx &lt; 0 or ny &lt; 0 or nx &gt;= W or ny &gt;= H) continue;
+            if (grid[@intCast(ny)][@intCast(nx)] == '#') continue;
+            const n: usize = @intCast(ny * W + nx);
+            if (closed[n]) continue;
+            if (g[c] + 1 &lt; g[n]) {
+                g[n] = g[c] + 1;
+                open[n] = true;
+            }
+        }
+    }
+}
+
+const map = [_][]const u8{
+    "........",
+    ".######.",
+    ".#....#.",
+    ".#.##.#.",
+    ".#....#.",
+    "........",
+};
+
+test "A* finds the same shortest length as exhaustive search, expanding few nodes on open ground" {
+    var n: usize = 0;
+    try std.testing.expectEqual(@as(?u32, 7), astar(&amp;map, .{ 0, 0 }, .{ 7, 0 }, &amp;n));
+    try std.testing.expect(n &lt;= 10); // goes almost straight there
+    try std.testing.expectEqual(@as(?u32, 11), astar(&amp;map, .{ 0, 0 }, .{ 3, 2 }, &amp;n)); // down the left side, along the bottom and up into the room
+    const blocked = [_][]const u8{ "..#.....", "..#.....", "..#.....", "..#.....", "..#.....", "..#....." };
+    try std.testing.expectEqual(@as(?u32, null), astar(&amp;blocked, .{ 0, 0 }, .{ 7, 5 }, &amp;n));
+}</code></pre>
+<h3>Grids vs navigation meshes</h3>
+<ul><li><b>Grid</b>: simple, great for tile games and strategy. Paths follow cell centres and look blocky: smooth them. Large open worlds produce huge grids (memory, search cost).</li><li><b>Navigation mesh (navmesh)</b>: the walkable area as a set of convex polygons with adjacency. Far fewer nodes than a grid, supports any shape and angle. Search runs over the polygons, then the <b>funnel algorithm</b> ("string pulling") pulls the path tight around corners to give a straight, natural route. This is what Godot, Unity and Unreal use for 3D and for non-grid 2D.</li><li><b>Waypoint graphs</b>: hand-placed nodes and links; cheap and controllable (racing lines, patrol routes), and tedious to cover large areas.</li></ul>
+<h3>Making paths look good</h3>
+<ul><li><b>Smoothing</b>: remove waypoints that a straight line of sight can skip (raycast between non-adjacent waypoints), then optionally round corners.</li><li><b>Agent radius</b>: inflate obstacles by the agent's size so wide characters do not clip corners (navmeshes bake this).</li><li><b>Costs</b>: different terrains cost different amounts (mud 3, road 1); danger zones cost more so AI avoids them without forbidding them.</li><li><b>Tie-breaking</b>: many equal-length paths exist on a grid; add a tiny bias (prefer straight lines) to avoid zig-zags.</li></ul>
+<h3>Scaling up</h3>
+<ul><li><b>Hierarchical pathfinding</b>: precompute connectivity between regions (rooms, chunks) and search the coarse graph first, then refine locally.</li><li><b>Jump point search</b>: on uniform-cost grids, skips over symmetric paths and is often an order of magnitude faster than A*.</li><li><b>Flow fields</b> (integration field plus direction field) for many agents sharing a goal.</li><li><b>Time-sliced search</b>: give pathfinding a per-frame budget (a few milliseconds), keep searches resumable, and queue requests. Agents move toward the best partial path in the meantime. Cancel requests whose agent died or changed its mind.</li><li><b>Cache and share</b>: agents in the same region heading to the same place can reuse paths.</li></ul>
+<h3>Dynamic worlds</h3>
+<p>Doors open, bridges collapse, crates move. Options: mark nodes blocked and re-run affected searches, use <b>D* Lite</b> (incremental replanning for changing maps), or let local avoidance handle small obstacles and replan only when the path is truly blocked. Never replan every frame.</p>
+<h3>Common bugs</h3>
+<ul><li>The goal is inside an obstacle or off the navmesh: snap it to the nearest valid point first.</li><li>Paths that cut corners through walls: obstacle inflation missing.</li><li>Agents vibrating at the goal: use arrive and an acceptance radius, not exact equality.</li><li>Stuck on a door: the door's collision is in the navmesh but the agent cannot open it; model it as a node with a cost or an "action" link.</li></ul></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">On an 8-way grid with diagonal cost √2, which heuristic keeps A* optimal and tight?</div><ol class="opts"><li><b>A.</b> Manhattan distance</li><li><b>B.</b> Octile distance</li><li><b>C.</b> Zero</li><li><b>D.</b> Twice the Euclidean distance</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A level is a huge open 3D space with irregular walkable areas. Which representation fits best?</div><ol class="opts"><li><b>A.</b> A one-metre grid</li><li><b>B.</b> A navigation mesh of convex polygons with funnel smoothing</li><li><b>C.</b> Breadth-first search on pixels</li><li><b>D.</b> A single waypoint</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Fifty agents ask for paths in the same frame and the game hitches. What is the best change?</div><ol class="opts"><li><b>A.</b> Remove the agents</li><li><b>B.</b> Queue the requests and time-slice searches with a per-frame budget, serving the nearest or most urgent first</li><li><b>C.</b> Use a bigger grid</li><li><b>D.</b> Search from the goal</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Someone proposes doubling the Euclidean heuristic to make A* faster on a navmesh. What is the risk?</div><ol class="opts"><li><b>A.</b> It will run slower</li><li><b>B.</b> It may overestimate the remaining cost, breaking admissibility, so the path is no longer guaranteed shortest</li><li><b>C.</b> It changes the movement cost</li><li><b>D.</b> It disables the closed set</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. Wide agents keep clipping corners through walls on grid paths that look fine for small ones. What was missed?</div><ol class="opts"><li><b>A.</b> The heuristic is wrong</li><li><b>B.</b> The tick rate is too low</li><li><b>C.</b> Jump point search was not used</li><li><b>D.</b> Obstacle inflation by the agent radius: paths must be planned for the body size, not a point</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="ai-perception.html">← Perception and steering</a> · <a href="ai-fun.html">AI that is fun: fairness, directors and testing →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Octile distance</p><div>Manhattan overestimates when diagonals are allowed (inadmissible). Octile is exact for an empty 8-way grid. Twice anything may overestimate too.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> A navigation mesh of convex polygons with funnel smoothing</p><div>Navmeshes cover large areas with few nodes and give natural, smooth routes.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Queue the requests and time-slice searches with a per-frame budget, serving the nearest or most urgent first</p><div>Spread the work over frames. Agents can move on a partial or old path while they wait.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>B.</b> It may overestimate the remaining cost, breaking admissibility, so the path is no longer guaranteed shortest</p><div>An admissible heuristic never overestimates; weighting above 1 trades optimality for speed by design.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>D.</b> Obstacle inflation by the agent radius: paths must be planned for the body size, not a point</p><div>Inflating obstacles (or baking radius into the navmesh) keeps wide bodies off corners they cannot fit around.</div></div>
+<p class="nav"><a href="ai-perception.html">← Perception and steering</a> · <a href="ai-fun.html">AI that is fun: fairness, directors and testing →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

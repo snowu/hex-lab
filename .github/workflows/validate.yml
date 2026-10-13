@@ -20,6 +20,7 @@ jobs:
       - run: node scripts/test-sync.mjs
       - run: node scripts/test-worker.mjs
       - run: node scripts/validate-katas.mjs
+      - run: node scripts/gen-lite.mjs --check
   # Drills and snippets compile real C/C++/Zig, so they need the toolchain.
   drills:
     runs-on: ubuntu-latest

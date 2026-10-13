@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Core loop, verbs and pillars · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gddesign">Game Design Theory</a> · lesson 1 of 5 · 6 min</p>
+<h1>Core loop, verbs and pillars</h1>
+<p class="sum">How to describe what a game actually is, so you can tell whether a feature belongs.</p>
+<div class="sec">
+<h3>The core loop</h3>
+<p>The <b>core loop</b> is the smallest cycle the player repeats: <i>do something → get a result → that changes what you do next</i>. If this loop is not fun in isolation, no amount of content saves it. Examples:</p>
+<ul><li><b>Tetris</b>: see piece → place it → clear lines (or stack higher) → see next piece.</li><li><b>Hades</b>: enter room → fight → pick a reward → stronger next room. Around it sits a longer loop: die → return to the hub → spend meta currency → try again.</li><li><b>A farming sim</b>: plant → wait → harvest → sell → buy better seeds.</li></ul>
+<p>Games stack loops at different timescales. A common frame is <b>seconds</b> (a single action, the feel), <b>minutes</b> (a fight, a level) and <b>hours</b> (progression, story). Each layer should give a reason to continue the next.</p>
+<h3>Verbs</h3>
+<p>List the player's <b>verbs</b> (jump, shoot, build, trade, hide). Good small games have a few verbs with depth rather than many shallow ones, and the interesting part is how verbs <i>combine</i> with the world (jump onto enemies, shoot to open doors). Before adding a feature, ask whether it adds a verb, deepens a verb, or only adds content.</p>
+<h3>Pillars</h3>
+<p>Design <b>pillars</b> are 3 or 4 short statements of what the game is, used to say no. “Fast, readable combat.” “Every run feels different.” “Cozy, never punishing.” A feature that fights a pillar gets cut, however cool it is. Write them on day one; they are the cheapest tool for keeping scope under control.</p>
+<h3>MDA: mechanics, dynamics, aesthetics</h3>
+<p>The MDA framework (Hunicke, LeBlanc, Zubek) separates what you build from what players experience:</p>
+<ul><li><b>Mechanics</b>: rules and data you author (jump height, spawn rates).</li><li><b>Dynamics</b>: behaviour that emerges when players interact with the rules (camping, rushing, hoarding).</li><li><b>Aesthetics</b>: the emotional result (challenge, discovery, fellowship, expression, narrative, sensation...).</li></ul>
+<p>Designers work from mechanics upward, but players experience it from aesthetics downward. When a playtester says “this is boring” that is an aesthetics report, and the cause is several steps below it, in the rules.</p></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Your prototype has 12 mechanics but playtesters stop after 5 minutes. What is the most useful first step?</div><ol class="opts"><li><b>A.</b> Add more content</li><li><b>B.</b> Strip back to the smallest loop and make that satisfying to repeat before adding anything</li><li><b>C.</b> Improve the graphics</li><li><b>D.</b> Add a tutorial</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">In MDA terms, “players hoard consumables and never use them” is a…</div><ol class="opts"><li><b>A.</b> Mechanic</li><li><b>B.</b> Dynamic</li><li><b>C.</b> Aesthetic</li><li><b>D.</b> Pillar</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><h3>Exercise: describe a game you love in verbs, loops and pillars</h3><p>Pick one game and write, in five lines each:</p><ol><li>The 10-second loop (what the hands do).</li><li>The 10-minute loop (what the brain plans).</li><li>The 10-hour loop (what keeps you coming back).</li><li>The verbs, and two ways they combine.</li><li>Three pillars you would guess the designers used, and one feature that clearly would have violated them.</li></ol><p>If you cannot name the pillars, the game may not have had any, which also tells you something.</p></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A cool feature idea arrives that fights one of your three design pillars. What do the pillars tell you to do?</div><ol class="opts"><li><b>A.</b> Prototype it anyway, since cool features always earn their place</li><li><b>B.</b> Cut it: pillars exist to say no, however cool the feature is</li><li><b>C.</b> Add it as an option so nobody is disappointed</li><li><b>D.</b> Rewrite the pillars around the feature</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<div class="box"><div class="q">2. Playtesters call your game boring but cannot say why. In MDA terms, where do you look for the cause?</div><ol class="opts"><li><b>A.</b> At the aesthetics report first, then trace down into the dynamics and mechanics below it</li><li><b>B.</b> At the marketing, since boredom is a trailer problem</li><li><b>C.</b> At the graphics settings, since feel is resolution</li><li><b>D.</b> Nowhere: aesthetics reports carry no design information</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<p class="nav"><a href="gd-flow.html">Flow, difficulty and teaching without text →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Strip back to the smallest loop and make that satisfying to repeat before adding anything</p><div>If the core loop is not fun when you strip everything else away, extra systems only hide the problem.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Dynamic</p><div>It is behaviour that emerges from the rules (probably from scarcity plus fear of waste). The fix is in the mechanics: make consumables renewable, or reward using them.</div></div>
+<div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Cut it: pillars exist to say no, however cool the feature is</p><div>Pillars are the cheapest scope tool: a feature that fights them gets cut rather than diluting the game.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>A.</b> At the aesthetics report first, then trace down into the dynamics and mechanics below it</p><div>Players experience aesthetics downward while designers build mechanics upward, so boredom is traced from the feeling to the rules.</div></div>
+<p class="nav"><a href="gd-flow.html">Flow, difficulty and teaching without text →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

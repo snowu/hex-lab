@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zig for game programming · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdcraft">Techniques &amp; Practice</a> · lesson 6 of 8 · 10 min</p>
+<h1>Zig for game programming</h1>
+<p class="sum">A fast tour of the Zig features games care about (explicit allocators, comptime, optionals, errors, packed data) and how to build a game with it.</p>
+<div class="sec">
+<h3>Why Zig for games</h3>
+<ul><li><b>No hidden allocation or control flow.</b> If it allocates, it takes an allocator parameter. If it can fail, the type says so. Perfect for frame-budget thinking and for arena allocators (one per frame or per level, freed in one go).</li><li><b>comptime</b>: generic code and tables built at compile time, without a separate template language. Containers like <code>ArrayList</code> are ordinary functions that return types.</li><li><b>C interop</b> is first class: <code>@cImport</code> and a build system that compiles C and C++ too. SDL, raylib, sokol and stb are one dependency away.</li><li><b>Safety in Debug, speed in Release</b>: bounds checks, overflow checks and use of undefined memory are caught in Debug and Safe builds; <code>ReleaseFast</code> removes them.</li><li><b>Tests are part of the language</b>: <code>test "name" { ... }</code> blocks in the same file, run with <code>zig test</code>. That is what the drills use.</li></ul>
+<div class="callout warn"><b>Zig is pre-1.0.</b> The language and standard library still change between releases (this lab is written and compiled against 0.17.0). When an online example does not compile, check its Zig version first. Pin a version per project in your README or build tooling.</div>
+<h3>Structs, methods and optionals</h3>
+<pre><code>const std = @import("std");
+
+const Enemy = struct {
+    hp: i32,
+    pos: [2]f32,
+
+    fn hit(self: *Enemy, dmg: i32) bool {   // *Enemy: may modify
+        self.hp -= dmg;
+        return self.hp &lt;= 0;
+    }
+};
+
+pub fn main() !void {
+    var e = Enemy{ .hp = 10, .pos = .{ 0, 0 } };
+    std.debug.print("dead? {}\n", .{e.hit(12)});
+}</code></pre>
+<p>Values that may be absent are <b>optionals</b> (<code>?T</code>), unwrapped with <code>if (x) |v| ...</code> or <code>x orelse default</code>. There are no null pointers by default, so a whole class of crashes is a compile error.</p>
+<h3>Tagged unions: state and shapes in one type</h3>
+<pre><code>const Shape = union(enum) {
+    circle: f32,
+    rect: struct { w: f32, h: f32 },
+
+    fn area(self: Shape) f32 {
+        return switch (self) {            // the compiler checks every case is handled
+            .circle =&gt; |r| std.math.pi * r * r,
+            .rect =&gt; |r| r.w * r.h,
+        };
+    }
+};</code></pre>
+<p>This is the natural way to model game states, AI actions, events and commands: each variant carries only its own data.</p>
+<h3>Errors are values</h3>
+<pre><code>const LoadError = error{ NotFound, Corrupt };
+
+fn loadLevel(name: []const u8) LoadError!u32 { ... }
+
+const lvl = loadLevel("forest") catch |err| {
+    std.debug.print("failed: {}\n", .{err});
+    return;
+};
+// or propagate: const lvl = try loadLevel("forest");</code></pre>
+<h3>Allocators and defer</h3>
+<pre><code>fn sumFrames(allocator: std.mem.Allocator, count: usize) !u64 {
+    const frames = try allocator.alloc(u64, count);
+    defer allocator.free(frames);              // runs when the scope ends, on every path
+    for (frames, 0..) |*f, i| f.* = i * i;
+    var total: u64 = 0;
+    for (frames) |f| total += f;
+    return total;
+}</code></pre>
+<p>In tests pass <code>std.testing.allocator</code>: it fails the test when you leak. In a game, hand your systems an <b>arena</b> for per-frame scratch memory and reset it every frame, or use fixed-capacity types (like the pools and sparse sets in the drills) so nothing allocates after startup.</p>
+<h3>comptime generics</h3>
+<pre><code>fn Pool(comptime T: type, comptime n: usize) type {
+    return struct {
+        items: [n]T = undefined,
+        used: [n]bool = @splat(false),
+        fn acquire(self: *@This()) ?*T { ... }
+    };
+}
+var bullets = Pool(Bullet, 256){};</code></pre>
+<h3>Building a game</h3>
+<p>You do not need an engine to learn the fundamentals: open a window, run the fixed-timestep loop from the first lesson, draw rectangles, read input. Libraries that fit Zig well (check each one's README for the Zig version it targets):</p>
+<ul><li><b>raylib</b> (simple C library, great for learning; raylib's own repo ships a <code>build.zig</code> and there are community Zig bindings),</li><li><b>SDL3</b> (windowing, input, audio, GPU; build integrations exist for Zig),</li><li><b>sokol</b> (small cross-platform headers with Zig bindings, nice for web via WASM),</li><li><b>Mach</b> (a game engine and toolkit written in Zig).</li></ul>
+<p>Plan: do the Zig drills, then recreate Pong with the fixed timestep and AABB overlap code you wrote, then Breakout using the swept test.</p></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A Zig function you call has the signature <code>fn load(allocator: std.mem.Allocator, path: []const u8) ![]u8</code>. What can you conclude without reading the body?</div><ol class="opts"><li><b>A.</b> It never fails</li><li><b>B.</b> It may allocate (through the allocator you pass) and may return an error, and the caller owns and must free the returned bytes</li><li><b>C.</b> It uses global memory</li><li><b>D.</b> It only reads from memory</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">What is <code>defer allocator.free(buf)</code> good for?</div><ol class="opts"><li><b>A.</b> It runs the free later on another thread</li><li><b>B.</b> It schedules the free to run at the end of the enclosing scope on every exit path, including early returns and errors</li><li><b>C.</b> It makes the free faster</li><li><b>D.</b> It is only a comment</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">What do you get from <code>switch (shape)</code> over a tagged union that you do not get from a chain of <code>if</code> statements?</div><ol class="opts"><li><b>A.</b> Nothing</li><li><b>B.</b> Exhaustiveness: forgetting a variant is a compile error, and each branch can capture only its own payload</li><li><b>C.</b> Faster execution</li><li><b>D.</b> Dynamic dispatch</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><h3>Extra exercise: a free-list pool in Zig</h3><p>The Pool in this lesson scans for a free slot (O(n)). Rewrite it with a free list: keep <code>next_free: [n]u32</code> and a <code>head</code>, so <code>acquire</code> and <code>release(ptr)</code> are both O(1). Write tests: acquiring more than <code>n</code> returns <code>null</code>; releasing then acquiring reuses the slot; double release is detected in Debug builds (<code>std.debug.assert</code>).</p></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A Zig system needs scratch buffers every frame with zero per-frame leaks and one cheap reset. Which allocator pattern fits?</div><ol class="opts"><li><b>A.</b> Hand the system an arena for per-frame scratch and reset it once per frame</li><li><b>B.</b> Call the page allocator for each buffer and free them one by one</li><li><b>C.</b> Store scratch data in globals so nothing allocates</li><li><b>D.</b> Leak the scratch buffers and restart the game hourly</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. A function may or may not return a target entity. How should that be typed in Zig, and how does the caller unwrap it?</div><ol class="opts"><li><b>A.</b> As a raw nullable pointer checked against null with pointer casts</li><li><b>B.</b> As an optional ?T, unwrapped with if (x) |v| or orelse, so absence is explicit in the type</li><li><b>C.</b> As an error union, since missing data is always an error</li><li><b>D.</b> As a global sentinel entity that means none</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="gd-godot.html">← Godot field guide</a> · <a href="gd-cpp.html">C++ for games →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> It may allocate (through the allocator you pass) and may return an error, and the caller owns and must free the returned bytes</p><div>No hidden allocation: allocation needs an allocator parameter. The <code>!</code> means it can fail. Ownership of the returned buffer is by convention the caller's; read the doc comment to confirm.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> It schedules the free to run at the end of the enclosing scope on every exit path, including early returns and errors</p><div>defer keeps acquire and release next to each other, which avoids the classic early-return leak. <code>errdefer</code> runs only when the function exits with an error.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Exhaustiveness: forgetting a variant is a compile error, and each branch can capture only its own payload</p><div>Add a variant and every switch that does not handle it stops compiling, so state machines and event handlers cannot silently ignore a new case.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>A.</b> Hand the system an arena for per-frame scratch and reset it once per frame</p><div>Arenas match frame lifetimes: many quick allocations, one reset, and the test allocator still catches real leaks.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>B.</b> As an optional ?T, unwrapped with if (x) |v| or orelse, so absence is explicit in the type</p><div>Optionals make absence visible to the compiler with no null pointers by default, unlike hidden sentinel conventions.</div></div>
+<p class="nav"><a href="gd-godot.html">← Godot field guide</a> · <a href="gd-cpp.html">C++ for games →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

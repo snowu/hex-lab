@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The game loop and delta time · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdloop">Game Loop &amp; Architecture</a> · lesson 1 of 4 · 30 min</p>
+<h1>The game loop and delta time</h1>
+<p class="sum">Why a game is a loop, what a frame budget is, and why frame-rate dependent code is the first bug everyone ships.</p>
+<div class="sec">
+<p>A game is one loop that runs until you quit. Each trip around it is a <b>frame</b>:</p>
+<pre><code>while (running) {
+    poll_input();        // what did the player press since last frame?
+    update(dt);          // advance the world by dt seconds
+    render();            // draw the result
+}</code></pre>
+<p>At 60 frames per second one frame has <b>16.6 ms</b> to do all of that (8.3 ms at 120 Hz, 33 ms at 30). That is the <i>frame budget</i>. Miss it and the player sees stutter. Everything else in this track is about spending that budget wisely or making the game behave when you overspend it.</p>
+<h3>Delta time</h3>
+<p>If you move a character by 5 pixels each frame, it moves 300 px/s on a 60 Hz monitor and 720 px/s on a 144 Hz one. The game plays at different speeds on different machines. The fix is to move by <b>speed × dt</b>, where <code>dt</code> is the real time the last frame took:</p>
+<pre><code># GDScript (Godot 4)
+func _process(delta):
+    position.x += speed * delta         # speed in px/s, correct at any frame rate</code></pre>
+<p>That handles movement, but not everything. Physics integration, collision and anything that must be <b>reproducible</b> still depends on how big dt is (try the simulation below).</p>
+<h3>Fixed timestep</h3>
+<p>The standard answer is to run the <i>simulation</i> in fixed slices (say 1/60 s) and let the <i>rendering</i> run as fast as it likes:</p>
+<pre><code>acc += frame_time;
+while (acc >= STEP) {        // catch up in whole steps
+    simulate(STEP);
+    acc -= STEP;
+}
+draw(interpolate(acc / STEP)); // blend previous and current state</code></pre>
+<p>Now the physics of a jump is identical on every machine and on every replay. You get determinism (replays, rollback netcode, reproducible bugs) for free. Godot does exactly this: <code>_physics_process</code> runs at a fixed rate (60 by default), <code>_process</code> runs every rendered frame.</p>
+<div class="callout warn"><b>The spiral of death:</b> if one frame takes 200 ms (alt-tab, a long load, a breakpoint), the loop wants to run twelve physics steps to catch up. Those take longer than a frame, so the next frame is even further behind. Always <b>cap the number of steps per frame</b> and throw the excess away. You will write exactly that in the drill below.</div></div>
+<div class="sec"><div class="box"><p class="kind">Simulation: The same jump at different frame rates</p><p>The jump uses gravity and an initial velocity. Amber integrates with the real frame time, green with a fixed 60 Hz step. The dashed line is the ideal curve. Drag the frame rate.</p><p><b>Try this in the full app:</b></p><ul><li>Set <b>30 fps</b>: the variable-dt jump is noticeably higher than ideal. The same code makes some players jump higher than others.</li><li>Move to <b>10 fps</b>: the error becomes huge.</li><li>The green line is the same at every frame rate. That is the whole point of a fixed step.</li><li>Go to <b>144 fps</b>: the error almost disappears, which is why this bug survives on dev machines.</li></ul><p class="note">Interactive: needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A character moves with <code>position.x += 5</code> inside <code>_process</code>. What happens on a 144 Hz monitor compared with 60 Hz?</div><ol class="opts"><li><b>A.</b> Nothing, Godot normalises it</li><li><b>B.</b> It moves 2.4 times faster, because the function runs 2.4 times as often</li><li><b>C.</b> It moves slower, because frames are shorter</li><li><b>D.</b> It moves the same, but looks smoother</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Why does Godot offer both <code>_process(delta)</code> and <code>_physics_process(delta)</code>?</div><ol class="opts"><li><b>A.</b> One is for 2D, one for 3D</li><li><b>B.</b> _physics_process runs at a fixed rate for stable simulation, _process runs every rendered frame for visuals and UI</li><li><b>C.</b> _process is deprecated</li><li><b>D.</b> They are identical, the name is a convention</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Fixed timestep with an accumulator</p><p>Implement <code>fixed_steps</code>. <code>frame_ms</code> holds the real duration of each frame in whole milliseconds. The game simulates in fixed slices of <code>step</code> ms. For every frame report how many simulation steps ran.</p>
+<ul><li>Add the frame time to an accumulator, then run one step (subtract <code>step</code>) while the accumulator holds at least one.</li><li><b>Spiral-of-death guard:</b> never run more than <code>max_steps</code> in one frame. If you hit the cap and are still behind, throw the rest of the accumulator away (set it to 0) instead of trying to catch up.</li></ul><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+/// Writes into out[i] how many simulation steps ran during frame i. out.len == frame_ms.len.
+pub fn fixedSteps(frame_ms: []const u32, step: u32, max_steps: u32, out: []u32) void {
+    _ = frame_ms;
+    _ = step;
+    _ = max_steps;
+    for (out) |*o| o.* = 0;
+}
+</pre><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Bug hunt: Spot the frame-rate bugs</p><p>A teammate wrote this player controller in GDScript. It feels fine on their 60 Hz laptop. Click the <b>3</b> lines that will behave differently at other frame rates or waste the frame budget.</p><pre> 1  extends CharacterBody2D
+ 2  
+ 3  var speed = 300.0
+ 4  var gravity = 20.0
+ 5  var health = 100
+ 6  
+ 7  func _process(delta):
+ 8      velocity.x = Input.get_axis(&quot;left&quot;, &quot;right&quot;) * speed
+ 9      velocity.y += gravity
+10      var label = get_node(&quot;/root/Main/UI/HealthLabel&quot;)
+11      label.text = str(health)
+12      move_and_slide()</pre><p>3 buggy lines. Find them, then check.</p><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<div class="sec"><h3>Think it through: how would you make a game run the same on every machine?</h3><ul><li>Separate <b>simulation</b> (fixed step, deterministic) from <b>rendering</b> (as fast as possible, interpolated).</li><li>Never use frame count as time. Use <code>dt</code> or the fixed step.</li><li>Cap catch-up steps (spiral of death) and decide what to drop: time, not state.</li><li>Seed all gameplay randomness, keep it out of rendering (see the procgen lesson).</li><li>Floating point is deterministic on one machine and compiler but can differ across platforms. For lockstep multiplayer use fixed-point or integers.</li></ul></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Your game targets 60 fps. How much time does one frame have, and what happens if input, update and render exceed it?</div><ol class="opts"><li><b>A.</b> About 16.6 ms; the game misses its frame budget and the player sees stutter</li><li><b>B.</b> About 100 ms; extra work just queues silently</li><li><b>C.</b> About 1 ms; the GPU skips the frame for free</li><li><b>D.</b> There is no budget; the engine stretches time to fit</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. After a 200 ms hitch your fixed-step loop wants to run twelve catch-up physics steps at once. What should it do?</div><ol class="opts"><li><b>A.</b> Run all twelve steps so no time is lost</li><li><b>B.</b> Cap the steps per frame and throw the excess time away</li><li><b>C.</b> Pause rendering until the simulation catches up</li><li><b>D.</b> Double the step size to catch up in fewer steps</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="gd-input-fsm.html">Input, buffering and state machines →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> It moves 2.4 times faster, because the function runs 2.4 times as often</p><div>The update is per frame, not per second. Multiply by delta (<code>5 * 60 * delta</code> if you think in px/s) so distance depends on time, not on how many frames happened.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> _physics_process runs at a fixed rate for stable simulation, _process runs every rendered frame for visuals and UI</p><div>Physics and gameplay that must be deterministic go in the fixed-rate callback; per-frame visuals (animation blending, UI, camera smoothing) go in _process.</div></div>
+<div class="ans" id="a3"><p><b>3. Fixed timestep with an accumulator</b> <a href="#q3">back ↑</a></p><p><b>Hint:</b> acc += t; then while (acc >= step and n < max_steps) { acc -= step; n += 1 }. Afterwards, if acc is still >= step you were behind: acc = 0. Only drop on a real backlog ([50] with step 10 and cap 5 runs exactly 5 and leaves 0 anyway).</p><p>Gaffer On Games, "Fix Your Timestep", is the reference. The simulation stays deterministic because it only ever sees the same dt, and rendering interpolates with alpha = acc / step. Without the cap one long frame (alt-tab, a breakpoint) makes the next frame run hundreds of steps, which takes longer, which makes the backlog bigger: the spiral of death.</p></div>
+<div class="ans" id="a4"><p><b>4. Spot the frame-rate bugs</b> <a href="#q4">back ↑</a></p><p><b>Hint:</b> One mistake is about which callback this is in, one is about time, one is about doing the same lookup 60 times a second.</p><ul><li><b>Line 7:</b> Physics movement (<code>velocity</code>, gravity, <code>move_and_slide</code>) belongs in <code>_physics_process</code>. In <code>_process</code> the collision step runs at the display rate, so tunnelling and tuning vary between machines.</li><li><b>Line 9:</b> <code>velocity.y += gravity</code> adds a fixed amount every <i>frame</i>, so gravity is three times stronger at 180 fps than at 60. Use <code>gravity * delta</code> (with gravity in px/s²).</li><li><b>Line 10:</b> <code>get_node</code> with an absolute path every frame walks the scene tree each time. Cache it once (<code>@onready</code>) or better, have the UI listen to a signal when health changes.</li></ul></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>A.</b> About 16.6 ms; the game misses its frame budget and the player sees stutter</p><div>At 60 Hz each frame has 16.6 ms for everything. Missing it visibly stutters, so the whole track is about spending that budget wisely.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>B.</b> Cap the steps per frame and throw the excess time away</p><div>Uncapped catch-up is the spiral of death: catching up takes longer than a frame, so the next frame falls further behind.</div></div>
+<p class="nav"><a href="gd-input-fsm.html">Input, buffering and state machines →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

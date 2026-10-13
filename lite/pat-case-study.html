@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Putting it together: architecture of a small game · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdpatterns">Game Programming Patterns</a> · lesson 12 of 12 · 10 min</p>
+<h1>Putting it together: architecture of a small game</h1>
+<p class="sum">Design the architecture of Breakout from scratch, choosing patterns for reasons, and learn to read a codebase you did not write.</p>
+<div class="sec">
+<p>Patterns are tools, and the skill is knowing which problem calls for which. We design a game small enough to hold in your head: <b>Breakout</b> (paddle, ball, bricks, lives, levels from files, a pause menu, high scores), and decide at each step whether a pattern pays for itself.</p>
+<h3>1. The loop and the update order</h3>
+<p>Fixed-timestep simulation, variable-rate rendering (game loop lesson). Per step, a <b>written order</b>: read input commands → move paddle → move ball → collisions → apply consequences (score, destroy bricks) → check win/lose. Comment the order in <b>one place</b>. Because the ball depends on the paddle's new position, order matters here; do not rely on node ordering by accident.</p>
+<h3>2. Input: commands, but only as much as needed</h3>
+<p>Keyboard, gamepad and touch all produce the same two intents: <code>MovePaddle(dir)</code> and <code>Launch</code>. Making these <b>commands</b> costs almost nothing and buys rebinding, an attract-mode AI that plays the game, and replays for bug reports. Undo is not needed in Breakout: skip it.</p>
+<h3>3. States: the game flow</h3>
+<p>Title → Playing → Paused → GameOver → HighScores. This is a <b>pushdown stack</b>: Pause pushes onto Playing and pop resumes. Ball-in-play vs ball-on-paddle is a small <b>enum state machine</b> inside the gameplay state. Do not make the ball a pushdown automaton; the pattern follows the problem.</p>
+<h3>4. Entities: data, not classes</h3>
+<p>The bricks (up to a few hundred) are plain data in arrays: position, hit points, type id. A <b>type object</b> defines brick kinds (normal, two-hit, indestructible, explosive) from a data file. The level is data too: a text grid where each character is a brick type id. Adding a new brick kind or level must not need a programmer. Because there are hundreds of bricks and the update touches few fields, <b>struct-of-arrays</b> is fine but unnecessary at this scale: write the clear version and measure before optimising.</p>
+<h3>5. Collisions: do not build a broadphase</h3>
+<p>One ball, a paddle and 200 bricks: brute force is trivial. The interesting part is <b>tunneling</b>: a fast ball can pass through a thin brick, so use a <b>swept</b> test (collision lesson) and resolve the first hit by time of impact. A grid would help only with thousands of objects: the "do I need this?" question again.</p>
+<h3>6. Events: how consequences spread</h3>
+<p>When the ball destroys a brick: add score, play a sound, spawn particles, maybe drop a power-up, check if the level is clear. The collision code emits <code>brick_destroyed(brick, position)</code> and the scoring, audio, particle and power-up systems each subscribe (<b>observer</b>). Audio requests go through a small <b>event queue</b> so ten bricks breaking in one frame play a limited number of sounds. The level-complete check reacts to the event instead of the collision code knowing about levels.</p>
+<h3>7. Services and data</h3>
+<p>Audio, settings, and save/high-score storage are <b>services</b> behind small interfaces, injected into the places that need them (audio into the event listener; the save service into the high-score screen). No <code>Game.instance</code>. The high-score file has a <b>version number</b> from the first release (data lesson).</p>
+<h3>8. What you deliberately skip</h3>
+<p>ECS, bytecode scripting, a scene graph with dirty-flag transforms, object pooling for particles (maybe later, after profiling shows allocation). Knowing what <i>not</i> to use is half of the design.</p>
+<h3>How the pieces talk</h3>
+<pre><code>Input (keyboard/gamepad/AI) --commands--> Gameplay state
+Gameplay: paddle, ball, bricks (data) --swept collision--> hit results
+hit results --events (brick_destroyed, ball_lost)--> Score, Audio queue, Particles, PowerUps, LevelFlow
+LevelFlow --push/pop/replace--> State stack (Title / Playing / Paused / GameOver)
+Services (Audio, Save, Settings) injected at construction</code></pre>
+<h3>Reading a codebase you did not write</h3>
+<ol><li><b>Find the loop.</b> Every game has one place that runs each frame. Start there and read down.</li><li><b>Find the data.</b> Where do kinds of things come from (resources, JSON, tables)? That tells you how content is made.</li><li><b>Follow one event end to end.</b> Pick "the player shoots" and trace input → command → spawn → collision → damage → UI. You will meet every system.</li><li><b>Draw the ownership tree</b>: who creates whom, who frees whom.</li><li><b>Look for the global state</b> (singletons, autoloads, statics): that is where the surprises live.</li><li><b>Run it with a profiler and a debugger</b> before forming opinions.</li></ol></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">In the Breakout design, why is the pause menu a good fit for a pushdown stack but "ball on paddle versus in play" is not?</div><ol class="opts"><li><b>A.</b> Pause menus are more important</li><li><b>B.</b> Pause must return to exactly what was underneath (and can nest with options), while the ball has two flat modes with no memory needed: an enum is enough</li><li><b>C.</b> The ball is too fast for a stack</li><li><b>D.</b> Stacks cannot hold enums</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Where should the check "all bricks destroyed, load next level" live?</div><ol class="opts"><li><b>A.</b> Inside the collision code, right after a brick breaks</li><li><b>B.</b> In a level-flow system that reacts to the brick_destroyed event and asks the level whether any bricks remain</li><li><b>C.</b> In the ball</li><li><b>D.</b> In the audio service</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><h3>Design challenge: apply this to your own game</h3><p>Take a game you want to build (or one you love) and write, in one page:</p><ol><li>The loop and the written update order (6 to 10 steps).</li><li>The commands the input produces.</li><li>The game-flow stack and which transitions push, pop and replace.</li><li>What is <b>data</b> (type objects, level files) and what is <b>code</b>.</li><li>The 3 to 5 events that cross system boundaries.</li><li>The services, and who owns each.</li><li>Three patterns you <b>deliberately skipped</b>, with a one-line reason each.</li></ol><p>Then check it against the antipatterns lesson: is there any global the design cannot live without?</p></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Breakout has one ball, a paddle and about 200 bricks. A teammate proposes a spatial grid broadphase for ball-versus-brick collision. What is the lesson answer?</div><ol class="opts"><li><b>A.</b> Skip it: brute force is trivial at this scale, and the real issue is tunneling, so use a swept test and resolve the first hit by time of impact</li><li><b>B.</b> Build the grid, since structures are always faster</li><li><b>C.</b> Remove collision entirely</li><li><b>D.</b> Use a grid only for the paddle</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<div class="box"><div class="q">2. You just opened a codebase you have never seen. What is the recommended first sequence?</div><ol class="opts"><li><b>A.</b> Rewrite it in your favourite language</li><li><b>B.</b> Find the loop and read down, find where kinds of things come from as data, then trace one event like the player shoots end to end before judging anything</li><li><b>C.</b> Start with the audio mixer settings</li><li><b>D.</b> Delete the singletons first</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<p class="nav"><a href="pat-antipatterns.html">← Singletons, globals and other traps</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Pause must return to exactly what was underneath (and can nest with options), while the ball has two flat modes with no memory needed: an enum is enough</p><div>Match the structure to the problem: memory of what you came from means a stack; two plain modes mean an enum.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> In a level-flow system that reacts to the brick_destroyed event and asks the level whether any bricks remain</p><div>Collision code should not know about levels. An event keeps the responsibilities separate and testable.</div></div>
+<div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>A.</b> Skip it: brute force is trivial at this scale, and the real issue is tunneling, so use a swept test and resolve the first hit by time of impact</p><div>Match the tool to the measured problem. At hundreds of objects clarity beats an unjustified accelerator.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Find the loop and read down, find where kinds of things come from as data, then trace one event like the player shoots end to end before judging anything</p><div>The loop, the data sources and one end-to-end trace reveal the systems, ownership and global surprises.</div></div>
+<p class="nav"><a href="pat-antipatterns.html">← Singletons, globals and other traps</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

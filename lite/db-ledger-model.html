@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modelling money in a relational database · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#data">Databases &amp; SQL</a> · lesson 1 of 5 · 25 min</p>
+<h1>Modelling money in a relational database</h1>
+<p class="sum">Accounts, transactions, entries: invariants as constraints.</p>
+<div class="sec">
+<p>For money you want a database that enforces rules for you: <b>ACID transactions</b>, <b>constraints</b> and <b>joins</b>. The classic model is a <b>double-entry ledger</b>:</p>
+<pre><code>accounts      (id, owner, currency, ...)
+transactions  (id, idempotency_key UNIQUE, created_at, memo)
+entries       (id, transaction_id → transactions, account_id → accounts, amount_minor BIGINT, currency)
+              -- every transaction's entries sum to zero; entries are never updated or deleted</code></pre>
+<h3>Rules a senior engineer states unprompted</h3>
+<ul>
+<li><b>Integer minor units</b> (<code>BIGINT</code> cents) or <code>NUMERIC(19,4)</code>, never <code>FLOAT</code>/<code>DOUBLE</code>. Avoid Postgres's <code>money</code> type (locale-dependent). Store the currency next to the amount.</li>
+<li><b>Append-only.</b> A mistake is corrected with a <i>reversing transaction</i>, never an <code>UPDATE</code>. History stays auditable.</li>
+<li><b>Idempotency key with a UNIQUE constraint</b>, so a retried request cannot post twice.</li>
+<li><b>Constraints over application checks:</b> <code>NOT NULL</code>, foreign keys (<code>ON DELETE RESTRICT</code>), <code>CHECK (amount_minor &lt;&gt; 0)</code>, <code>CHECK (length(currency) = 3)</code>.</li>
+<li><b>Timestamps:</b> <code>timestamptz</code> stored in UTC. Never store local times.</li>
+<li><b>The balance is derived</b> (<code>SUM(entries)</code>). If you keep a cached balance column, update it in the same transaction and reconcile against the sum regularly.</li>
+<li><b>NULL means unknown</b>, not zero. Prefer <code>NOT NULL DEFAULT 0</code> where zero is what you mean.</li>
+</ul>
+<div class="callout"><b>The data below</b> is a tiny ledger you will query in the exercises: accounts <code>alice, bob, shop, fees, carol, bank</code>, seven transactions, one of which is deliberately wrong. Use the schema panel on each exercise.</div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (SQL): Balance per account</p><p>The ledger stores every money movement as <code>entries</code> (positive or negative <code>amount_minor</code>, in cents). Write a query returning <b>one row per account</b>: <code>owner</code> and <code>balance_minor</code>, the sum of that account's entries. Accounts with no entries must still appear, with a balance of <code>0</code>.</p><p><b>Schema:</b></p><pre>CREATE TABLE accounts (id INTEGER PRIMARY KEY, owner TEXT NOT NULL, currency TEXT NOT NULL, opened_on TEXT NOT NULL);
+CREATE TABLE transactions (id INTEGER PRIMARY KEY, idempotency_key TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL, memo TEXT);
+CREATE TABLE entries (id INTEGER PRIMARY KEY, transaction_id INTEGER NOT NULL REFERENCES transactions(id), account_id INTEGER NOT NULL REFERENCES accounts(id), amount_minor INTEGER NOT NULL);</pre><p><b>Starter:</b></p><pre>-- owner, balance_minor  (every account, 0 when it has no entries)
+SELECT
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (SQL): Find unbalanced transactions</p><p>The ledger invariant: <b>the entries of every transaction sum to zero</b>. Write a query returning <code>id</code> and <code>imbalance</code> (the non-zero sum) for each transaction that violates it. This is the kind of check you run continuously in production.</p><p><b>Schema:</b></p><pre>CREATE TABLE accounts (id INTEGER PRIMARY KEY, owner TEXT NOT NULL, currency TEXT NOT NULL, opened_on TEXT NOT NULL);
+CREATE TABLE transactions (id INTEGER PRIMARY KEY, idempotency_key TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL, memo TEXT);
+CREATE TABLE entries (id INTEGER PRIMARY KEY, transaction_id INTEGER NOT NULL REFERENCES transactions(id), account_id INTEGER NOT NULL REFERENCES accounts(id), amount_minor INTEGER NOT NULL);</pre><p><b>Starter:</b></p><pre>-- id, imbalance  (only transactions whose entries do not sum to zero)
+SELECT
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A transaction posted last week had the wrong amount. What is the correct way to fix a double-entry ledger?</div><ol class="opts"><li><b>A.</b> UPDATE the entry to the right amount, then log who did it</li><li><b>B.</b> Post a new reversing transaction (and then the corrected one), leaving the original entries untouched</li><li><b>C.</b> DELETE the transaction and re-insert it</li><li><b>D.</b> Edit the balance column directly and leave the entries</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Why do payments systems store amounts as integer minor units (or NUMERIC) rather than FLOAT?</div><ol class="opts"><li><b>A.</b> Integers are smaller on disk</li><li><b>B.</b> Binary floating point cannot represent most decimal fractions exactly, so sums drift and equality checks fail</li><li><b>C.</b> Floats are slower to index</li><li><b>D.</b> SQL does not support FLOAT arithmetic</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<div class="sec"><h3>Interview prompt: “model payments with refunds and partial captures”</h3><ul><li>A <code>payments</code> table with a state machine (created, authorised, captured, refunded, failed) and an append-only <code>payment_events</code> history.</li><li>Money movement lives in the ledger. A capture posts entries; a refund posts <b>new</b> entries, linked by <code>original_payment_id</code>, never editing the capture.</li><li>Partial capture and refund amounts are constrained: <code>SUM(captures) &lt;= authorised</code> and <code>SUM(refunds) &lt;= SUM(captures)</code>, checked in the same transaction under a row lock on the payment.</li><li>Idempotency keys on every write endpoint, with unique indexes.</li></ul></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A payment webhook may be retried by the provider. How do you guarantee it cannot post twice?</div><ol class="opts"><li><b>A.</b> Deduplicate in application code by querying first, without any database constraint</li><li><b>B.</b> Store an idempotency key with a UNIQUE constraint so a retried request fails to insert twice</li><li><b>C.</b> Delete old transactions periodically so retries find nothing</li><li><b>D.</b> Compare amounts as FLOAT to detect near-duplicate posts</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. The team wants fast balance reads and proposes a balance column updated by the app. What is the safe rule?</div><ol class="opts"><li><b>A.</b> Derive the balance as SUM of entries, and if a cached balance column exists update it in the same transaction and reconcile against the sum</li><li><b>B.</b> Update the balance column whenever convenient and ignore the entries</li><li><b>C.</b> Store local times alongside balances for readability</li><li><b>D.</b> Allow NULL balances to mean zero</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="db-sql-fluency.html">SQL fluency: joins, windows, anti-joins →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Balance per account</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> You need every account, so start from accounts and LEFT JOIN entries. SUM over zero rows is NULL, not 0: wrap it in COALESCE.</p><p><b>Reference solution:</b></p><pre>SELECT a.owner, COALESCE(SUM(e.amount_minor), 0) AS balance_minor
+FROM accounts a
+LEFT JOIN entries e ON e.account_id = a.id
+GROUP BY a.id, a.owner</pre><p>An INNER JOIN silently drops accounts without entries, a classic reporting bug. In production the balance is usually a maintained column checked against SUM(entries), never recomputed on every read of a hot account.</p></div>
+<div class="ans" id="a2"><p><b>2. Find unbalanced transactions</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> Filtering on an aggregate needs HAVING, not WHERE (WHERE runs before grouping).</p><p><b>Reference solution:</b></p><pre>SELECT transaction_id AS id, SUM(amount_minor) AS imbalance
+FROM entries
+GROUP BY transaction_id
+HAVING SUM(amount_minor) &lt;&gt; 0</pre><p>Enforcing this inside the database is hard: a CHECK constraint sees one row at a time. Options are a deferred constraint trigger, posting through one function that validates, or a reconciliation job that runs this exact query and alerts on any row.</p></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Post a new reversing transaction (and then the corrected one), leaving the original entries untouched</p><div>Entries are immutable so that any past state can be reconstructed and audited. Corrections are new, visible transactions.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Binary floating point cannot represent most decimal fractions exactly, so sums drift and equality checks fail</p><div>0.1 + 0.2 is not 0.3 in binary floating point. Integer cents (or an exact decimal type) make sums exact, and the invariant "entries sum to zero" is only checkable if arithmetic is exact.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>B.</b> Store an idempotency key with a UNIQUE constraint so a retried request fails to insert twice</p><div>Only a UNIQUE constraint enforced inside the transaction makes retries safe under concurrency; application checks race.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>A.</b> Derive the balance as SUM of entries, and if a cached balance column exists update it in the same transaction and reconcile against the sum</p><div>The entries sum is the truth; a cached balance is only safe when written atomically with its entries and reconciled regularly.</div></div>
+<p class="nav"><a href="db-sql-fluency.html">SQL fluency: joins, windows, anti-joins →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preparing for the Neonomics interview · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#openbanking">Neonomics &amp; Open Banking</a> · lesson 5 of 5 · 5 min</p>
+<h1>Preparing for the Neonomics interview</h1>
+<p class="sum">Research checklist, questions to ask, and how to map your experience.</p>
+<div class="sec"><p>Neonomics is an Oslo-based open banking company (founded 2017) with a licensed payment institution, an aggregator API covering many European banks, and a pay-by-bank product (<b>Nello Pay</b>). It has been growing via partnerships and acquisitions. Check their latest news; details change.</p></div>
+<div class="sec"><h3>✅ Research checklist (do these before the interview)</h3><ol>
+<li>Read the <a href="https://docs.neonomics.io" target="_blank" rel="noopener">API docs</a>: Platform overview, Consent/Authorization/SCA, Error handling, Pay by Bank. Draw the flow from memory.</li>
+<li>Skim the <a href="https://neonomics.io/blog/open-banking-is-evolving-and-so-are-we" target="_blank" rel="noopener">blog</a> and the About page for strategy: what are they pushing right now (pay by bank, data products, UK expansion)?</li>
+<li>Look up their engineering job posts for the stack and the on-call/ownership language.</li>
+<li>Read the Berlin Group NextGenPSD2 intro (free) and the EBA PSD2 RTS summary.</li>
+<li>Try a sandbox for any open banking API to get a feel for consent redirects.</li></ol></div>
+<div class="sec"><h3>🎯 Likely themes</h3><ul>
+<li>Reliability across flaky third-party banks (timeouts, breakers, bulkheads).</li>
+<li>Idempotent payments and exactly-once <i>effects</i>.</li>
+<li>Security: certificates, signing, secrets, least privilege, GDPR.</li>
+<li>Data modelling for normalised accounts/transactions across banks.</li>
+<li>Asynchronous status handling, webhooks, reconciliation.</li>
+<li>Working in a regulated environment: auditability, change management, incident reports.</li>
+<li>AI: where it helps (support triage, error-explanation, categorisation, dev productivity) and where it must not touch money flows without controls.</li></ul></div>
+<div class="sec"><h3>❓ Good questions to ask them</h3><ul>
+<li>“What fails most often today: banks, our infra, or the integration with customers? How do you detect bank-side regressions?”</li>
+<li>“How is on-call organised and what did your last significant incident teach you?”</li>
+<li>“How do you test against hundreds of banks: contract tests, sandboxes, synthetic probes?”</li>
+<li>“How do you balance building canonical models against exposing bank-specific features?”</li>
+<li>“How do you use AI in engineering and what are the guardrails in a regulated setting?”</li>
+<li>“What does a senior engineer own here in the first 6 months?”</li></ul></div>
+<div class="sec"><h3>🧩 Map your experience</h3><p>For each, prepare a story: (1) a third-party dependency that was unreliable, (2) a money or data-correctness bug, (3) a security/compliance requirement you implemented, (4) a migration or integration across many heterogeneous partners, (5) something you simplified. Tie each to a concept above.</p></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Interviewer: “How would you make sure our API never double-charges a customer?” Pick the strongest outline.</div><ol class="opts"><li><b>A.</b> Check the database before inserting</li><li><b>B.</b> Idempotency keys scoped per customer with a unique constraint, atomic claim+effect (or outbox), safe retries with backoff, status reconciliation against the bank, and monitoring for duplicates</li><li><b>C.</b> Use a lock in memory</li><li><b>D.</b> Tell customers not to retry</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. You have one evening before the interview. Which preparation gives the strongest signal?</div><ol class="opts"><li><b>A.</b> Reading the aggregator API docs on consent, SCA, and errors, then drawing the flow from memory and trying a sandbox redirect</li><li><b>B.</b> Memorising the founding year and office locations only</li><li><b>C.</b> Re-reading your own CV with no reference to their API or strategy</li><li><b>D.</b> Learning a new frontend framework overnight</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div>
+<div class="box"><div class="q">2. You once owned an integration over many flaky third-party partners. How should you pitch that story here?</div><ol class="opts"><li><b>A.</b> As a story about writing the most lines of code in a sprint</li><li><b>B.</b> As a story about tabs versus spaces in code review</li><li><b>C.</b> As a story about office relocation logistics</li><li><b>D.</b> As evidence for aggregator themes: per-partner isolation, contract tests and probes, idempotent effects, and reconciliation</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<p class="nav"><a href="ob-aggregator-eng.html">← Engineering a multi-bank aggregator</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Idempotency keys scoped per customer with a unique constraint, atomic claim+effect (or outbox), safe retries with backoff, status reconciliation against the bank, and monitoring for duplicates</p><div>Layered defence: prevent duplicates (idempotency), make retries safe, and detect any that slip through (reconciliation, alerts).</div></div>
+<div class="ans" id="a2"><p><b>2. Check 1</b> <a href="#q2">back ↑</a></p><p><b>A.</b> Reading the aggregator API docs on consent, SCA, and errors, then drawing the flow from memory and trying a sandbox redirect</p><div>Discussing their actual API flow from memory, plus sandbox experience, shows role-relevant preparation beyond generic company facts.</div></div>
+<div class="ans" id="a3"><p><b>3. Check 2</b> <a href="#q3">back ↑</a></p><p><b>D.</b> As evidence for aggregator themes: per-partner isolation, contract tests and probes, idempotent effects, and reconciliation</p><div>Map each past story to their likely themes: unreliable banks, money correctness, security, heterogeneous modelling, and async status handling.</div></div>
+<p class="nav"><a href="ob-aggregator-eng.html">← Engineering a multi-bank aggregator</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

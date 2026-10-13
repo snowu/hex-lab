@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design-a-class problems · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#coding">Coding Fluency</a> · lesson 2 of 3 · 45 min</p>
+<h1>Design-a-class problems</h1>
+<p class="sum">LRU cache and rate limiter: clean APIs, injectable clocks, invariants.</p>
+<div class="sec">
+<p>These problems test whether you can maintain <b>invariants</b> across operations. Senior moves: inject dependencies (a clock!) so the code is testable, define behavior at edges up front, and keep the public surface tiny.</p>
+<div class="callout tip">In Python an <code>OrderedDict</code> (<code>move_to_end</code>, <code>popitem(last=False)</code>) gives you an LRU in a few lines. In interviews, also be ready to explain the classic hash map + doubly linked list version (O(1) get/put, which is what <code>OrderedDict</code> is underneath) and the thread-safety follow-ups.</div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): LRU cache</p><p>Implement <code>class LRUCache</code> with <code>__init__(capacity)</code>, <code>get(key)</code> (returns the value or <code>None</code>, and marks the key as recently used) and <code>put(key, value)</code> (evicts the least recently used entry when over capacity). All operations O(1).</p><p><b>Starter:</b></p><pre>class LRUCache:
+    def __init__(self, capacity):
+        pass
+
+    def get(self, key):
+        pass
+
+    def put(self, key, value):
+        pass
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Simulation: Token bucket rate limiter</p><p>Each request spends one token. Tokens refill continuously up to the capacity. Capacity is your burst tolerance, refill rate is your sustained throughput.</p><p><b>Try this in the full app:</b></p><ul><li>Press <b>Burst ×10</b> with capacity 5: the first 5 pass, the rest are rejected.</li><li>Wait a few seconds and burst again: the bucket has refilled.</li><li>Turn on <b>auto traffic</b> at 8/s with a refill of 2/s: roughly three quarters of requests are rejected in steady state.</li><li>Raise capacity but not the refill rate: bigger bursts, same long-run rate.</li></ul><p class="note">Interactive: needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Token-bucket rate limiter</p><p>Implement <code>class RateLimiter</code> with <code>__init__(capacity, refill_per_sec, now=time.monotonic)</code>. <code>now()</code> returns seconds (injected so tests control time). <code>try_acquire(n=1)</code> returns <code>True</code> and consumes tokens if enough are available, otherwise <code>False</code>. The bucket starts full; tokens refill continuously and never exceed capacity.</p>
+<p>Why this matters for open banking: banks throttle aggregators hard, so a per-bank limiter in front of outgoing calls is real code.</p><p><b>Starter:</b></p><pre>import time
+
+class RateLimiter:
+    def __init__(self, capacity, refill_per_sec, now=time.monotonic):
+        pass
+
+    def try_acquire(self, n=1):
+        pass
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Your rate limiter calls time.time() directly, and tests must sleep for real seconds. What is the senior fix?</div><ol class="opts"><li><b>A.</b> Inject the clock (default time.time) so tests can pass a fake clock and advance time deterministically</li><li><b>B.</b> Make the limit higher so tests never hit it</li><li><b>C.</b> Catch all exceptions so sleeps never fail</li><li><b>D.</b> Store timestamps as strings for readability</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<div class="box"><div class="q">2. In your LRU cache, get(k) returns the value but hit rates are mysteriously low. What invariant did you break?</div><ol class="opts"><li><b>A.</b> Keys must be sorted before every access</li><li><b>B.</b> The cache must be cleared on every read to stay fresh</li><li><b>C.</b> A get must mark the key most-recently-used (move_to_end) so eviction drops the truly least-used entry</li><li><b>D.</b> Capacity should grow by one on every get</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<p class="nav"><a href="maps-complexity.html">← Hash maps &amp; complexity talk</a> · <a href="async-patterns.html">Async patterns: pools, retries, timeouts →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. LRU cache</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> collections.OrderedDict has move_to_end(key) and popitem(last=False). Careful with “if not self.d.get(key)”: it treats 0 as a miss. Use “in”.</p><p><b>Reference solution:</b></p><pre>from collections import OrderedDict
+
+class LRUCache:
+    def __init__(self, capacity):
+        self.capacity = capacity
+        self.data = OrderedDict()
+
+    def get(self, key):
+        if key not in self.data:
+            return None
+        self.data.move_to_end(key)
+        return self.data[key]
+
+    def put(self, key, value):
+        if key in self.data:
+            self.data.move_to_end(key)
+        self.data[key] = value
+        if len(self.data) &gt; self.capacity:
+            self.data.popitem(last=False)</pre><p>Be ready to explain the classic hash map + doubly linked list version too (OrderedDict is exactly that under the hood), and what changes for thread-safety.</p></div>
+<div class="ans" id="a2"><p><b>2. Token-bucket rate limiter</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> Do not use a timer. Refill lazily on every call: tokens = min(capacity, tokens + elapsed * rate).</p><p><b>Reference solution:</b></p><pre>import time
+
+class RateLimiter:
+    def __init__(self, capacity, refill_per_sec, now=time.monotonic):
+        self.capacity = capacity
+        self.rate = refill_per_sec
+        self.now = now
+        self.tokens = float(capacity)
+        self.last = now()
+
+    def _refill(self):
+        t = self.now()
+        self.tokens = min(self.capacity, self.tokens + (t - self.last) * self.rate)
+        self.last = t
+
+    def try_acquire(self, n=1):
+        self._refill()
+        if self.tokens &gt;= n:
+            self.tokens -= n
+            return True
+        return False</pre><p>Follow-ups to be ready for: distributed limiting (Redis + a Lua script for atomicity), sliding window vs token bucket, fairness per tenant, returning Retry-After. Use time.monotonic, never time.time, for intervals.</p></div>
+<div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>A.</b> Inject the clock (default time.time) so tests can pass a fake clock and advance time deterministically</p><div>Injecting dependencies like a clock keeps the public surface tiny and the invariant testable; define edge behavior up front instead of sleeping in tests.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>C.</b> A get must mark the key most-recently-used (move_to_end) so eviction drops the truly least-used entry</p><div>The LRU invariant is maintained across operations: every get and put refreshes recency, and eviction removes the least-recently-used entry in O(1).</div></div>
+<p class="nav"><a href="maps-complexity.html">← Hash maps &amp; complexity talk</a> · <a href="async-patterns.html">Async patterns: pools, retries, timeouts →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

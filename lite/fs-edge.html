@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edge and serverless: Cloudflare Workers, KV, Durable Objects · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#fullstack">Full-Stack: Browser to Edge to Postgres</a> · lesson 4 of 6 · 65 min</p>
+<h1>Edge and serverless: Cloudflare Workers, KV, Durable Objects</h1>
+<p class="sum">What runs where, which storage to pick, and how to protect an upstream with caching and coalescing.</p>
+<div class="sec">
+<h3>How Workers run</h3>
+<p>A Cloudflare Worker is JavaScript/WASM running in a lightweight <b>V8 isolate</b> in a data centre near the user: very small cold starts, no servers to manage, billed per request and CPU time. The trade-offs: <b>tight CPU-time and memory limits</b> (check the plan's numbers), no guarantee that in-memory state survives between requests, and you reach everything else through <b>bindings</b>.</p>
+<h3>Choosing the right primitive</h3>
+<table><tr><th>Need</th><th>Use</th><th>Why / watch out</th></tr>
+<tr><td>Cache public HTTP responses</td><td><b>Cache API</b></td><td>Per-data-centre cache of whole responses with TTLs; does not consume KV operations</td></tr>
+<tr><td>Read-heavy config, credentials, small lookups</td><td><b>KV</b></td><td>Globally distributed but <b>eventually consistent</b>; great for reads, wrong for counters or coordination</td></tr>
+<tr><td>Coordination, per-user/per-room state, rate limiters, WebSockets, scheduled work</td><td><b>Durable Objects</b></td><td>One instance per id, single-threaded, <b>strongly consistent</b> storage, alarms. The “single writer” answer</td></tr>
+<tr><td>Relational data at the edge</td><td><b>D1</b> (SQLite)</td><td>Serverless SQL; mind write location and replication</td></tr>
+<tr><td>Files and blobs</td><td><b>R2</b></td><td>S3-compatible object storage</td></tr>
+<tr><td>Async work, retries, fan-out</td><td><b>Queues</b></td><td>At-least-once delivery: idempotent consumers</td></tr>
+<tr><td>Periodic jobs</td><td><b>Cron Triggers</b></td><td>Good for polling, cleanup, keep-alive pings</td></tr>
+<tr><td>Metrics at high volume</td><td><b>Analytics Engine</b></td><td>Cheap write-only datapoints you query with SQL</td></tr></table>
+<h3>Patterns you can name in an interview</h3>
+<ul>
+<li><b>Shared cache with explicit TTLs</b> per payload: seconds for live data (arrivals), minutes for a whole-city feed, days for data that barely changes. Put a <b>version in the cache key</b> and bump it when the parsed shape changes.</li>
+<li><b>Fan-in polling:</b> instead of N users each calling an upstream API, route them to one Durable Object per resource that polls once and shares the result (single-flight at global scale). The upstream sees one caller.</li>
+<li><b>Per-user background jobs</b> as a Durable Object with an alarm (for example “check every two minutes and push a notification”). Alarms are <b>best effort</b>, not exact clocks: design for late or retried runs and expire stale pushes.</li>
+<li><b>Credentials in KV with an expiry shorter than the token’s</b> (login expiry minus a minute) plus isolate memory, so one login serves everyone.</li>
+<li><b>JWT passthrough:</b> verify nothing yourself where the database can do it; forward the user’s token so row-level security applies.</li>
+<li><b>Keep-alive cron</b> for free-tier databases that pause when idle.</li>
+<li><b>Budget and quota awareness:</b> an upstream with a daily quota is protected by caching and coalescing, and a plan that rejects instead of billing at the limit caps cost.</li>
+</ul>
+<div class="callout"><b>Interview framing:</b> “The Worker exists because a public page cannot hold credentials and cannot call the upstream directly (CORS). It stays thin: auth check, cache lookup, upstream call, shape the response. State that must be correct lives in Postgres or a Durable Object, not in the isolate’s memory.”</div></div>
+<div class="sec"><div class="box"><p class="kind">Simulation: Many viewers, one upstream</p><p>Hundreds of phones refresh the same live data. Compare four strategies and watch how many calls reach the upstream API, and what users experience. The chart shows upstream calls per second for one simulated minute.</p><p><b>Try this in the full app:</b></p><ul><li><b>no cache</b>: every poll becomes an upstream call. Raise the viewers and watch the quota burn.</li><li><b>TTL cache</b>: most requests are cache hits, but look for spikes when the entry expires: all the viewers who arrive during the refresh each trigger a call (a stampede).</li><li><b>+ single-flight</b>: exactly one call per refresh, but the unlucky viewers wait for it.</li><li><b>stale-while-revalidate</b>: nobody waits after the first request, because old data is served instantly while one refresh runs in the background. Compare the data age.</li><li>Make the upstream slow (2000 ms) and see which strategies hurt users.</li></ul><p class="note">Interactive: needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Single-flight: coalesce duplicate requests</p><p>Fifty phones ask for the same stop's arrivals in the same second. Calling the upstream 50 times wastes quota. Write <code>class SingleFlight</code> with <code>async do(key, fn)</code>: if a call for <code>key</code> is already running, wait for it and share its result; otherwise run <code>await fn()</code> (an async function with no arguments). When the call finishes the key is forgotten, so a later call runs again. Errors propagate to <b>every</b> waiter and are not cached. Different keys run independently.</p><p><b>Starter:</b></p><pre>import asyncio
+
+class SingleFlight:
+    def __init__(self):
+        pass
+
+    async def do(self, key, fn):
+        pass
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Stale-while-revalidate cache</p><p>Write <code>class SWRCache</code> with <code>__init__(ttl, swr, now)</code> (<code>now()</code> returns seconds), <code>async get(key, loader)</code> and <code>async idle()</code>. For each key:</p>
+<ul><li><b>Fresh</b> (age &lt; <code>ttl</code>): return the cached value, no load.</li><li><b>Stale</b> (<code>ttl</code> ≤ age &lt; <code>ttl + swr</code>): return the cached value <b>immediately</b> and refresh it in the background. Many readers must trigger only <b>one</b> refresh.</li><li><b>Missing or expired</b>: await <code>loader()</code>, cache the result, return it. Concurrent callers share one load.</li><li>A failed background refresh keeps the old value (the next <code>get</code> tries again). A failed foreground load raises and caches nothing.</li><li><code>idle()</code> waits for any background refreshes to finish (so tests are deterministic).</li></ul><p><b>Starter:</b></p><pre>import asyncio
+
+class SWRCache:
+    def __init__(self, ttl, swr, now):
+        pass
+
+    async def get(self, key, loader):
+        pass
+
+    async def idle(self):
+        pass
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You need a global rate limiter that must never allow more than 100 requests per minute per API key, even across edge locations. Which primitive fits?</div><ol class="opts"><li><b>A.</b> KV, because it is globally replicated</li><li><b>B.</b> A Durable Object per API key: one single-threaded, strongly consistent counter all requests are routed through</li><li><b>C.</b> The Cache API</li><li><b>D.</b> Isolate memory</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A Durable Object alarm is scheduled every 2 minutes to check bus arrivals and push a notification. What should the design assume?</div><ol class="opts"><li><b>A.</b> It fires at exactly the scheduled instant</li><li><b>B.</b> Alarms are best effort: runs can be late or retried, so each push should expire quickly and processing must be idempotent</li><li><b>C.</b> It never fails</li><li><b>D.</b> It runs only while the user’s page is open</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You cache a parsed upstream response in the Cache API. A later deploy changes the shape of the parsed object. What prevents new code from reading old cached objects?</div><ol class="opts"><li><b>A.</b> Nothing, flush manually</li><li><b>B.</b> Include a cache version in the key and bump it when the shape changes</li><li><b>C.</b> Shorter TTLs everywhere</li><li><b>D.</b> Disable the cache</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. You need a per-API-key counter shared across edge locations that stays correct under concurrency. Why is KV the wrong pick?</div><ol class="opts"><li><b>A.</b> KV is too expensive for counters</li><li><b>B.</b> KV is eventually consistent so concurrent requests read stale counts; route each key through one single-threaded Durable Object with strongly consistent storage</li><li><b>C.</b> The Cache API cannot store counters at all</li><li><b>D.</b> Isolate memory is strongly consistent across the globe</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<div class="box"><div class="q">2. A Queue consumer charges a user per message. The queue promises at-least-once delivery. What must the consumer be?</div><ol class="opts"><li><b>A.</b> Exactly-once by default, so no extra work is needed</li><li><b>B.</b> Faster than the producer on every message</li><li><b>C.</b> Idempotent, so redelivered messages do not double-charge</li><li><b>D.</b> Synchronous with the open browser tab</li></ol><p class="tolink" id="q7"><a href="#a7">answer 7 ↓</a></p></div>
+<p class="nav"><a href="fs-api-design.html">← API design that survives its clients</a> · <a href="fs-offline-sync.html">Local-first apps and cross-device sync →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Single-flight: coalesce duplicate requests</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Keep a dict of key → task. If there is none, create one with asyncio.ensure_future(run()) where run() awaits fn() and removes the key in a finally block. Every caller awaits the same task, wrapped in asyncio.shield so one cancelled waiter cannot cancel it for everybody.</p><p><b>Reference solution:</b></p><pre>import asyncio
+
+class SingleFlight:
+    def __init__(self):
+        self.inflight = {}
+
+    async def do(self, key, fn):
+        task = self.inflight.get(key)
+        if task is None:
+            async def run():
+                try:
+                    return await fn()
+                finally:
+                    self.inflight.pop(key, None)
+            task = self.inflight[key] = asyncio.ensure_future(run())
+        return await asyncio.shield(task)</pre><p>This is the pattern behind a shared poller: N clients, one upstream call. In a Cloudflare Worker the same idea is a Durable Object (one instance per key) that all requests are routed to. Go ships it as golang.org/x/sync/singleflight.</p></div>
+<div class="ans" id="a2"><p><b>2. Stale-while-revalidate cache</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> Store (value, fetched_at) per key and a dict of in-flight tasks per key (the single-flight idea). Decide by age: fresh → return; stale → return the old value and start (or join) a background task you track in a set; otherwise await the shared load task. Entries are written only when a load succeeds, so failures leave the old value alone. Retrieve the background task’s exception so asyncio does not warn.</p><p><b>Reference solution:</b></p><pre>import asyncio
+
+class SWRCache:
+    def __init__(self, ttl, swr, now):
+        self.ttl, self.swr, self.now = ttl, swr, now
+        self.entries = {}      # key -&gt; (value, fetched_at)
+        self.inflight = {}     # key -&gt; task
+        self.background = set()
+
+    def _load(self, key, loader):
+        task = self.inflight.get(key)
+        if task is None:
+            async def run():
+                try:
+                    value = await loader()
+                    self.entries[key] = (value, self.now())
+                    return value
+                finally:
+                    self.inflight.pop(key, None)
+            task = self.inflight[key] = asyncio.ensure_future(run())
+        return task
+
+    async def get(self, key, loader):
+        entry = self.entries.get(key)
+        if entry is not None:
+            age = self.now() - entry[1]
+            if age &lt; self.ttl:
+                return entry[0]
+            if age &lt; self.ttl + self.swr:
+                task = self._load(key, loader)
+                self.background.add(task)
+                task.add_done_callback(self.background.discard)
+                task.add_done_callback(lambda t: t.cancelled() or t.exception())
+                return entry[0]
+        return await asyncio.shield(self._load(key, loader))
+
+    async def idle(self):
+        await asyncio.gather(*list(self.background), return_exceptions=True)</pre><p>This is Cache-Control: max-age=ttl, stale-while-revalidate=swr implemented in-process. It hides latency from users, absorbs upstream slowness, and (with the single-flight behaviour) prevents a stampede when a hot key expires. Add stale-if-error to serve old data during an upstream outage.</p></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> A Durable Object per API key: one single-threaded, strongly consistent counter all requests are routed through</p><div>KV is eventually consistent, so concurrent requests would each read a stale count. A Durable Object serialises access to one instance per key, giving a correct counter at the cost of routing to that object.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Alarms are best effort: runs can be late or retried, so each push should expire quickly and processing must be idempotent</p><div>Scheduling guarantees are “at least once, roughly on time”. Alert content that is stale after a couple of minutes should carry a short expiry, and repeated runs must not duplicate effects.</div></div>
+<div class="ans" id="a5"><p><b>5. Quick check</b> <a href="#q5">back ↑</a></p><p><b>B.</b> Include a cache version in the key and bump it when the shape changes</p><div>Versioned keys make old entries unreachable by new code, and they expire on their own.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 1</b> <a href="#q6">back ↑</a></p><p><b>B.</b> KV is eventually consistent so concurrent requests read stale counts; route each key through one single-threaded Durable Object with strongly consistent storage</p><div>Counters need serialization; only the single-writer Durable Object gives a correct global count, while KV suits read-heavy lookups.</div></div>
+<div class="ans" id="a7"><p><b>7. Check 2</b> <a href="#q7">back ↑</a></p><p><b>C.</b> Idempotent, so redelivered messages do not double-charge</p><div>At-least-once means retries and duplicates happen; the consumer must handle the same message twice safely.</div></div>
+<p class="nav"><a href="fs-api-design.html">← API design that survives its clients</a> · <a href="fs-offline-sync.html">Local-first apps and cross-device sync →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

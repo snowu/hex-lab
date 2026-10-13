@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spatial partitioning · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdpatterns">Game Programming Patterns</a> · lesson 9 of 12 · 15 min</p>
+<h1>Spatial partitioning</h1>
+<p class="sum">Grids, quadtrees and bounding volume hierarchies: finding what is near without looking at everything.</p>
+<div class="sec">
+<h3>The problem</h3>
+<p>"Which enemies are within 200 pixels of the player?", "what does this bullet collide with?", "which objects are visible?". The naive answer checks every object: O(n) per query, O(n²) for all pairs. With 5,000 objects that is 12 million pair checks per frame. <b>Spatial partitioning</b> stores objects in a structure organised by position so a query only visits the neighbourhood.</p>
+<h3>Uniform grid (and spatial hash)</h3>
+<p>Divide space into equal cells. Each cell holds a list of the objects inside it. A query looks at the cells the query region overlaps. Insertion is O(1), queries are proportional to the number of nearby objects. Variations: a fixed 2D array (fast; needs bounded space) or a <b>hash map</b> from cell coordinates to a list (unbounded space, no empty-cell memory). The drill in the performance lesson builds one.</p>
+<ul><li><b>Cell size</b> is the knob: about the typical query radius or object size. Too small: a query touches many cells and objects span several. Too large: each cell holds too many objects.</li><li><b>Moving objects</b>: rebuild every frame (simple, often the fastest for dynamic crowds) or move an object between cells only when it crosses a boundary.</li><li><b>Big objects</b> (a huge boss) overlap many cells; insert it into all of them or into a separate "large objects" list.</li><li>Weak when density is very uneven (a crowd in one corner of a big empty map).</li></ul>
+<h3>Quadtree (octree in 3D)</h3>
+<p>A tree that <b>subdivides</b> a region into four quadrants only where there are many objects. Dense areas get deep, fine cells; empty areas stay one big cell. Queries descend only into quadrants that overlap the query. Good for uneven density and static or slowly moving objects; costlier to update than a grid when everything moves each frame. A <b>loose quadtree</b> lets nodes overlap by a margin so a moving object rarely needs to change nodes.</p>
+<h3>Bounding volume hierarchy (BVH)</h3>
+<p>A tree where each node stores a bounding box of everything below it, built from the objects rather than from fixed space. Queries skip a whole subtree when its box misses. This is what most physics engines use for their broadphase (Box2D's dynamic tree) and what ray tracers use. It handles objects of very different sizes well, and supports dynamic updates by refitting boxes.</p>
+<h3>Sweep and prune</h3>
+<p>Sort object bounds along one axis and only compare overlapping neighbours in the sorted list. When objects move a little each frame, the list is almost sorted already, so re-sorting is cheap. Used in physics engines for large scenes with mostly coherent motion.</p>
+<h3>Choosing</h3>
+<table><tr><th>Situation</th><th>Reach for</th></tr>
+<tr><td>Many similar-sized moving objects (bullets, crowd)</td><td>Uniform grid / spatial hash, rebuilt each frame</td></tr>
+<tr><td>Very uneven density, mostly static</td><td>Quadtree</td></tr>
+<tr><td>Objects of very different sizes, raycasts, dynamic scenes</td><td>BVH / dynamic tree</td></tr>
+<tr><td>A few hundred objects</td><td>Brute force. Do not add a structure you cannot justify with a measurement.</td></tr></table>
+<p>Engines already include a broadphase (Godot, Box2D, Jolt). Build your own for <i>non-physics</i> queries: AI perception, crowd avoidance, pickups in range, "everything inside this explosion".</p>
+<h3>A quadtree in Zig (insert and query)</h3>
+<pre><code data-check="zig">const std = @import("std");
+
+const Rect = struct { x: f32, y: f32, w: f32, h: f32 };
+
+fn overlaps(a: Rect, b: Rect) bool {
+    return a.x &lt; b.x + b.w and b.x &lt; a.x + a.w and a.y &lt; b.y + b.h and b.y &lt; a.y + a.h;
+}
+
+/// A tiny point quadtree with fixed capacity per leaf and a depth limit, no allocation (children live in a flat array).
+const Quad = struct {
+    const cap = 4;
+    const max_nodes = 64;
+
+    const Node = struct { bounds: Rect, pts: [cap][2]f32 = undefined, n: usize = 0, kids: ?usize = null };
+
+    nodes: [max_nodes]Node = undefined,
+    count: usize = 1,
+
+    fn init(bounds: Rect) Quad {
+        var q = Quad{};
+        q.nodes[0] = .{ .bounds = bounds };
+        return q;
+    }
+
+    fn insert(self: *Quad, node: usize, x: f32, y: f32, depth: u8) bool {
+        const b = self.nodes[node].bounds;
+        if (x &lt; b.x or y &lt; b.y or x &gt;= b.x + b.w or y &gt;= b.y + b.h) return false;
+        if (self.nodes[node].kids == null) {
+            if (self.nodes[node].n &lt; cap or depth &gt;= 3 or self.count + 4 &gt; max_nodes) {
+                if (self.nodes[node].n == cap) return false; // full at max depth: a real tree would use an overflow list
+                const n = self.nodes[node].n;
+                self.nodes[node].pts[n] = .{ x, y };
+                self.nodes[node].n += 1;
+                return true;
+            }
+            self.split(node);
+        }
+        const k = self.nodes[node].kids.?;
+        for (0..4) |i| if (self.insert(k + i, x, y, depth + 1)) return true;
+        return false;
+    }
+
+    fn split(self: *Quad, node: usize) void {
+        const b = self.nodes[node].bounds;
+        const hw = b.w / 2;
+        const hh = b.h / 2;
+        const first = self.count;
+        self.count += 4;
+        self.nodes[first] = .{ .bounds = .{ .x = b.x, .y = b.y, .w = hw, .h = hh } };
+        self.nodes[first + 1] = .{ .bounds = .{ .x = b.x + hw, .y = b.y, .w = hw, .h = hh } };
+        self.nodes[first + 2] = .{ .bounds = .{ .x = b.x, .y = b.y + hh, .w = hw, .h = hh } };
+        self.nodes[first + 3] = .{ .bounds = .{ .x = b.x + hw, .y = b.y + hh, .w = hw, .h = hh } };
+        self.nodes[node].kids = first;
+        const old = self.nodes[node];
+        self.nodes[node].n = 0;
+        for (old.pts[0..old.n]) |p| _ = self.insert(node, p[0], p[1], 99); // depth 99: reinsert into the children
+    }
+
+    /// How many points are inside the query rectangle. Subtrees whose bounds miss the query are skipped.
+    fn countIn(self: *const Quad, node: usize, q: Rect) usize {
+        if (!overlaps(self.nodes[node].bounds, q)) return 0;
+        var total: usize = 0;
+        for (self.nodes[node].pts[0..self.nodes[node].n]) |p| {
+            if (p[0] &gt;= q.x and p[0] &lt; q.x + q.w and p[1] &gt;= q.y and p[1] &lt; q.y + q.h) total += 1;
+        }
+        if (self.nodes[node].kids) |k| for (0..4) |i| {
+            total += self.countIn(k + i, q);
+        };
+        return total;
+    }
+};
+
+test "a query only counts the points inside it" {
+    var q = Quad.init(.{ .x = 0, .y = 0, .w = 100, .h = 100 });
+    var i: u32 = 0;
+    while (i &lt; 30) : (i += 1) {
+        const x: f32 = @floatFromInt((i * 37) % 100);
+        const y: f32 = @floatFromInt((i * 61) % 100);
+        try std.testing.expect(q.insert(0, x, y, 0));
+    }
+    try std.testing.expectEqual(@as(usize, 30), q.countIn(0, .{ .x = 0, .y = 0, .w = 100, .h = 100 }));
+    var brute: usize = 0;
+    i = 0;
+    while (i &lt; 30) : (i += 1) {
+        const x: f32 = @floatFromInt((i * 37) % 100);
+        const y: f32 = @floatFromInt((i * 61) % 100);
+        if (x &gt;= 10 and x &lt; 40 and y &gt;= 20 and y &lt; 70) brute += 1;
+    }
+    try std.testing.expectEqual(brute, q.countIn(0, .{ .x = 10, .y = 20, .w = 30, .h = 50 }));
+}</code></pre></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">2,000 bullets of equal size move every frame and must find nearby enemies. Which structure is usually best?</div><ol class="opts"><li><b>A.</b> A quadtree updated incrementally</li><li><b>B.</b> A uniform grid or spatial hash rebuilt every frame</li><li><b>C.</b> A sorted list by name</li><li><b>D.</b> Brute force over all pairs</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A quadtree is slow because everything moves every frame and many objects keep changing nodes. Which change helps?</div><ol class="opts"><li><b>A.</b> Make the tree deeper</li><li><b>B.</b> Use a loose quadtree (nodes overlap by a margin) or switch to a rebuilt grid</li><li><b>C.</b> Sort objects by id</li><li><b>D.</b> Query less often than once a day</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You have 150 enemies and the AI perception check is fast. A teammate proposes adding a quadtree. What is the best response?</div><ol class="opts"><li><b>A.</b> Add it, structures are always faster</li><li><b>B.</b> Measure first: at that size brute force is probably fine, and a structure adds code and bugs for no gain</li><li><b>C.</b> Use a BVH instead</li><li><b>D.</b> Remove perception</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. You are tuning a uniform grid for similarly sized pickups with a 200-pixel pickup radius. How do you pick the cell size?</div><ol class="opts"><li><b>A.</b> One pixel, so nothing is ever missed</li><li><b>B.</b> About the typical query radius or object size: too small touches many cells and splits objects, too large packs too many objects per cell</li><li><b>C.</b> The size of the whole map, so there is exactly one cell</li><li><b>D.</b> Random each frame to avoid bias</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. A static forest with a dense village in one corner uses a uniform grid and wastes memory on empty cells, while a dogfight with thousands of movers thrashes a quadtree. What pair of choices fits?</div><ol class="opts"><li><b>A.</b> Quadtree for the static uneven forest since empty areas stay coarse, and a rebuilt grid or spatial hash for the many similar-sized movers</li><li><b>B.</b> Grid for the static uneven forest, quadtree for the dogfight</li><li><b>C.</b> Brute force for both because structures never help</li><li><b>D.</b> Sort both by name instead</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="pat-component.html">← Component, subclass sandbox and service locator</a> · <a href="pat-bytecode.html">Bytecode, scripting and data languages →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> A uniform grid or spatial hash rebuilt every frame</p><div>Rebuilding a grid is O(n) with tiny constants, and equal-sized movers suit a single cell size.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Use a loose quadtree (nodes overlap by a margin) or switch to a rebuilt grid</p><div>Loose nodes let small moves stay in the same node. For fully dynamic data a grid rebuild is often cheaper than maintaining a tree.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Measure first: at that size brute force is probably fine, and a structure adds code and bugs for no gain</p><div>Optimisation without a measurement is guessing. Small n does not need acceleration structures.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>B.</b> About the typical query radius or object size: too small touches many cells and splits objects, too large packs too many objects per cell</p><div>Cell size balances cells visited against objects per cell. The query radius is the natural scale.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>A.</b> Quadtree for the static uneven forest since empty areas stay coarse, and a rebuilt grid or spatial hash for the many similar-sized movers</p><div>Quadtrees adapt to uneven static density; grids with O(1) insert and per-frame rebuild suit dynamic crowds.</div></div>
+<p class="nav"><a href="pat-component.html">← Component, subclass sandbox and service locator</a> · <a href="pat-bytecode.html">Bytecode, scripting and data languages →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS building blocks for senior engineers · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#cloud">Scale, Kafka, AWS &amp; Terraform</a> · lesson 3 of 4 · 30 min</p>
+<h1>AWS building blocks for senior engineers</h1>
+<p class="sum">Compute, data, messaging, networking, security and how to choose.</p>
+<div class="sec">
+<p>You are not expected to know every service. You are expected to <b>pick appropriately, explain the trade-off, and design for failure</b>.</p>
+<table>
+<tr><th>Need</th><th>Typical choices</th><th>Trade-off to mention</th></tr>
+<tr><td>Compute</td><td>Lambda · ECS/Fargate · EKS · EC2</td><td>Lambda: no servers, cold starts, 15-min limit, concurrency limits. Fargate: simple containers. EKS: max flexibility and most operational burden. EC2: full control, you patch.</td></tr>
+<tr><td>Relational data</td><td>RDS · Aurora (Multi-AZ, read replicas)</td><td>Multi-AZ = <i>availability</i> (sync standby, failover). Read replicas = <i>read scaling</i> (async, lag). Different problems.</td></tr>
+<tr><td>Key-value at scale</td><td>DynamoDB</td><td>Predictable single-digit-ms at any scale; you must design around access patterns and partition keys; no ad-hoc joins. Hot partitions.</td></tr>
+<tr><td>Cache</td><td>ElastiCache (Redis/Valkey)</td><td>Invalidation and stampedes; not a source of truth.</td></tr>
+<tr><td>Queue / pub-sub</td><td>SQS · SNS · EventBridge · Kinesis · MSK</td><td>SNS fan-out → SQS per consumer is a common pattern. EventBridge for routing between services/SaaS. Kinesis/MSK for ordered replayable streams.</td></tr>
+<tr><td>Object storage</td><td>S3</td><td>11 nines durability, strong read-after-write consistency, lifecycle tiers; not a file system.</td></tr>
+<tr><td>Edge &amp; ingress</td><td>CloudFront · ALB/NLB · API Gateway · WAF</td><td>Cache and absorb attacks at the edge; ALB for HTTP routing, NLB for L4/static IPs.</td></tr>
+<tr><td>Secrets &amp; keys</td><td>KMS · Secrets Manager · Parameter Store · CloudHSM</td><td>Envelope encryption, key policies and rotation; CloudHSM when you need dedicated, single-tenant HSMs.</td></tr>
+</table>
+<h3>Design for failure</h3>
+<ul>
+<li><b>Region → AZ:</b> spread across ≥ 2-3 AZs. Multi-region only when RTO/RPO or regulation demands it (cost and complexity jump: data replication, failover, testing).</li>
+<li><b>RTO/RPO:</b> how long can we be down, how much data can we lose? Backup &amp; restore → pilot light → warm standby → active/active, rising in cost.</li>
+<li><b>Shared responsibility:</b> AWS secures the cloud; you secure what you put in it (IAM, data, config).</li>
+<li><b>Well-Architected pillars:</b> operational excellence, security, reliability, performance, cost, sustainability.</li>
+</ul>
+<h3>Security fundamentals</h3>
+<ul>
+<li><b>IAM:</b> least privilege, roles over long-lived keys, no wildcards on resources you can name, separate accounts per environment (AWS Organizations + SCPs). Evaluation logic: <b>explicit Deny wins, otherwise an Allow is needed, otherwise implicit deny.</b></li>
+<li>Private subnets for data/compute, <b>VPC endpoints</b> to reach AWS services without the internet, security groups as the main firewall.</li>
+<li>Encrypt at rest (KMS) and in transit; CloudTrail + GuardDuty + Config for audit and detection. Particularly relevant in regulated finance.</li>
+</ul></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Evaluate IAM-style policies</p><p>Implement <code>evaluate(statements, action, resource)</code> returning <code>'ALLOW'</code> or <code>'DENY'</code>. Each statement is a dict <code>{'effect': 'Allow' | 'Deny', 'actions': [...], 'resources': [...]}</code>. Patterns may contain <code>*</code> (matches any characters, including none; every other character is literal). Rules: if any matching <b>Deny</b> exists → DENY; else if any matching <b>Allow</b> exists → ALLOW; else DENY (implicit). A statement matches only if <b>both</b> an action pattern and a resource pattern match. Actions compare case-insensitively; resources are case-sensitive.</p><p><b>Starter:</b></p><pre>def evaluate(statements, action, resource):
+    pass
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You need to absorb bursty payment-status events from many producers, and three independent services must each process every event. Best AWS-native pattern?</div><ol class="opts"><li><b>A.</b> One SQS queue read by three services</li><li><b>B.</b> SNS topic (or EventBridge) fanning out to one SQS queue per service, each with a DLQ</li><li><b>C.</b> Direct HTTP calls to all three</li><li><b>D.</b> Write to S3 and poll</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">RDS “Multi-AZ” is enabled. A teammate says reads are now scaled. Correct response?</div><ol class="opts"><li><b>A.</b> Yes, standby serves reads</li><li><b>B.</b> No: Multi-AZ gives failover availability (standby is not readable in the classic setup); scale reads with read replicas or caching</li><li><b>C.</b> Yes, but only on Tuesdays</li><li><b>D.</b> Multi-AZ replaces backups</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A Lambda behind SQS is overwhelming a downstream bank API during a backlog. What control fits best?</div><ol class="opts"><li><b>A.</b> Increase memory</li><li><b>B.</b> Set a maximum concurrency on the event source mapping / function (reserved concurrency) to cap parallel calls, plus retries with backoff and a DLQ</li><li><b>C.</b> Delete the queue</li><li><b>D.</b> Use bigger instances</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<div class="sec"><h3>Prompt: “Design deployments across two AZs with zero-downtime releases”</h3><ul><li>ALB across 2-3 AZs → ECS/Fargate or EKS services with ≥ 2 tasks per AZ; health checks with sensible grace periods.</li><li>Rolling or blue/green (CodeDeploy / weighted target groups) with automatic rollback on alarm; canary a small % first.</li><li>DB migrations backward compatible (expand → migrate → contract) so old and new code can run together.</li><li>Aurora/RDS Multi-AZ; Secrets Manager; autoscaling on a leading metric (queue depth/requests per target).</li><li>Observability tied to the release: dashboards and SLO alarms that gate the rollout.</li></ul></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A policy grants Allow on a bucket but another attached policy has an explicit Deny on the same action. Can the call proceed?</div><ol class="opts"><li><b>A.</b> Yes, Allow always overrides Deny</li><li><b>B.</b> Yes, the most recently created policy wins</li><li><b>C.</b> No: an explicit Deny wins, and without any Allow the default is an implicit deny</li><li><b>D.</b> Only on Tuesdays when audit logging is enabled</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. The team wants multi-region active/active for an internal dashboard with a 24-hour RTO. What is the senior response?</div><ol class="opts"><li><b>A.</b> Match cost to the RTO/RPO: a single region across 2-3 AZs with backups is enough, since multi-region jumps in cost and failover complexity</li><li><b>B.</b> Multi-region active/active is always worth it regardless of RTO</li><li><b>C.</b> Skip backups once you have two AZs</li><li><b>D.</b> Regions and AZs are the same thing, so one AZ is enough</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="kafka.html">← Kafka: partitions, groups, delivery guarantees</a> · <a href="terraform.html">Terraform &amp; infrastructure as code →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Evaluate IAM-style policies</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Turn a pattern into a regex: split on "*", re.escape each piece, join with ".*", and use re.fullmatch (with re.IGNORECASE for actions). fnmatch is tempting but treats [] and ? as special.</p><p><b>Reference solution:</b></p><pre>import re
+
+def glob(pattern, ignore_case=False):
+    regex = '.*'.join(re.escape(part) for part in pattern.split('*'))
+    return re.compile(regex, re.IGNORECASE if ignore_case else 0)
+
+def evaluate(statements, action, resource):
+    def matches(s):
+        return (any(glob(a, True).fullmatch(action) for a in s['actions'])
+                and any(glob(r).fullmatch(resource) for r in s['resources']))
+
+    hits = [s for s in statements if matches(s)]
+    if any(s['effect'] == 'Deny' for s in hits):
+        return 'DENY'
+    return 'ALLOW' if any(s['effect'] == 'Allow' for s in hits) else 'DENY'</pre><p>Real IAM also has principals, conditions, permission boundaries, SCPs and session policies. All layers must allow, and an explicit deny at any layer wins.</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> SNS topic (or EventBridge) fanning out to one SQS queue per service, each with a DLQ</p><div>A single queue would split messages among consumers (competing consumers). Fan-out to a queue per subscriber gives each its own copy, retries and DLQ. Kinesis/MSK is the alternative if you need ordered replay.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> No: Multi-AZ gives failover availability (standby is not readable in the classic setup); scale reads with read replicas or caching</p><div>Availability vs read scaling are different mechanisms. (Aurora and newer RDS Multi-AZ cluster options have readable standbys, so be precise about which product and mode.) Multi-AZ also is not a backup.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Set a maximum concurrency on the event source mapping / function (reserved concurrency) to cap parallel calls, plus retries with backoff and a DLQ</p><div>Queues + concurrency caps turn a spike into a controlled drain. Pair with a per-dependency rate limiter and circuit breaker.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>C.</b> No: an explicit Deny wins, and without any Allow the default is an implicit deny</p><div>IAM evaluation logic: explicit Deny wins, otherwise an Allow is required, otherwise access is implicitly denied.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>A.</b> Match cost to the RTO/RPO: a single region across 2-3 AZs with backups is enough, since multi-region jumps in cost and failover complexity</p><div>Choose backup-and-restore through active/active by RTO/RPO. Multi-region is for strict recovery or regulatory needs, not a default.</div></div>
+<p class="nav"><a href="kafka.html">← Kafka: partitions, groups, delivery guarantees</a> · <a href="terraform.html">Terraform &amp; infrastructure as code →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

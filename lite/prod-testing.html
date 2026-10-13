@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Testing a game · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdprod">Production &amp; Tooling</a> · lesson 2 of 4 · 10 min</p>
+<h1>Testing a game</h1>
+<p class="sum">What is worth automating in a game, how to keep logic testable, golden replays, bots and fuzzing.</p>
+<div class="sec">
+<h3>"You cannot test games" is half true</h3>
+<p>Feel, fun and visuals need people. But a surprising amount of a game is ordinary logic that tests well: rules, damage and economy calculations, inventory, parsing of data and saves, pathfinding, AI decisions, save migrations, network message handling. Automated tests catch regressions in those while you work on the parts that need human judgement.</p>
+<h3>Make the code testable: separate simulation from presentation</h3>
+<p>The most important design rule: keep the <b>game logic free of engine types</b> (no nodes, no rendering, no audio calls, no wall-clock time). Logic takes inputs and a time step and produces a new state plus events; a thin layer turns state into pixels and sounds. Then a test can create a world in one line, feed commands, and check the state, in milliseconds, without a window. This is also what makes determinism, replays and rollback possible: the same design pays three times.</p>
+<h3>Kinds of automated tests that work for games</h3>
+<ul><li><b>Unit tests</b>: pure functions and small modules: damage formula, cost curve, pity timer, A* on a tiny map. Fast; written like the drills in this lab (Zig and C++ have tests built in or one framework away; Godot has GUT and gdUnit).</li><li><b>Golden-replay tests</b>: record a list of commands and a seed once, then assert that replaying them produces the same final state checksum. Any unintended change in behaviour trips the test. When you <i>meant</i> to change behaviour, regenerate the golden value deliberately and review the diff (the sample below).</li><li><b>Property tests and invariants</b>: generate many random situations and assert rules that must always hold ("health never exceeds max", "total items are conserved by a trade", "a path never crosses a wall"). They find the case you did not think of.</li><li><b>Fuzzing</b>: feed random and mutated bytes to the parsers (save files, network packets, level files) and make sure they fail gracefully and never crash or hang.</li><li><b>Headless simulation and bots</b>: run thousands of automated playthroughs or encounters without rendering, and measure win rates, time to kill, economy balance, deadlocks. This is the "balance benchmarks" idea: a script that plays the game faster than a human.</li><li><b>Smoke tests</b>: launch the exported game, load each level, check it does not crash or log errors in 30 seconds. Cheap and catches broken builds.</li><li><b>Screenshot tests</b>: render a known scene and compare images; useful for UI and shaders, brittle across GPUs, so use tolerance and one reference machine.</li><li><b>Performance tests</b>: run a standard scene and assert frame time, allocations and memory stay within budget.</li></ul>
+<pre><code data-check="zig">const std = @import("std");
+
+/// A small deterministic simulation: a seeded random generator, a position, and commands that change it.
+const Sim = struct {
+    rng: u64,
+    x: i32 = 0,
+    hp: i32 = 100,
+    frame: u32 = 0,
+
+    fn init(seed: u64) Sim {
+        return .{ .rng = seed };
+    }
+
+    fn nextRand(self: *Sim) u32 {
+        self.rng = self.rng *% 6364136223846793005 +% 1442695040888963407;
+        return @intCast(self.rng &gt;&gt; 33);
+    }
+
+    fn step(self: *Sim, cmd: u8) void {
+        switch (cmd) {
+            'L' =&gt; self.x -= 1,
+            'R' =&gt; self.x += 1,
+            'H' =&gt; self.hp = @min(100, self.hp + 5),
+            else =&gt; {},
+        }
+        if (self.nextRand() % 10 == 0) self.hp -= 7; // a random hazard: deterministic because the generator is seeded
+        self.frame += 1;
+    }
+
+    /// A summary of the whole state: if any field changes, the checksum changes.
+    fn checksum(self: *const Sim) u64 {
+        var h: u64 = 1469598103934665603; // FNV-1a
+        inline for (.{ @as(u64, @bitCast(@as(i64, self.x))), @as(u64, @bitCast(@as(i64, self.hp))), @as(u64, self.frame) }) |v| {
+            h = (h ^ v) *% 1099511628211;
+        }
+        return h;
+    }
+};
+
+fn run(seed: u64, commands: []const u8) u64 {
+    var sim = Sim.init(seed);
+    for (commands) |c| sim.step(c);
+    return sim.checksum();
+}
+
+const recorded = "RRRLRHRRLLLRRRHRLRRRRHLLRR"; // the recorded command stream, as it would be loaded from a replay file
+
+test "the same replay always reproduces the same checksum" {
+    try std.testing.expectEqual(run(42, recorded), run(42, recorded));
+}
+
+test "a different seed or a different command changes the outcome, so the test is sensitive" {
+    try std.testing.expect(run(42, recorded) != run(43, recorded));
+    try std.testing.expect(run(42, recorded) != run(42, "RRRLRHRRLLLRRRHRLRRRRHLLRL"));
+}
+
+test "golden value: if you change game rules on purpose, regenerate this number and review the change" {
+    try std.testing.expectEqual(@as(u64, 16487696168835199546), run(42, recorded));
+}</code></pre>
+<h3>What not to automate</h3>
+<ul><li>"Is it fun", "does it feel responsive", "is this readable" are playtest questions.</li><li>Pixel-exact visuals on many GPUs: too brittle for the value.</li><li>Anything you would rewrite next week: wait until a prototype becomes a design.</li></ul>
+<h3>Manual and playtest discipline</h3>
+<ul><li>Keep a short <b>regression checklist</b> for each release (menus, save and load, each level start, pause, quit, input devices, settings persistence).</li><li>Test on the <b>lowest-end device you support</b> and on a clean machine without your dev tools.</li><li>Watch real players (the design lesson): record sessions, note where they hesitate.</li><li>Keep a bug tracker with reproduction steps, build number and the replay or seed attached.</li></ul>
+<h3>Where to start</h3>
+<ol><li>Separate the simulation from the engine for <i>new</i> code.</li><li>Write unit tests for formulas and parsers first (cheap, high value).</li><li>Add a golden replay of one complete level.</li><li>Fuzz your save loader.</li><li>Add a headless bot once you have balance questions.</li></ol></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You refactor the damage system "without changing behaviour" and a golden-replay test fails. What should you do first?</div><ol class="opts"><li><b>A.</b> Update the golden value so the test passes</li><li><b>B.</b> Investigate: the checksum changed, so behaviour changed. Find the first frame where state differs, then decide whether it is a bug or an intended change (and only then regenerate the golden value)</li><li><b>C.</b> Delete the test</li><li><b>D.</b> Ignore it, replays are flaky</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Which design makes a game <i>easy</i> to unit test?</div><ol class="opts"><li><b>A.</b> Game rules written inside rendering nodes</li><li><b>B.</b> Pure logic that takes state, input and a time step and returns new state, with the engine layer only presenting it</li><li><b>C.</b> A global singleton for everything</li><li><b>D.</b> Reading the clock directly in rules</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Which testing technique best finds a crash when a corrupted save file is loaded?</div><ol class="opts"><li><b>A.</b> A screenshot test</li><li><b>B.</b> Fuzzing the save parser with random and mutated files</li><li><b>C.</b> A performance test</li><li><b>D.</b> More playtesters</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. You must guarantee that trading items between players never creates or destroys total wealth. Which technique fits best?</div><ol class="opts"><li><b>A.</b> Property and invariant tests: generate many random trades and assert conservation always holds</li><li><b>B.</b> A screenshot test</li><li><b>C.</b> A smoke test of level loading</li><li><b>D.</b> A manual playtest only</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. A UI screenshot test passes on your GPU but fails on others over tiny pixel differences. How do you keep its value?</div><ol class="opts"><li><b>A.</b> Delete all visual tests</li><li><b>B.</b> Test every frame</li><li><b>C.</b> Compare with a tolerance on one reference machine instead of demanding pixel-exact matches everywhere</li><li><b>D.</b> Require all players to use your GPU</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="prod-debug.html">← Debugging and profiling games</a> · <a href="prod-repo.html">Repositories, assets and pipelines →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Investigate: the checksum changed, so behaviour changed. Find the first frame where state differs, then decide whether it is a bug or an intended change (and only then regenerate the golden value)</p><div>A golden test exists to flag unintended changes. Refreshing it blindly defeats the purpose.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Pure logic that takes state, input and a time step and returns new state, with the engine layer only presenting it</p><div>No engine, no wall-clock, no globals in the logic: that is also what determinism needs.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Fuzzing the save parser with random and mutated files</p><div>Fuzzing explores malformed inputs far beyond what a human would think to try.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>A.</b> Property and invariant tests: generate many random trades and assert conservation always holds</p><div>Invariants over generated cases find the edge case nobody thought to write by hand.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>C.</b> Compare with a tolerance on one reference machine instead of demanding pixel-exact matches everywhere</p><div>Screenshot tests are brittle across hardware, so tolerance plus a single reference keeps the signal without the noise.</div></div>
+<p class="nav"><a href="prod-debug.html">← Debugging and profiling games</a> · <a href="prod-repo.html">Repositories, assets and pipelines →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

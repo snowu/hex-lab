@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A practice routine and a reusable editor · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdpixel">Pixel Art</a> · lesson 6 of 6 · 5 min</p>
+<h1>A practice routine and a reusable editor</h1>
+<p class="sum">Daily drills that build skill quickly, and the design of a pixel editor you can drop into any game project.</p>
+<div class="sec">
+<h3>Twenty minutes a day beats a weekend a month</h3>
+<ol>
+<li><b>Icon of the day</b> (8×8 or 16×16, one palette of 4 to 8 colours): sword, potion, key, mushroom, heart. Timebox it to 15 minutes. Do not undo more than you must.</li>
+<li><b>Copy a sprite pixel by pixel</b> from a game you love, then close it and redraw from memory. You learn how others place pixels, then what you retained.</li>
+<li><b>Ramp study</b>: draw the same sphere three times in three palettes (warm light, cool light, night). Compare with the ramp simulation.</li>
+<li><b>Silhouette thumbnails</b>: draw 10 different monsters as 16×16 black shapes. Keep the three most distinct, give them colour.</li>
+<li><b>Animate a bounce, then a blink, then a walk.</b> Always the same order: bounce first.</li>
+<li><b>Tile a floor</b> with 16 tiles that connect, then build a room from them in the engine.</li>
+<li>Once a week, make a <b>small scene</b> (64×64 to 128×128) with background, midground and a character, and post it for feedback.</li>
+</ol>
+<h3>Learning resources (free)</h3>
+<p>See the Links page in this section for tutorials and palette libraries. The habit that matters is <b>looking at lots of good work and asking where each pixel is a decision</b>.</p>
+<h3>A reusable editor: spritewright</h3>
+<p>The editor in the first lesson is a teaching toy. The real tool lives in its own project, <b>spritewright</b>: a dependency-free pixel editor you can use <b>by itself</b> or <b>drop into a game repository</b>.</p>
+<ul><li><b>By itself, in a browser.</b> Open the hosted page (<a href="https://snowu.github.io/spritewright/" target="_blank" rel="noopener">snowu.github.io/spritewright</a>): upload a PNG, edit and download it, or pick a project: a <b>GitHub repository</b> (it lists the PNG sprites, you edit, and <b>Propose PR</b> opens a pull request through the GitHub API, forking first if you have no write access) or a <b>folder on your computer</b> (Chromium browsers; <b>Save</b> writes back in place). Nothing to install, nothing added to the game repo.</li><li><b>As a dependency of a game repository.</b> From a clone of the game, <code>npx --allow-git=root github:snowu/spritewright --open</code> runs it with nothing installed (npm 12 refuses GitHub packages unless you opt in). To pin it: add <code>allow-git=root</code> to <code>.npmrc</code>, <code>npm i -D github:snowu/spritewright</code>, then <code>npx spritewright init</code> writes a config (it picks the art folders and skips docs and screenshots) and <code>npx spritewright --open</code> serves the editor with save-to-disk. Add <code>"art": "spritewright --open"</code> to <code>package.json</code> so an artist just runs <code>npm run art</code>. It is one file plus a tiny Node server, no build step.</li><li><b>As a library.</b> <code>PixelForge.mount(element, options)</code> embeds the editor in your own tool or page, with TypeScript types.</li></ul>
+<p>What it does: pencil, eraser, fill, line, rectangles, mirror drawing, "clean lines" mode, a palette panel (recolour a colour everywhere, load a Lospec <code>.hex</code> palette, snap an image to it), flip/rotate/shift/resize, a sprite-sheet animation preview, PNG import and export. Saves are <b>lossless</b>: it reads and writes PNG bytes itself, so even semi-transparent pixels (an alpha value used as a marker) come back unchanged. Its README lists the limits honestly, including that the pull request flow is tested against a mocked GitHub API.</p></div>
+<div class="sec"><h3>Exercise: spec the PR flow</h3><p>Before reading the code of the editor, write down in five bullets what should happen when an artist presses “Propose change”: which API calls, in which order (read the base branch ref, create blobs, create a tree, create a commit, create or update a branch ref, open the pull request), what the branch is called, what the PR body contains (before/after images), and what happens on a conflict. Then compare with the editor's implementation.</p></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. You want to learn how a favourite game places its pixels. Which practice does the lesson recommend?</div><ol class="opts"><li><b>A.</b> Trace it with a large brush</li><li><b>B.</b> Copy a sprite pixel by pixel, then close it and redraw from memory</li><li><b>C.</b> Upscale it with smoothing</li><li><b>D.</b> Recolour it randomly</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div>
+<div class="box"><div class="q">2. An artist with no git setup must fix one sprite in a game repo and get it reviewed. What is the lightest path with spritewright?</div><ol class="opts"><li><b>A.</b> Open the hosted editor in a browser, pick the GitHub repo, edit, and Propose PR, which forks first if needed</li><li><b>B.</b> Email a screenshot of the fix</li><li><b>C.</b> Rewrite the game in a new engine</li><li><b>D.</b> Edit the exported PNG bytes by hand</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div>
+<p class="nav"><a href="px-tiles-workflow.html">← Tilesets, sprite sheets and the art pipeline</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Check 1</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Copy a sprite pixel by pixel, then close it and redraw from memory</p><div>Copying teaches placement, and redrawing from memory reveals what you actually retained.</div></div>
+<div class="ans" id="a2"><p><b>2. Check 2</b> <a href="#q2">back ↑</a></p><p><b>A.</b> Open the hosted editor in a browser, pick the GitHub repo, edit, and Propose PR, which forks first if needed</p><div>The standalone browser flow lists repo sprites and opens a pull request through the API with nothing to install.</div></div>
+<p class="nav"><a href="px-tiles-workflow.html">← Tilesets, sprite sheets and the art pipeline</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frontend fundamentals for backend engineers · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#fullstack">Full-Stack: Browser to Edge to Postgres</a> · lesson 6 of 6 · 15 min</p>
+<h1>Frontend fundamentals for backend engineers</h1>
+<p class="sum">Rendering models, Core Web Vitals, state, accessibility and the security basics.</p>
+<div class="sec">
+<h3>Rendering models</h3>
+<table><tr><th>Model</th><th>HTML comes from</th><th>Good for</th><th>Cost</th></tr>
+<tr><td><b>CSR</b> (client-side)</td><td>JavaScript builds the page in the browser</td><td>app-like UIs behind a login</td><td>slow first paint, SEO needs care</td></tr>
+<tr><td><b>SSR</b> (server-side)</td><td>server renders each request</td><td>fresh, personalised, SEO</td><td>server work per request; hydration</td></tr>
+<tr><td><b>SSG</b> (static)</td><td>built ahead of time, served from a CDN</td><td>docs, marketing, blogs</td><td>rebuild to change</td></tr>
+<tr><td><b>ISR / edge rendering</b></td><td>static plus background regeneration, or rendered at the edge</td><td>mostly static with some freshness</td><td>more moving parts</td></tr></table>
+<p><b>Hydration</b> attaches JavaScript to server-rendered HTML so it becomes interactive; it costs bytes and CPU. A no-framework page with one ES module and CDN scripts is perfectly valid for small tools: fewer moving parts, trivial deploys.</p>
+<h3>Performance: what users feel</h3>
+<ul><li><b>Core Web Vitals:</b> <b>LCP</b> (largest content shown, good ≤ 2.5 s), <b>INP</b> (responsiveness to interactions, good ≤ 200 ms), <b>CLS</b> (layout shift, good ≤ 0.1).</li><li>Ship less JavaScript: code-split, lazy-load rarely used libraries (load the auth/sync SDK only when someone signs in), compress, cache hashed assets for a year.</li><li>Avoid layout shift: reserve space for images and embeds. Avoid long main-thread tasks: chunk or move work to a Web Worker (as this site does for Python).</li><li>Measure with real-user data and Lighthouse, not guesses.</li></ul>
+<h3>State</h3>
+<ul><li><b>Server state</b> (data that lives on the backend and goes stale) is different from <b>UI state</b> (an open menu). Use a cache layer with invalidation for the first (stale-while-revalidate again), plain local state for the second.</li><li><b>Optimistic updates:</b> update the UI immediately, send the request, roll back on failure. Pair with idempotent endpoints.</li><li>Handle all four states in every view: loading, empty, error, success. Handle out-of-order responses (cancel the old request with <code>AbortController</code>).</li></ul>
+<h3>Accessibility essentials</h3>
+<ul><li>Semantic HTML first (<code>button</code>, <code>a</code>, <code>label</code>, headings). ARIA only to fill gaps.</li><li>Everything reachable and usable by keyboard with a visible focus. Sufficient colour contrast. Alt text. Respect <code>prefers-reduced-motion</code> and <code>prefers-color-scheme</code>.</li></ul>
+<h3>Security basics</h3>
+<ul>
+<li><b>XSS:</b> never put untrusted data into HTML with <code>innerHTML</code>; use <code>textContent</code> or a framework’s escaping, and sanitise if you must render HTML. Add a <b>Content-Security-Policy</b> to limit what scripts may run.</li>
+<li>Third-party scripts have full access to the page: pin versions, use Subresource Integrity, keep them few.</li>
+<li><b>CSRF</b> applies to cookie auth (see the HTTP lesson). Validate input on the server; client checks are only UX.</li>
+<li>Never put secrets in frontend code: it is public by definition. Public project keys are fine if authorisation is enforced server-side.</li>
+</ul>
+<h3>Testing and delivery</h3>
+<p>Many fast unit tests, some component tests, a few end-to-end tests with a real browser (Playwright) for the critical flows. Treat the build, the cache-busting strategy and the deployment as part of the product.</p></div>
+<div class="sec"><div class="box"><p class="kind">Bug hunt: Spot the frontend bugs</p><p>A search box calls an API and renders the results. This is JavaScript (frontend code). Click the <b>2</b> lines that are wrong.</p><pre>1  async function onSearch(q) {
+2    const res = await fetch('/api/search?q=' + q);
+3    const data = await res.json();
+4    results.innerHTML = data.items.map((i) =&gt; '&lt;li&gt;' + i.title + '&lt;/li&gt;').join('');
+5  }</pre><p>2 buggy lines. Find them, then check.</p><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A marketing page rarely changes and must load instantly worldwide with good SEO. Which rendering approach fits best?</div><ol class="opts"><li><b>A.</b> Client-side rendering with a large bundle</li><li><b>B.</b> Static generation (SSG) served from a CDN</li><li><b>C.</b> Server-side rendering on every request from one region</li><li><b>D.</b> A WebSocket per visitor</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Users report the page “jumps” as images load and the Cumulative Layout Shift score is poor. What is the usual fix?</div><ol class="opts"><li><b>A.</b> Use a faster server</li><li><b>B.</b> Reserve space (width/height or aspect-ratio) for images, embeds and late-loading content</li><li><b>C.</b> Disable caching</li><li><b>D.</b> Convert images to PNG</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You fire search requests on every keystroke and sometimes an older response arrives after a newer one and overwrites the results. What fixes it?</div><ol class="opts"><li><b>A.</b> Add a sleep</li><li><b>B.</b> Cancel the previous request with AbortController (and ignore stale responses), optionally debouncing input</li><li><b>C.</b> Use POST instead of GET</li><li><b>D.</b> Increase the server timeout</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Which statement about secrets in frontend code is correct?</div><ol class="opts"><li><b>A.</b> Minified code hides them well enough</li><li><b>B.</b> Anything shipped to the browser is public; keep secrets on a server, and rely on server-side authorisation for public keys</li><li><b>C.</b> Environment variables in the build keep them private</li><li><b>D.</b> Base64 encoding protects them</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div></div>
+<div class="sec"><h3>Questions to practise out loud</h3><ul><li>“Walk me through what happens when I type a URL and press enter.” (DNS, TLS, HTTP caching layers, rendering, then what changes with a CDN and with SSR)</li><li>“How would you design authentication for a single-page app with a serverless backend?” (code flow with PKCE or passwordless code, short-lived tokens, where tokens live, RLS or server-side authorisation)</li><li>“Your page is slow on phones. How do you investigate?” (field data vs lab, bundle, main thread, images, caching)</li><li>“A user sees another user’s data. What do you check first?” (cache key and Vary, shared cache with private data, missing tenant filter/RLS, session handling)</li><li>“Design an offline-first notes app that syncs.” (see the sync lesson and the design lab)</li></ul></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Search results include server-provided titles. Which rendering choice avoids XSS?</div><ol class="opts"><li><b>A.</b> Build HTML with innerHTML for speed</li><li><b>B.</b> Concatenate titles into the request URL instead</li><li><b>C.</b> Build elements with textContent or an escaping framework plus sanitisation and a Content-Security-Policy</li><li><b>D.</b> Trust titles because they come from your own API</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<div class="box"><div class="q">2. The UI applies an edit immediately before the server confirms it. What must the endpoint and UI provide?</div><ol class="opts"><li><b>A.</b> An idempotent endpoint so retries are safe, with rollback on failure</li><li><b>B.</b> A larger JavaScript bundle for faster rendering</li><li><b>C.</b> A WebSocket per keystroke</li><li><b>D.</b> Server-side rendering for every interaction</li></ol><p class="tolink" id="q7"><a href="#a7">answer 7 ↓</a></p></div>
+<p class="nav"><a href="fs-offline-sync.html">← Local-first apps and cross-device sync</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Spot the frontend bugs</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> One line builds a URL from user input; the other builds HTML from server data. (A third problem, out-of-order responses, is a good extra to mention: cancel old requests with AbortController.)</p><ul><li><b>Line 2:</b> The query is concatenated into the URL without <code>encodeURIComponent(q)</code>: characters like <code>&amp;</code>, <code>#</code> or spaces change the request and can inject extra parameters.</li><li><b>Line 4:</b> <code>innerHTML</code> with untrusted titles is <b>stored/reflected XSS</b>: a title containing <code>&lt;img onerror=…&gt;</code> runs script as your site. Build elements with <code>textContent</code> (or escape/sanitise).</li></ul></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Static generation (SSG) served from a CDN</p><div>Pre-built HTML from a CDN has the lowest latency and no server work. Rebuild when content changes.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Reserve space (width/height or aspect-ratio) for images, embeds and late-loading content</p><div>CLS measures unexpected movement. If the browser knows the size up front, nothing shifts when the content arrives.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Cancel the previous request with AbortController (and ignore stale responses), optionally debouncing input</p><div>Responses can arrive out of order. Abort the superseded request or tag each request and ignore the outdated one.</div></div>
+<div class="ans" id="a5"><p><b>5. Quick check</b> <a href="#q5">back ↑</a></p><p><b>B.</b> Anything shipped to the browser is public; keep secrets on a server, and rely on server-side authorisation for public keys</p><div>Build-time variables end up in the bundle. A public project identifier is fine only because authorisation is enforced elsewhere.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 1</b> <a href="#q6">back ↑</a></p><p><b>C.</b> Build elements with textContent or an escaping framework plus sanitisation and a Content-Security-Policy</p><div>Untrusted strings in innerHTML execute as markup; textContent keeps them as text and CSP limits script sources.</div></div>
+<div class="ans" id="a7"><p><b>7. Check 2</b> <a href="#q7">back ↑</a></p><p><b>A.</b> An idempotent endpoint so retries are safe, with rollback on failure</p><div>Optimistic UI bets the request succeeds; idempotency makes retries safe and rollback covers rejection.</div></div>
+<p class="nav"><a href="fs-offline-sync.html">← Local-first apps and cross-device sync</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

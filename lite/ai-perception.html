@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perception and steering · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdai">Game AI</a> · lesson 3 of 5 · 20 min</p>
+<h1>Perception and steering</h1>
+<p class="sum">What an agent knows (sight, sound, memory) and how it moves (seek, arrive, avoid, flock): the other half of believable AI.</p>
+<div class="sec">
+<h3>Do not let the AI cheat by default</h3>
+<p>The easiest AI reads the player's position straight from the game state: it always knows where you are. That feels unfair and robotic. <b>Perception</b> is the layer that decides what an agent is <i>allowed</i> to know, and most "smart" behaviour is really good perception plus memory.</p>
+<h3>Sight</h3>
+<p>Three checks, cheapest first:</p>
+<ol><li><b>Distance</b>: closer than the sight range? (compare squared distances).</li><li><b>Field of view</b>: <code>dot(facing, direction_to_target) &gt; cos(half_fov)</code> (no trigonometry in the loop).</li><li><b>Line of sight</b>: a raycast to the target that must not hit a wall (physics queries lesson). Stagger these across frames.</li></ol>
+<p>Refinements: visibility depends on <b>light</b> and <b>stance</b> (crouching or standing in shadow shortens range), <b>peripheral vision</b> (a narrow high-acuity cone and a wider low-acuity one), and a <b>reaction delay</b> before the AI acts on what it saw: awareness grows while you are visible and decays when you are not.</p>
+<h3>Hearing and other senses</h3>
+<p>Model sound as <b>events</b>, not audio: when the player runs, fires or breaks a bottle, post a noise event with a position and a loudness (radius). Agents within that radius, with walls attenuating it, are alerted to the noise <i>position</i> (not to the player). The same event system carries damage, allies calling for help and smells.</p>
+<h3>Memory and alert levels</h3>
+<ul><li>Keep a <b>last known position</b> and a timestamp for each threat. When sight is lost, the agent goes to that point, searches, then gives up: this single behaviour makes AI feel intelligent.</li><li>A small number of <b>alert states</b> (unaware, suspicious, searching, combat) with clear <b>telegraphs</b> (a "?" and a "!", a change of colour or animation, a spoken line) lets the player read the AI and plan around it. Stealth games live on this.</li><li><b>Share information</b> deliberately: an agent that spots you alerts nearby allies (with a delay and a range), not the whole level instantly.</li></ul>
+<h3>Steering behaviours</h3>
+<p>Decision-making says <i>where</i> to go; <b>steering</b> says <i>how</i> to move so it looks natural. Craig Reynolds' steering behaviours return a desired acceleration for each frame:</p>
+<ul><li><b>Seek</b>: accelerate toward the target. <b>Flee</b>: the opposite.</li><li><b>Arrive</b>: seek, but slow down inside a radius around the target so the agent stops instead of overshooting and orbiting.</li><li><b>Pursue / evade</b>: seek or flee the target's <i>predicted</i> position (position + velocity × time to reach).</li><li><b>Wander</b>: steer toward a point on a small circle in front, nudged randomly each frame: aimless but smooth.</li><li><b>Obstacle avoidance</b>: cast short feelers ahead and add a sideways push away from what they hit.</li><li><b>Separation, alignment, cohesion</b>: avoid crowding neighbours, match their heading, move toward their centre. Together they produce <b>flocking</b> (boids), try the simulation.</li><li><b>Path following</b>: seek the next waypoint on a path, switching when close.</li></ul>
+<p>Each behaviour first computes a <b>desired velocity</b> (toward the target at full speed, or scaled down when arriving). The steering acceleration is the difference between that and the current velocity, divided by a short <b>time to target</b> (0.1 to 0.25 s: how quickly the agent reacts; too large and it lags and overshoots, as the sample below shows).</p>
+<p>Combine behaviours by a <b>weighted sum</b> or by <b>priority</b> (obstacle avoidance overrides everything), then clamp the total acceleration and speed (the drill from the vectors lesson). Weighted sums need tuning; priority systems are more predictable.</p>
+<pre><code data-check="zig">const std = @import("std");
+
+const V = struct { x: f32, y: f32 };
+
+fn len(v: V) f32 {
+    return @sqrt(v.x * v.x + v.y * v.y);
+}
+
+fn limit(v: V, max: f32) V {
+    const l = len(v);
+    if (l &lt;= max or l == 0) return v;
+    return .{ .x = v.x / l * max, .y = v.y / l * max };
+}
+
+/// How quickly the agent tries to reach its desired velocity (seconds). Small = snappy, large = sluggish and overshoots.
+const TIME_TO_TARGET: f32 = 0.1;
+
+/// Desired velocity toward the target at full speed; the steering acceleration closes the gap to it over TIME_TO_TARGET.
+fn seek(pos: V, vel: V, target: V, max_speed: f32) V {
+    const dx = target.x - pos.x;
+    const dy = target.y - pos.y;
+    const d = @sqrt(dx * dx + dy * dy);
+    if (d == 0) return .{ .x = -vel.x / TIME_TO_TARGET, .y = -vel.y / TIME_TO_TARGET };
+    return .{ .x = (dx / d * max_speed - vel.x) / TIME_TO_TARGET, .y = (dy / d * max_speed - vel.y) / TIME_TO_TARGET };
+}
+
+/// Like seek, but the desired speed shrinks to zero inside slow_radius, so the agent stops at the target.
+fn arrive(pos: V, vel: V, target: V, max_speed: f32, slow_radius: f32) V {
+    const dx = target.x - pos.x;
+    const dy = target.y - pos.y;
+    const d = @sqrt(dx * dx + dy * dy);
+    if (d == 0) return .{ .x = -vel.x / TIME_TO_TARGET, .y = -vel.y / TIME_TO_TARGET };
+    const speed = if (d &lt; slow_radius) max_speed * d / slow_radius else max_speed;
+    return .{ .x = (dx / d * speed - vel.x) / TIME_TO_TARGET, .y = (dy / d * speed - vel.y) / TIME_TO_TARGET };
+}
+
+fn simulate(use_arrive: bool) f32 {
+    var pos = V{ .x = 0, .y = 0 };
+    var vel = V{ .x = 0, .y = 0 };
+    const target = V{ .x = 100, .y = 0 };
+    const dt: f32 = 1.0 / 60.0;
+    var farthest: f32 = 0;
+    for (0..60 * 20) |_| {
+        const steer = limit(if (use_arrive) arrive(pos, vel, target, 80, 40) else seek(pos, vel, target, 80), 600);
+        vel = limit(.{ .x = vel.x + steer.x * dt, .y = vel.y + steer.y * dt }, 80);
+        pos.x += vel.x * dt;
+        pos.y += vel.y * dt;
+        farthest = @max(farthest, pos.x);
+    }
+    return farthest;
+}
+
+test "arrive stops at the target, plain seek overshoots and circles back" {
+    const arriving = simulate(true);
+    const seeking = simulate(false);
+    try std.testing.expect(arriving &lt; 100.5); // never overshoots
+    try std.testing.expect(seeking &gt; arriving + 3.0); // seek sails past
+}</code></pre>
+<h3>Crowds and avoidance</h3>
+<p>For many agents add <b>local avoidance</b> that predicts collisions with neighbours: <b>velocity obstacles</b> (RVO, ORCA) choose a velocity that avoids all predicted collisions within a short horizon. Most engines ship it (Godot's NavigationAgent avoidance, Unity's NavMeshAgent). Use <b>flow fields</b> for large groups heading to one goal (pathfinding lesson).</p>
+<h3>Debugging movement</h3>
+<p>Draw it: the desired velocity, the steering force, the target, the feelers, perception cones, last-known positions. Most steering bugs (orbiting a target, jitter at the destination, getting stuck on corners) are obvious once visible.</p></div>
+<div class="sec"><div class="box"><p class="kind">Simulation: Flocking from three simple rules</p><p>Each boid only reacts to neighbours inside its sight radius. Move the pointer over the canvas to attract them.</p><p><b>Try this in the full app:</b></p><ul><li>Set <b>separation</b> to 0: the flock collapses into overlapping blobs.</li><li>Set <b>alignment</b> to 0: boids still cluster but move in all directions.</li><li>Set <b>cohesion</b> to 0: they stay aligned but drift apart.</li><li>Shrink the <b>sight radius</b>: separate small flocks form instead of one large group.</li><li>Move the pointer: the attraction is just one more weighted steering force added to the sum.</li></ul><p class="note">Interactive: needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A guard sees the player, the player ducks behind a crate for a second, and the guard instantly loses all interest. How do you make it feel smarter?</div><ol class="opts"><li><b>A.</b> Give the guard x-ray vision</li><li><b>B.</b> Store the last known position and make the guard go there and search for a few seconds before giving up</li><li><b>C.</b> Make the guard faster</li><li><b>D.</b> Remove the crate</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">An enemy using plain "seek" overshoots its target and orbits around it. Which behaviour fixes this?</div><ol class="opts"><li><b>A.</b> Flee</li><li><b>B.</b> Arrive: reduce the desired speed inside a radius around the target</li><li><b>C.</b> Wander</li><li><b>D.</b> Alignment</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Where should noise (footsteps, gunshots) be handled in the AI architecture?</div><ol class="opts"><li><b>A.</b> As raw audio analysed by the AI</li><li><b>B.</b> As noise events with a position and loudness posted to nearby agents, which then react to the noise position</li><li><b>C.</b> In the renderer</li><li><b>D.</b> Not at all</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A guard checks an expensive wall raycast against every distant entity before testing distance or facing. What is wrong?</div><ol class="opts"><li><b>A.</b> Raycasts should replace all other checks</li><li><b>B.</b> Guards should have x-ray vision</li><li><b>C.</b> Sight checks should run cheapest first (distance, then field of view, then the raycast) and be staggered across frames</li><li><b>D.</b> Perception should read the player position directly</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. An enemy using plain seek keeps missing a fast strafing target because it chases where the target was. What fixes the aim?</div><ol class="opts"><li><b>A.</b> Pursue the predicted position (position plus velocity times time to reach) instead of the current one</li><li><b>B.</b> Seek faster</li><li><b>C.</b> Wander instead</li><li><b>D.</b> Add more separation</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="ai-planning.html">← Utility AI and planners</a> · <a href="ai-pathing.html">Pathfinding in depth →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Store the last known position and make the guard go there and search for a few seconds before giving up</p><div>Memory plus a search behaviour reads as intelligence for almost no code.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Arrive: reduce the desired speed inside a radius around the target</p><div>Arrive matches speed to distance so the agent decelerates and stops.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> As noise events with a position and loudness posted to nearby agents, which then react to the noise position</p><div>Events are cheap, controllable and testable. The AI reacts to where the noise happened, not to the player directly.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>C.</b> Sight checks should run cheapest first (distance, then field of view, then the raycast) and be staggered across frames</p><div>Ordering cheapest-first plus staggering keeps perception cheap; the raycast is the last resort, not the first.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>A.</b> Pursue the predicted position (position plus velocity times time to reach) instead of the current one</p><div>Pursuit leads the target while seek chases history; prediction is what hits movers.</div></div>
+<p class="nav"><a href="ai-planning.html">← Utility AI and planners</a> · <a href="ai-pathing.html">Pathfinding in depth →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API design that survives its clients · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#fullstack">Full-Stack: Browser to Edge to Postgres</a> · lesson 3 of 6 · 30 min</p>
+<h1>API design that survives its clients</h1>
+<p class="sum">Pagination, idempotency, errors, versioning, and the backend-for-frontend pattern.</p>
+<div class="sec">
+<h3>Resources and verbs</h3>
+<p>Model nouns, not actions: <code>POST /payments</code>, <code>GET /payments/{id}</code>, <code>PATCH /payments/{id}</code>. Use verbs for the HTTP method, status codes for the outcome, and keep responses consistent. <b>PUT</b> (full replace) and <b>DELETE</b> are naturally idempotent; <b>POST</b> is not, so accept an <code>Idempotency-Key</code> (see the Reliability track).</p>
+<h3>Pagination</h3>
+<ul><li><b>Offset</b> (<code>?page=500</code>) gets slower as pages get deeper and skips or repeats rows when data changes.</li><li><b>Keyset / cursor</b>: <code>?after=&lt;opaque cursor&gt;</code> with a stable sort (including a unique tiebreaker). Fast on any page, stable under inserts. Make the cursor opaque and signed so you can change internals and clients cannot forge it.</li></ul>
+<h3>Errors</h3>
+<p>One predictable shape, such as <code>{ "error": "kind", "message": "..." }</code> or RFC 9457 <code>application/problem+json</code>. Classify them for callers (<code>user_auth</code>, <code>forbidden</code>, <code>not_found</code>, <code>quota</code>, <code>upstream</code>) so a client knows whether to re-login, retry or give up, and map upstream failures to 502/503 instead of leaking them.</p>
+<h3>Concurrency control over HTTP</h3>
+<p>Return an <code>ETag</code>; the client sends <code>If-Match</code> on update; a mismatch returns <b>412</b>. This is optimistic locking for APIs, the same idea as a <code>version</code> or <code>generation</code> column.</p>
+<h3>Evolving an API</h3>
+<ul><li>Additive changes (new optional fields) are safe. Removing or renaming a field is breaking.</li><li>Clients must ignore unknown fields. Servers should tolerate old clients for a while.</li><li>Version when you must (<code>/v2</code> or a header) and deprecate with dates and metrics on who still uses the old one.</li><li>Document with OpenAPI, and test the contract.</li></ul>
+<h3>Backend for frontend</h3>
+<p>A small server-side layer that exists to serve one frontend: it <b>holds secrets</b>, <b>works around CORS</b> to third-party APIs, <b>aggregates</b> several calls into one, <b>caches</b> shared data, and shapes responses for the UI. A serverless function at the edge is a natural fit. Keep it thin: it should not become a second monolith.</p>
+<p><b>REST vs GraphQL vs RPC:</b> REST is simple, cacheable and ubiquitous; GraphQL lets clients ask for exactly what they need (at the cost of caching, N+1 and query-cost control); RPC (gRPC) is efficient between services.</p></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Keyset pagination with a signed cursor</p><p>Write <code>paginate(items, limit, cursor, secret)</code> for a feed. <code>items</code> are dicts with <code>id</code> and <code>created_at</code> (sortable) in any order. Return <code>{'items': [...], 'next_cursor': str | None}</code>, newest first (sort by <code>(created_at, id)</code> descending, so ties are stable). The <b>opaque cursor</b> encodes the last item's <code>(created_at, id)</code> plus an HMAC signature so clients cannot forge or edit it; the next page returns only items strictly <b>after</b> that position. <code>cursor=None</code> means the first page; <code>next_cursor</code> is <code>None</code> on the last page. Raise <code>ValueError('invalid cursor')</code> for a tampered, garbled or wrong-secret cursor and <code>ValueError('limit must be 1-100')</code> for a bad limit.</p><p><b>Starter:</b></p><pre>import base64
+import hashlib
+import hmac
+import json
+
+def paginate(items, limit, cursor, secret):
+    pass
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A client updates a record with PUT, but another user changed it a minute ago and the client had the old copy. Which mechanism prevents silently overwriting?</div><ol class="opts"><li><b>A.</b> Rate limiting</li><li><b>B.</b> An ETag/version: the client sends If-Match, and the server returns 412 Precondition Failed when it no longer matches</li><li><b>C.</b> Using POST instead of PUT</li><li><b>D.</b> A longer timeout</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Which response code best fits “you sent valid JSON, but the end date is before the start date”?</div><ol class="opts"><li><b>A.</b> 400 or 422 with a clear field-level error (422 if you separate syntax from semantics)</li><li><b>B.</b> 500</li><li><b>C.</b> 404</li><li><b>D.</b> 401</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Why make a pagination cursor opaque and signed?</div><ol class="opts"><li><b>A.</b> It is shorter</li><li><b>B.</b> So you can change the underlying sort/keys later without breaking clients, and so clients cannot forge positions to probe data</li><li><b>C.</b> Browsers require it</li><li><b>D.</b> It makes responses cacheable forever</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A client retries POST /payments after a timeout and risks charging twice. What is the intended design?</div><ol class="opts"><li><b>A.</b> Tell clients never to retry POST requests</li><li><b>B.</b> Accept an Idempotency-Key so a retried request with the same key executes once</li><li><b>C.</b> Switch the charge to a GET request</li><li><b>D.</b> Return 500 so the client gives up</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. Version 2 renames a widely used response field and old mobile clients break. Which rule was violated?</div><ol class="opts"><li><b>A.</b> That every API change requires a new major version</li><li><b>B.</b> That GraphQL is always safer than REST</li><li><b>C.</b> That additive changes are safe while renames are breaking, so version, keep old clients working, and deprecate with dates and metrics</li><li><b>D.</b> That status codes should be hidden from clients</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="fs-auth.html">← Auth: sessions, JWTs, OAuth and row-level security</a> · <a href="fs-edge.html">Edge and serverless: Cloudflare Workers, KV, Durable Objects →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Keyset pagination with a signed cursor</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Sort with key=(created_at, id), reverse=True. Cursor = base64url(json [created_at, id]) + "." + a truncated HMAC of that payload. To decode: split, recompute and compare_digest the signature, then keep only rows whose (created_at, id) tuple is less than the cursor tuple. next_cursor exists only if more rows remain after this page.</p><p><b>Reference solution:</b></p><pre>import base64
+import hashlib
+import hmac
+import json
+
+def _sign(payload, secret):
+    return hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()[:32]
+
+def _encode(last, secret):
+    payload = base64.urlsafe_b64encode(json.dumps([last['created_at'], last['id']]).encode()).decode().rstrip('=')
+    return payload + '.' + _sign(payload, secret)
+
+def _decode(cursor, secret):
+    try:
+        payload, sig = cursor.split('.')
+        if not hmac.compare_digest(sig, _sign(payload, secret)):
+            raise ValueError
+        created_at, row_id = json.loads(base64.urlsafe_b64decode(payload + '=' * (-len(payload) % 4)))
+        return created_at, row_id
+    except (ValueError, TypeError, AttributeError):
+        raise ValueError('invalid cursor')
+
+def paginate(items, limit, cursor, secret):
+    if not isinstance(limit, int) or isinstance(limit, bool) or not 1 &lt;= limit &lt;= 100:
+        raise ValueError('limit must be 1-100')
+    ordered = sorted(items, key=lambda r: (r['created_at'], r['id']), reverse=True)
+    if cursor is not None:
+        position = _decode(cursor, secret)
+        ordered = [r for r in ordered if (r['created_at'], r['id']) &lt; position]
+    page = ordered[:limit]
+    more = len(ordered) &gt; limit
+    return {'items': page, 'next_cursor': _encode(page[-1], secret) if more else None}</pre><p>This is the API-level twin of the SQL keyset query: WHERE (created_at, id) < ($1, $2) ORDER BY created_at DESC, id DESC LIMIT n. Opaque, signed cursors let you change the internals later and stop clients from crafting positions. Include a tiebreaker (id) or rows with equal timestamps will be skipped or repeated.</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> An ETag/version: the client sends If-Match, and the server returns 412 Precondition Failed when it no longer matches</p><div>Optimistic concurrency: the update is conditional on the version the client last saw. The same idea as compare-and-swap with a generation number.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>A.</b> 400 or 422 with a clear field-level error (422 if you separate syntax from semantics)</p><div>It is the client’s mistake, not the server’s. Return a 4xx with a machine-readable error naming the field.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> So you can change the underlying sort/keys later without breaking clients, and so clients cannot forge positions to probe data</p><div>Clients should treat the cursor as a black box. A signature (HMAC) stops tampering and enumeration tricks.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>B.</b> Accept an Idempotency-Key so a retried request with the same key executes once</p><div>PUT and DELETE are naturally idempotent but POST is not, so the key makes a retry safe against double execution.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>C.</b> That additive changes are safe while renames are breaking, so version, keep old clients working, and deprecate with dates and metrics</p><div>Clients tolerate unknown fields but not renamed ones; evolve additively and version breaking changes explicitly.</div></div>
+<p class="nav"><a href="fs-auth.html">← Auth: sessions, JWTs, OAuth and row-level security</a> · <a href="fs-edge.html">Edge and serverless: Cloudflare Workers, KV, Durable Objects →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

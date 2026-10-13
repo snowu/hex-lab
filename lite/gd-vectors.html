@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vectors, movement and steering · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdmath">Game Math &amp; Physics</a> · lesson 1 of 4 · 15 min</p>
+<h1>Vectors, movement and steering</h1>
+<p class="sum">Position, direction, speed, and the two operations (dot and cross) that answer most gameplay questions.</p>
+<div class="sec">
+<p>A <b>vector</b> is a pair (or triple) of numbers. It can mean a <i>position</i> (where), a <i>displacement</i> (from here to there) or a <i>velocity</i> (displacement per second). Most game maths is moving things with them.</p>
+<h3>The operations you use every day</h3>
+<table>
+<tr><th>Operation</th><th>What it gives you</th></tr>
+<tr><td><code>a + b</code>, <code>a - b</code></td><td>Combine movements. <code>target - self</code> is the vector pointing from you to the target.</td></tr>
+<tr><td><code>v * s</code></td><td>Scale. <code>velocity * dt</code> is how far you move this frame.</td></tr>
+<tr><td><code>length(v)</code></td><td>Distance or speed. Use <code>length_squared</code> to compare distances without a square root.</td></tr>
+<tr><td><code>normalize(v)</code></td><td>Same direction, length 1. Guard against the zero vector.</td></tr>
+<tr><td><code>dot(a, b)</code></td><td>How much two directions agree: 1 same, 0 perpendicular, -1 opposite (for unit vectors).</td></tr>
+<tr><td><code>cross(a, b)</code> (2D)</td><td>Which side b is on relative to a (sign), and the area of the parallelogram.</td></tr>
+<tr><td><code>lerp(a, b, t)</code></td><td>Point a fraction t of the way from a to b.</td></tr>
+</table>
+<h3>Questions the dot product answers</h3>
+<ul><li><b>Is the player in front of the guard?</b> <code>dot(guard.facing, normalize(player - guard)) &gt; cos(half_fov)</code>. No angles or trig needed.</li><li><b>How fast am I moving toward the goal?</b> <code>dot(velocity, direction_to_goal)</code>.</li><li><b>Slide along a wall</b>: remove the part of the velocity that points into the wall: <code>v - n * dot(v, n)</code> for a unit normal <code>n</code>. That one line is how characters glide along walls instead of sticking.</li></ul>
+<h3>The diagonal-speed bug</h3>
+<p>Holding right and up gives input <code>(1, 1)</code> which has length <b>1.414</b>. If you multiply that by speed, diagonal movement is 41% faster. Normalise (or clamp the length), then scale. In the drill you cap a velocity vector by its <i>length</i>, not per axis.</p>
+<h3>Angles</h3>
+<p>Use <code>atan2(y, x)</code> (never <code>atan(y/x)</code>, which loses the quadrant and divides by zero) to get a heading, and avoid storing angles when a direction vector works. Interpolating angles needs wrap-around care (350° to 10° is a 20° turn, not 340°). Godot's <code>lerp_angle</code> handles it.</p>
+<div class="callout warn"><b>Screen versus maths axes.</b> In 2D engines y usually grows <i>downward</i>. Rotation sign, "up" and cross-product signs all flip. Write a comment the first time you rely on it.</div></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Acceleration with a speed cap</p><p>Implement <code>accelerate(v, a, dt, max_speed)</code>: add <code>a * dt</code> to the velocity, then limit the <b>length</b> of the resulting vector to <code>max_speed</code>, keeping its direction.</p>
+<p>The classic bug: clamping x and y separately lets diagonal movement be about 41% faster than straight movement.</p><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub const Vec2 = struct { x: f32, y: f32 };
+
+pub fn accelerate(v: Vec2, a: Vec2, dt: f32, max_speed: f32) Vec2 {
+    _ = a;
+    _ = dt;
+    _ = max_speed;
+    return v;
+}
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A guard faces <code>f</code> (unit length) and the player is at relative position <code>d</code>. The guard has a 90° field of view. Which test says the player is inside the cone?</div><ol class="opts"><li><b>A.</b> dot(f, normalize(d)) > cos(45°)</li><li><b>B.</b> dot(f, d) < 0</li><li><b>C.</b> cross(f, d) == 0</li><li><b>D.</b> length(d) < 90</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A ball with velocity <code>v</code> hits a wall with unit normal <code>n</code> and should bounce perfectly. Which formula?</div><ol class="opts"><li><b>A.</b> v - n</li><li><b>B.</b> v - 2 * n * dot(v, n)</li><li><b>C.</b> n * dot(v, n)</li><li><b>D.</b> -v</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Holding right and up feeds input (1, 1) into movement, and diagonal runs feel faster than straight runs. What is the fix?</div><ol class="opts"><li><b>A.</b> Scale speed down only on the x axis</li><li><b>B.</b> Normalise or clamp the input length before scaling by speed, since (1, 1) has length 1.414</li><li><b>C.</b> Multiply by dt twice on diagonals</li><li><b>D.</b> Read the axes in separate frames</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. Each frame an enemy compares its distance to the player against several ranges. Which comparison is cheapest and correct?</div><ol class="opts"><li><b>A.</b> Compare length_squared against the squared ranges to skip the square root</li><li><b>B.</b> Take the square root first because squared values overflow</li><li><b>C.</b> Normalise both positions and compare the dot product</li><li><b>D.</b> Use atan2 on the distance and compare angles</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="gd-collision.html">Collision detection and response →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Acceleration with a speed cap</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> speed = sqrt(x*x + y*y). If speed > max_speed, multiply both components by max_speed / speed. If speed is 0 you never enter the branch, so there is no division by zero.</p><p>The same idea in one line of GDScript: velocity = velocity.limit_length(max_speed). Normalising input before multiplying by speed is the other half: Input.get_vector() already returns a length-clamped vector, which is why it exists.</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>A.</b> dot(f, normalize(d)) > cos(45°)</p><div>Half of 90° is 45°. A unit-vector dot product equals the cosine of the angle between them, so compare with cos(45°) (about 0.707). Add a distance check for range.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> v - 2 * n * dot(v, n)</p><div>Reflection: subtract twice the component of v along the normal. <code>-v</code> only works for a head-on hit. Subtracting just once (<code>v - n * dot(v, n)</code>) is the “slide along the wall” projection instead.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Normalise or clamp the input length before scaling by speed, since (1, 1) has length 1.414</p><div>The diagonal input vector is 41 percent longer, so cap by length before applying speed.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>A.</b> Compare length_squared against the squared ranges to skip the square root</p><div>Squared distances order the same as distances, so length_squared answers nearer-or-farther with no square root.</div></div>
+<p class="nav"><a href="gd-collision.html">Collision detection and response →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

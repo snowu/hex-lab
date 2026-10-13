@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thinking in patterns: sequencing · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdpatterns">Game Programming Patterns</a> · lesson 1 of 12 · 15 min</p>
+<h1>Thinking in patterns: sequencing</h1>
+<p class="sum">What a pattern is and costs, then the three that organise time in every game: the game loop, update methods and double buffering.</p>
+<div class="sec">
+<h3>What a pattern is (and is not)</h3>
+<p>A <b>pattern</b> is a named solution to a problem that keeps coming back, written down with its trade-offs. The name matters as much as the code: saying "this is an event queue" lets a teammate understand the design in one sentence. It is not a template to stamp on everything. Every pattern has a <b>cost</b> (more indirection, more memory, harder debugging), and the cost is only worth paying when the problem is real.</p>
+<p>Before applying any pattern ask three questions:</p>
+<ol><li><b>What exact problem do I have?</b> "The code feels messy" is not one. "Adding a new enemy needs edits in six files" is.</li><li><b>What does the pattern cost here?</b> Indirection makes code harder to follow; caches go stale; queues add latency.</li><li><b>What is the simplest thing that works?</b> A function and a <code>switch</code> beats a framework for three cases. Wait for the third repetition before abstracting ("rule of three").</li></ol>
+<p>Patterns in this track are grouped like the book that made them famous: <b>sequencing</b> (this lesson), <b>behaviour</b> (command, state, bytecode, type object), <b>decoupling</b> (observer, event queue, component, service locator) and <b>optimisation</b> (pool, flyweight, dirty flag, spatial partition, data locality). Each lesson ends with a coding drill in Zig and C++ so you build the data structure yourself.</p>
+<h3>Game loop (recap)</h3>
+<p>The first lesson of the game loop track covered it: input, update, render, with a fixed timestep for the simulation. The important property for patterns: <b>the loop is the only place that decides when things happen</b>. Everything else is a callback from it. When two systems fight over order, the answer is almost always in how the loop is organised.</p>
+<h3>Update method</h3>
+<p>Give every entity an <code>update(dt)</code> and let the loop call it. This is the pattern behind Godot's <code>_process</code> and <code>_physics_process</code>, Unity's <code>Update</code> and Unreal's <code>Tick</code>.</p>
+<pre><code># GDScript: each node has its own update; the engine walks the tree
+func _physics_process(delta):
+    position += velocity * delta</code></pre>
+<p>What it buys you: each object describes its own behaviour in isolation, and the loop does not need to know what objects exist. What to watch for:</p>
+<ul><li><b>Order dependence.</b> If A updates before B, A sees B's <i>old</i> state and B sees A's <i>new</i> state. Bugs from this look like "the left enemy is always one frame ahead of the right one".</li><li><b>Adding and removing during the loop.</b> An object that spawns a bullet or kills itself while the list is being walked can skip, repeat or crash. Queue spawns and removals and apply them after the pass (Godot: <code>queue_free()</code> and <code>call_deferred</code> exist for this).</li><li><b>Too many tiny updates.</b> Ten thousand objects each doing a virtual call and touching different memory is slow. Systems that update arrays of plain data (see the data-locality lesson) fix that.</li><li><b>Time.</b> Pass <code>dt</code>, never count frames.</li></ul>
+<h3>Double buffer</h3>
+<p>Order dependence has a clean fix when the objects <i>read each other</i> during the update: keep <b>two copies</b> of the state. Everyone reads from the <b>current</b> copy and writes into the <b>next</b> one; when the pass ends, swap them. Now the result does not depend on the update order at all. Conway's Game of Life is the classic example: updating in place corrupts the neighbours that have not been processed yet.</p>
+<pre><code data-check="zig">const std = @import("std");
+
+const W = 8;
+const H = 8;
+
+/// One Game of Life generation. Reads only from `cur`, writes only to `next`.
+fn step(cur: *const [W * H]bool, next: *[W * H]bool) void {
+    for (0..H) |y| {
+        for (0..W) |x| {
+            var n: u8 = 0;
+            for ([_]i32{ -1, 0, 1 }) |dy| {
+                for ([_]i32{ -1, 0, 1 }) |dx| {
+                    if (dx == 0 and dy == 0) continue;
+                    const nx = @as(i32, @intCast(x)) + dx;
+                    const ny = @as(i32, @intCast(y)) + dy;
+                    if (nx &lt; 0 or ny &lt; 0 or nx &gt;= W or ny &gt;= H) continue;
+                    if (cur[@as(usize, @intCast(ny)) * W + @as(usize, @intCast(nx))]) n += 1;
+                }
+            }
+            const alive = cur[y * W + x];
+            next[y * W + x] = n == 3 or (alive and n == 2);
+        }
+    }
+}
+
+test "a blinker flips between horizontal and vertical, whatever the update order" {
+    var a: [W * H]bool = @splat(false);
+    var b: [W * H]bool = @splat(false);
+    a[3 * W + 2] = true;
+    a[3 * W + 3] = true;
+    a[3 * W + 4] = true;
+    step(&amp;a, &amp;b);
+    try std.testing.expect(b[2 * W + 3] and b[3 * W + 3] and b[4 * W + 3]);
+    try std.testing.expect(!b[3 * W + 2] and !b[3 * W + 4]);
+    step(&amp;b, &amp;a); // swap the roles of the two buffers
+    try std.testing.expect(a[3 * W + 2] and a[3 * W + 3] and a[3 * W + 4]);
+}</code></pre>
+<p>Swapping is just exchanging which buffer plays which role (two pointers, no copying). The same idea is how graphics work: the GPU shows the <b>front buffer</b> while you draw into the <b>back buffer</b>, then they swap, so the player never sees a half-drawn frame. The cost is double the memory and, if the data is large, the time to copy or clear.</p></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Enemy A and enemy B each move toward the other's position, updated in a loop. B always seems to react one frame later than A. What is the cause and the cleanest fix?</div><ol class="opts"><li><b>A.</b> A floating point error; use doubles</li><li><b>B.</b> Update order: A reads B's old position, B reads A's new one. Read from the previous state and write into a new one (double buffering), or compute all decisions first and move afterwards</li><li><b>C.</b> The frame rate is too low</li><li><b>D.</b> B has a bug in its AI</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Which statement about patterns is the most useful guideline?</div><ol class="opts"><li><b>A.</b> Use as many as possible, they are best practice</li><li><b>B.</b> Name the problem first, weigh the cost, and prefer the simplest solution until it hurts (about the third repetition)</li><li><b>C.</b> Patterns only matter in object-oriented languages</li><li><b>D.</b> A pattern is correct if it appears in a book</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Bug hunt: Spot the update-method bugs</p><p>An enemy manager in GDScript. Click the <b>3</b> lines that cause skipped updates, crashes or frame-rate dependence.</p><pre>1  func _physics_process(delta):
+2      for e in enemies:
+3          e.position += e.velocity
+4          if e.hp &lt;= 0:
+5              enemies.erase(e)
+6          elif e.wants_to_shoot():
+7              enemies.append(spawn_bullet(e))</pre><p>3 buggy lines. Find them, then check.</p><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. During the enemy update loop a dying enemy removes itself from the array and a shooter appends a new bullet to that same array. Some enemies get skipped and the game sometimes crashes. What is the correct fix?</div><ol class="opts"><li><b>A.</b> Iterate the array faster so the mutant elements are visited in time</li><li><b>B.</b> Copy the whole game state every frame before updating</li><li><b>C.</b> Queue spawns and removals during the pass and apply them afterwards (Godot queue_free and call_deferred exist for this)</li><li><b>D.</b> Update bullets before enemies so the list never changes</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. A grid simulation where each cell reads its neighbours gives different results depending on the order cells are visited. Which change removes the order dependence?</div><ol class="opts"><li><b>A.</b> Keep two buffers: every cell reads from the current copy and writes into the next one, then swap their roles</li><li><b>B.</b> Update the cells in reverse order on alternate frames</li><li><b>C.</b> Use smaller floating point steps for the update</li><li><b>D.</b> Run the update twice per frame and average the results</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="pat-command.html">Command: actions as data →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Update order: A reads B's old position, B reads A's new one. Read from the previous state and write into a new one (double buffering), or compute all decisions first and move afterwards</p><div>In-place updates make results depend on iteration order. Separating "decide from the old state" from "apply the new state" removes the asymmetry.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Name the problem first, weigh the cost, and prefer the simplest solution until it hurts (about the third repetition)</p><div>A pattern is a trade-off, not a virtue. Indirection and caches have real costs; unnecessary ones are the typical beginner mistake.</div></div>
+<div class="ans" id="a3"><p><b>3. Spot the update-method bugs</b> <a href="#q3">back ↑</a></p><p><b>Hint:</b> One is about time, two are about changing a list while walking it.</p><ul><li><b>Line 3:</b> <code>e.velocity</code> is added per frame, not per second. Multiply by <code>delta</code> so movement does not depend on the frame rate.</li><li><b>Line 5:</b> Erasing from the array being iterated skips the element that slides into the freed slot (or crashes in other languages). Mark the enemy dead and remove it after the loop, or iterate over a copy or backwards.</li><li><b>Line 7:</b> Appending to the array being iterated: the new bullet may or may not be visited this frame depending on the engine, and it is a different kind of object stored in the enemy list. Queue spawns and add them after the loop, into the right collection.</li></ul></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>C.</b> Queue spawns and removals during the pass and apply them afterwards (Godot queue_free and call_deferred exist for this)</p><div>Mutating a list while walking it skips or repeats elements. Deferred add/remove keeps the iteration stable.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>A.</b> Keep two buffers: every cell reads from the current copy and writes into the next one, then swap their roles</p><div>Double buffering separates deciding from applying, so no cell sees a half-updated neighbour. Swapping is just exchanging roles.</div></div>
+<p class="nav"><a href="pat-command.html">Command: actions as data →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

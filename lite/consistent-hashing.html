@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deep dive: consistent hashing · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#design">System Design</a> · lesson 3 of 4 · 25 min</p>
+<h1>Deep dive: consistent hashing</h1>
+<p class="sum">How to spread keys over nodes without reshuffling everything. Implement it.</p>
+<div class="sec">
+<p>With <code>hash(key) % N</code>, adding a node remaps almost every key, which is a cache disaster. <b>Consistent hashing</b> places nodes (and many <i>virtual nodes</i> per node) on a ring; a key belongs to the first node clockwise from its hash. Adding or removing a node moves only ~1/N of the keys.</p>
+<ul><li><b>Virtual nodes</b> even out load and let you weight bigger machines.</li><li>Used by Dynamo-style stores, memcached clients, and many load balancers.</li></ul></div>
+<div class="sec"><div class="box"><p class="kind">Simulation: The hash ring</p><p>Dots are keys and coloured ticks are virtual nodes. Add or remove a node and compare how many keys must move with the naive <code>hash(key) mod N</code> approach.</p><p><b>Try this in the full app:</b></p><ul><li>Press <b>+ add node</b>: consistent hashing moves roughly 1/N of the keys, while mod N moves most of them.</li><li>Set virtual nodes to <b>1</b> and look at the spread: some nodes get far more keys than others.</li><li>Raise virtual nodes to <b>100</b> and the load evens out.</li></ul><p class="note">Interactive: needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Implement a hash ring</p><p>Implement <code>class HashRing</code> with <code>__init__(vnodes=50)</code>, <code>add_node(name)</code>, <code>remove_node(name)</code> and <code>get_node(key)</code> (returns <code>None</code> if the ring is empty). A simple hash function <code>fnv1a</code> is provided. Keep the ring points sorted and use <code>bisect</code> to find the owner.</p><p><b>Starter:</b></p><pre>import bisect
+
+def fnv1a(text):  # 32-bit FNV-1a
+    h = 2166136261
+    for ch in text:
+        h ^= ord(ch)
+        h = (h * 16777619) &amp; 0xFFFFFFFF
+    return h
+
+class HashRing:
+    def __init__(self, vnodes=50):
+        pass
+
+    def add_node(self, name):
+        pass
+
+    def remove_node(self, name):
+        pass
+
+    def get_node(self, key):
+        pass
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Your cache uses hash(key) % N. You add one node and nearly every key misses at once. Why?</div><ol class="opts"><li><b>A.</b> The hash function is too slow for the new size</li><li><b>B.</b> Modulo-N remaps almost every key when N changes; consistent hashing moves only about 1/N of keys</li><li><b>C.</b> Virtual nodes were missing from the client library version</li><li><b>D.</b> Caches must be cleared whenever topology changes</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div>
+<div class="box"><div class="q">2. One node on the ring holds far more keys than the rest. What is the standard fix, and what bonus does it give?</div><ol class="opts"><li><b>A.</b> Add many virtual nodes per physical node to even out load, and weight bigger machines with more of them</li><li><b>B.</b> Rehash every key with a stronger algorithm</li><li><b>C.</b> Reduce the ring to a single node per machine</li><li><b>D.</b> Disable hashing and assign keys round-robin</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<p class="nav"><a href="building-blocks.html">← Building blocks &amp; their trade-offs</a> · <a href="design-webhooks.html">Worked design: webhook delivery platform →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Implement a hash ring</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Keep self.points as a sorted list of (hash, node) tuples. get_node: bisect_left for (fnv1a(key),), wrapping to index 0 when you run off the end. Virtual node i of a node hashes the string f"{name}#{i}".</p><p><b>Reference solution:</b></p><pre>import bisect
+
+def fnv1a(text):  # 32-bit FNV-1a
+    h = 2166136261
+    for ch in text:
+        h ^= ord(ch)
+        h = (h * 16777619) &amp; 0xFFFFFFFF
+    return h
+
+class HashRing:
+    def __init__(self, vnodes=50):
+        self.vnodes = vnodes
+        self.points = []  # sorted list of (hash, node)
+
+    def add_node(self, name):
+        for i in range(self.vnodes):
+            bisect.insort(self.points, (fnv1a(f'{name}#{i}'), name))
+
+    def remove_node(self, name):
+        self.points = [p for p in self.points if p[1] != name]
+
+    def get_node(self, key):
+        if not self.points:
+            return None
+        i = bisect.bisect_left(self.points, (fnv1a(str(key)),))
+        return self.points[i % len(self.points)][1]</pre><p>Follow-ups: replication (the next N distinct nodes clockwise), weighted nodes (more vnodes), hot keys (consistent hashing balances keys, not load), and rendezvous hashing as an alternative. Plain FNV clusters similar strings; production rings use a better mixer (murmur3, xxhash).</p></div>
+<div class="ans" id="a2"><p><b>2. Check 1</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Modulo-N remaps almost every key when N changes; consistent hashing moves only about 1/N of keys</p><div>Modulo hashing couples every key to N, so a membership change reshuffles nearly everything. The ring assigns each key to the first node clockwise, so only neighbours of the change move.</div></div>
+<div class="ans" id="a3"><p><b>3. Check 2</b> <a href="#q3">back ↑</a></p><p><b>A.</b> Add many virtual nodes per physical node to even out load, and weight bigger machines with more of them</p><div>Virtual nodes spread each physical node around the ring, evening out load and letting heavier machines carry proportionally more keys.</div></div>
+<p class="nav"><a href="building-blocks.html">← Building blocks &amp; their trade-offs</a> · <a href="design-webhooks.html">Worked design: webhook delivery platform →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>
