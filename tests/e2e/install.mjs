@@ -21,4 +21,20 @@ export default async function ({ url, browser, ok, section }) {
   await page.waitForTimeout(2200);
   ok((await page.locator('#installBanner').count()) === 0, 'no banner again within the cooldown');
   await page.close();
+
+  section('service worker serves new deploys');
+  {
+    const page = await newPage(browser);
+    await page.goto(url + '#/');
+    await page.waitForFunction(() => navigator.serviceWorker && navigator.serviceWorker.controller, null, { timeout: 10000 });
+    await page.reload(); await page.waitForTimeout(500); // index.html is now cached by the worker
+    await page.context().route(/index\.html/, async (r) => { const res = await r.fetch(); r.fulfill({ response: res, body: (await res.text()).replace('<title>Hex Lab</title>', '<title>Hex Lab</title><meta name="deploy" content="new">') }); });
+    await page.reload(); await page.waitForTimeout(500);
+    ok((await page.locator('meta[name=deploy]').count()) === 1, 'a reload gets the newly deployed index.html, not the cached one');
+    await page.context().unroute(/index\.html/);
+    await page.context().setOffline(true);
+    await page.reload().catch(() => {}); await page.waitForTimeout(500);
+    ok((await page.locator('header.top').count()) === 1, 'offline still loads the cached page');
+    await page.context().close();
+  }
 }

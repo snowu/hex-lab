@@ -1,6 +1,7 @@
-/* Hex Lab service worker: minimal installability + app-shell offline cache.
-   Deliberately small — the shell only, never lesson content. Bump CACHE to rotate. */
-const CACHE = 'hex-lab-v1';
+/* Hex Lab service worker: minimal installability + offline fallback.
+   Network first: every deploy is picked up on the next load; the cache is only used offline.
+   (v1 was cache-first and kept serving the old index.html after deploys.) Bump CACHE to rotate. */
+const CACHE = 'hex-lab-v2';
 const SHELL = [
   './',
   './index.html',
@@ -34,18 +35,14 @@ self.addEventListener('fetch', (e) => {
   const u = new URL(e.request.url);
   if (u.origin !== self.location.origin) return;
   e.respondWith(
-    caches.match(e.request).then(
-      (hit) =>
-        hit ||
-        fetch(e.request)
-          .then((res) => {
-            if (res && res.ok) {
-              const copy = res.clone();
-              caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
-            }
-            return res;
-          })
-          .catch(() => (e.request.mode === 'navigate' ? caches.match('./index.html') : undefined))
-    )
+    fetch(e.request)
+      .then((res) => {
+        if (res && res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
+        }
+        return res;
+      })
+      .catch(() => caches.match(e.request).then((hit) => hit || (e.request.mode === 'navigate' ? caches.match('./index.html') : undefined)))
   );
 });
