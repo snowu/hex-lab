@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Utility AI and planners · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdai">Game AI</a> · lesson 2 of 5 · 35 min</p>
+<h1>Utility AI and planners</h1>
+<p class="sum">Choosing by scores, and planning a sequence of actions toward a goal: two alternatives to hand-written priorities.</p>
+<div class="sec">
+<h3>Utility AI: choose by scoring</h3>
+<p>A behaviour tree encodes <i>priorities</i> you decided in advance. <b>Utility AI</b> instead gives every possible action a <b>score</b> from 0 to 1 computed from the current situation, and runs the highest. "Drink a potion" scores high when health is low and potions remain; "attack" scores high when an enemy is close; "take cover" when under fire and the weapon is empty. No explicit priorities: the right behaviour <b>emerges</b> from the numbers.</p>
+<ul><li>Each action has several <b>considerations</b>: an input (health 0.3) mapped through a <b>response curve</b> (linear, quadratic, logistic or any custom shape) to a 0 to 1 value. Designers shape behaviour by editing curves.</li><li>Multiply the considerations (any 0 vetoes) or average them with a compensation factor to avoid the score collapsing as considerations are added.</li><li><b>Inertia</b>: add a bonus to the action currently running so the agent does not flip-flop when two scores hover around each other (a drill exercise). Other fixes: a minimum action duration, cooldowns.</li><li>Good for: many competing options (a life simulation: eat, sleep, socialise, work), behaviour that should adapt smoothly, ambient NPCs. The Sims is the classic reference. Dave Mark's talks on "infinite axis utility systems" are the standard source.</li><li>Weaknesses: scores are hard to tune and debug when there are many actions ("why did it prefer that?") so log the scores, and it expresses <i>sequences</i> poorly.</li></ul>
+<h3>Planners: let the AI work out the steps</h3>
+<p>Both trees and utility systems choose among actions you wired up. A <b>planner</b> instead takes a <b>goal</b> and a set of <b>actions</b> described by what they need and what they change, and <b>searches</b> for a sequence that gets from the current state to the goal.</p>
+<h3>GOAP: goal-oriented action planning</h3>
+<p>Made famous by <i>F.E.A.R.</i> (Jeff Orkin). The world is a set of boolean facts (<code>hasWeapon</code>, <code>weaponLoaded</code>, <code>enemyDead</code>). Each action has <b>preconditions</b> (facts that must hold), <b>effects</b> (facts it sets or clears) and a <b>cost</b>. The planner runs a search (A* or breadth-first) over world states from the current state to one that satisfies the goal and returns the cheapest action list. The point is <b>emergence and flexibility</b>: if the weapon is already loaded the plan is shorter; if the door is locked the planner may route through the window; designers add an action and the AI finds new ways to use it.</p>
+<pre><code data-check="zig">const std = @import("std");
+
+// World facts as bits in a byte.
+const HAS_WEAPON: u8 = 1 &lt;&lt; 0;
+const LOADED: u8 = 1 &lt;&lt; 1;
+const ENEMY_VISIBLE: u8 = 1 &lt;&lt; 2;
+const ENEMY_DEAD: u8 = 1 &lt;&lt; 3;
+
+const Action = struct {
+    name: []const u8,
+    needs: u8, // facts that must be true
+    sets: u8, // facts made true
+    clears: u8 = 0, // facts made false
+    cost: u32 = 1,
+};
+
+const actions = [_]Action{
+    .{ .name = "pick up weapon", .needs = 0, .sets = HAS_WEAPON },
+    .{ .name = "load weapon", .needs = HAS_WEAPON, .sets = LOADED },
+    .{ .name = "approach enemy", .needs = 0, .sets = ENEMY_VISIBLE, .cost = 3 },
+    .{ .name = "shoot", .needs = HAS_WEAPON | LOADED | ENEMY_VISIBLE, .sets = ENEMY_DEAD, .clears = LOADED },
+};
+
+/// Cheapest plan as a list of action indices (Dijkstra over the 256 possible states), or null if the goal is unreachable.
+fn plan(start: u8, goal: u8, out: []usize) ?usize {
+    var dist: [256]u32 = @splat(std.math.maxInt(u32));
+    var prev_state: [256]u8 = undefined;
+    var prev_action: [256]usize = undefined;
+    var done: [256]bool = @splat(false);
+    dist[start] = 0;
+    while (true) {
+        // pick the unfinished state with the smallest distance
+        var best: ?usize = null;
+        for (0..256) |s| {
+            if (!done[s] and dist[s] != std.math.maxInt(u32) and (best == null or dist[s] &lt; dist[best.?])) best = s;
+        }
+        const cur = best orelse return null;
+        if (cur &amp; goal == goal) { // goal facts all true: rebuild the plan backwards
+            var n: usize = 0;
+            var s: usize = cur;
+            while (s != start) : (s = prev_state[s]) n += 1;
+            if (n &gt; out.len) return null;
+            var i = n;
+            s = cur;
+            while (s != start) : (s = prev_state[s]) {
+                i -= 1;
+                out[i] = prev_action[s];
+            }
+            return n;
+        }
+        done[cur] = true;
+        const cur_state: u8 = @intCast(cur);
+        for (actions, 0..) |a, ai| {
+            if (cur_state &amp; a.needs != a.needs) continue;
+            const next: u8 = (cur_state | a.sets) &amp; ~a.clears;
+            const nd = dist[cur] + a.cost;
+            if (nd &lt; dist[next]) {
+                dist[next] = nd;
+                prev_state[next] = cur_state;
+                prev_action[next] = ai;
+            }
+        }
+    }
+}
+
+test "the planner finds the cheapest sequence and adapts to the starting state" {
+    var out: [8]usize = undefined;
+    const n = plan(0, ENEMY_DEAD, &amp;out).?;
+    try std.testing.expectEqual(@as(usize, 4), n);
+    try std.testing.expectEqualStrings("shoot", actions[out[n - 1]].name);
+    // already armed and loaded: only approach and shoot are needed
+    const short = plan(HAS_WEAPON | LOADED, ENEMY_DEAD, &amp;out).?;
+    try std.testing.expectEqual(@as(usize, 2), short);
+    // impossible goal
+    try std.testing.expect(plan(0, 1 &lt;&lt; 7, &amp;out) == null);
+}</code></pre>
+<h3>HTN planners</h3>
+<p><b>Hierarchical task networks</b> plan top-down: a goal ("kill the player") decomposes through authored <b>methods</b> into subtasks ("get in range", "attack") until primitive actions remain. Designers keep more control than with GOAP (the structure is authored), and planning is cheaper. Guerrilla's <i>Killzone 2</i> is the best-known example of an HTN planner in a shipped shooter.</p>
+<h3>Choosing</h3>
+<table><tr><th>Technique</th><th>Strength</th><th>Cost</th></tr>
+<tr><td>State machine</td><td>Simple, predictable, great for modes and animation</td><td>Wiring explosion</td></tr>
+<tr><td>Behaviour tree</td><td>Modular priorities, designer-friendly, debuggable</td><td>Implicit state, no planning</td></tr>
+<tr><td>Utility AI</td><td>Smooth adaptive choices among many options</td><td>Tuning and debugging scores</td></tr>
+<tr><td>GOAP / HTN</td><td>Emergent sequences, flexible with new actions</td><td>Search cost, harder to guarantee designed behaviour</td></tr></table>
+<p>They combine well: a utility layer picks a <i>goal</i>, a planner builds the steps, a behaviour tree or state machine executes them. Start with the simplest that works. Most shipped enemies are a behaviour tree or a plain state machine.</p></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Utility AI: scoring and not flip-flopping</p><p>In <b>utility AI</b> every possible action gets a score from 0 to 1 and the agent does the best one. A score is built from <b>considerations</b> (health is low, enemy is close, ammo left...), each already mapped to 0..1 by a response curve.</p>
+<ul><li><code>score(considerations)</code>: multiply them, after clamping each to <code>[0, 1]</code>. A 0 vetoes the action. An empty list scores 1.</li><li><code>pick(scores, current, inertia)</code>: the index of the best action. The action currently running gets <code>inertia</code> <b>added</b> to its score first, so the agent does not flip between two actions whose scores hover around each other. Ties go to the lowest index. Returns nothing for an empty list. A <code>current</code> that is out of range is ignored.</li></ul><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+/// Multiply the considerations, each clamped to 0..1. An empty list scores 1.
+pub fn score(considerations: []const f64) f64 {
+    _ = considerations;
+    return 0;
+}
+
+/// Index of the best action; the current one gets +inertia. Ties: lowest index. Empty: null.
+pub fn pick(scores: []const f64, current: ?usize, inertia: f64) ?usize {
+    _ = scores;
+    _ = current;
+    _ = inertia;
+    return null;
+}
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Two actions score 0.61 and 0.60, and the agent keeps switching between them every tick. What is the usual fix?</div><ol class="opts"><li><b>A.</b> Add random noise</li><li><b>B.</b> Add inertia: give the current action a bonus (or a minimum duration) so small score changes do not cause switches</li><li><b>C.</b> Raise all scores</li><li><b>D.</b> Tick faster</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">In GOAP, the planner returns a 5-step plan but the player destroys the door at step 3. What should the agent do?</div><ol class="opts"><li><b>A.</b> Continue blindly</li><li><b>B.</b> Notice the precondition of the next action no longer holds, abandon the plan and replan from the current world state</li><li><b>C.</b> Crash</li><li><b>D.</b> Restart the level</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Which situation favours a behaviour tree over GOAP?</div><ol class="opts"><li><b>A.</b> You want designers to author exact, predictable fights with clear priorities and reuse</li><li><b>B.</b> You want enemies to invent new ways of reaching the goal</li><li><b>C.</b> You have no designers</li><li><b>D.</b> You want zero authoring</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A utility action combines three considerations by multiplication, and one consideration scores 0. What happens to the action?</div><ol class="opts"><li><b>A.</b> It gets an average score</li><li><b>B.</b> It gets a bonus</li><li><b>C.</b> It is skipped for one tick</li><li><b>D.</b> It scores 0 no matter how good the others are: any 0 vetoes the product</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. A GOAP agent with an unloaded weapon plans four steps, but when it starts already loaded the plan has two. Why?</div><ol class="opts"><li><b>A.</b> The planner picks randomly</li><li><b>B.</b> The planner searches from the current world state, so an already-satisfied precondition shortens the plan</li><li><b>C.</b> The designer deleted steps</li><li><b>D.</b> The goal changed</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="ai-bt.html">← From state machines to behaviour trees</a> · <a href="ai-perception.html">Perception and steering →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Utility AI: scoring and not flip-flopping</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> score: start at 1.0 and multiply by clamp(c, 0, 1). pick: loop i, value = scores[i] + (i == current ? inertia : 0); keep the best with a strict ">" so earlier indices win ties.</p><p>Multiplying considerations is the simplest "and" (Dave Mark and Kevin Dill's GDC talks on utility AI are the reference). Designers shape behaviour by editing curves, not code. The inertia (or "commitment") term is not optional in practice: without it two close scores make the agent twitch between actions every frame. Other fixes are a minimum action time and cooldowns. Compare with behaviour trees: utility AI is better at "choose the most appropriate thing now" among many options, trees are better at scripted sequences.</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Add inertia: give the current action a bonus (or a minimum duration) so small score changes do not cause switches</p><div>Hysteresis prevents flip-flopping. Without it any utility system twitches around ties.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Notice the precondition of the next action no longer holds, abandon the plan and replan from the current world state</p><div>Plans are valid only while their assumptions hold. Check preconditions as you execute and replan when they fail.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>A.</b> You want designers to author exact, predictable fights with clear priorities and reuse</p><div>Trees give authored control and readability; planners trade some control for flexibility.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>D.</b> It scores 0 no matter how good the others are: any 0 vetoes the product</p><div>Multiplication makes each consideration a veto, which is why averaging with compensation is sometimes preferred.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>B.</b> The planner searches from the current world state, so an already-satisfied precondition shortens the plan</p><div>Plans emerge from the start state plus action preconditions and effects, so they adapt to what already holds.</div></div>
+<p class="nav"><a href="ai-bt.html">← From state machines to behaviour trees</a> · <a href="ai-perception.html">Perception and steering →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

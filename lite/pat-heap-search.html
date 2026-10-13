@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heaps &amp; binary search on the answer · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#patterns">Coding Patterns</a> · lesson 5 of 7 · 35 min</p>
+<h1>Heaps &amp; binary search on the answer</h1>
+<p class="sum">k-way merging, and turning “minimise the maximum” into a search.</p>
+<div class="sec">
+<h3>Heaps</h3>
+<p><code>heapq</code> is a <b>min-heap</b>. For a max-heap push negated values. Use a heap when you repeatedly need “the smallest/largest remaining”: top-k (keep a heap of size k), merging k sorted streams, scheduling by earliest deadline, Dijkstra.</p>
+<h3>Binary search on the answer</h3>
+<p>If you can write a fast <code>feasible(x)</code> that is monotonic (false … false true … true), you can binary search <code>x</code> even though the input is not sorted. Typical wording: “smallest capacity / minimum rate / minimise the maximum”. Always set the search bounds explicitly (lowest possible, highest possible) and be careful with <code>lo &lt; hi</code> and <code>mid</code> updates to avoid infinite loops.</p></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Merge k sorted lists</p><p>Write <code>merge_k_sorted(lists)</code>: <code>lists</code> is a list of individually sorted lists of numbers. Return one sorted list containing all elements. Aim for O(N log k) where N is the total number of elements. Empty lists may appear.</p><p><b>Starter:</b></p><pre>def merge_k_sorted(lists):
+    pass
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Binary search on the answer</p><p>Packages with the given <code>weights</code> must be shipped <b>in order</b> within <code>days</code> days; each day you load consecutive packages onto a ship up to its capacity. Write <code>min_capacity(weights, days)</code> returning the smallest ship capacity that makes it possible. (Think: batch jobs with a daily quota.)</p><p><b>Starter:</b></p><pre>def min_capacity(weights, days):
+    pass
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. You must keep the k largest values from a stream without storing everything sorted. What is the standard approach?</div><ol class="opts"><li><b>A.</b> Sort the whole stream after every new element</li><li><b>B.</b> Keep a max-heap of all elements and scan it each time</li><li><b>C.</b> Store everything and sort once at the very end</li><li><b>D.</b> Keep a min-heap of size k with the best seen so far, evicting the smallest on each new arrival</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<div class="box"><div class="q">2. Your binary search for the minimum feasible capacity never terminates. What did you most likely get wrong?</div><ol class="opts"><li><b>A.</b> The search bounds or the lo/hi and mid update, which must preserve progress over a monotonic feasibility check</li><li><b>B.</b> The heap size, which must equal the input size</li><li><b>C.</b> The trie depth, which limits how far the search can go</li><li><b>D.</b> The recursion limit, which stops binary search early</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<p class="nav"><a href="pat-graphs.html">← Graphs: BFS, DFS &amp; shortest paths</a> · <a href="pat-dp.html">Dynamic programming →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Merge k sorted lists</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Push (value, list_index, position) for the first element of each non-empty list into a heap. Pop the smallest, append it, and push the next element from the same list. (heapq.merge exists, but be able to write it yourself.)</p><p><b>Reference solution:</b></p><pre>import heapq
+
+def merge_k_sorted(lists):
+    heap = [(lst[0], i, 0) for i, lst in enumerate(lists) if lst]
+    heapq.heapify(heap)
+    out = []
+    while heap:
+        value, i, j = heapq.heappop(heap)
+        out.append(value)
+        if j + 1 &lt; len(lists[i]):
+            heapq.heappush(heap, (lists[i][j + 1], i, j + 1))
+    return out</pre><p>Same shape as merging sorted log shards or sorted result pages from several services. The heap holds k items, so each of the N pops costs O(log k).</p></div>
+<div class="ans" id="a2"><p><b>2. Binary search on the answer</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> The answer lies between max(weights) and sum(weights), and feasibility is monotonic: if capacity C works, C+1 works. Binary search the capacity, with a greedy helper that counts the days needed for a given capacity.</p><p><b>Reference solution:</b></p><pre>def min_capacity(weights, days):
+    def days_needed(cap):
+        used, load = 1, 0
+        for w in weights:
+            if load + w &gt; cap:
+                used += 1
+                load = 0
+            load += w
+        return used
+
+    lo, hi = max(weights), sum(weights)
+    while lo &lt; hi:
+        mid = (lo + hi) // 2
+        if days_needed(mid) &lt;= days:
+            hi = mid
+        else:
+            lo = mid + 1
+    return lo</pre><p>Recognise “minimise the maximum” or “smallest value that satisfies a monotonic check” as binary search on the answer space. The same trick sizes rate limits, worker counts and batch sizes.</p></div>
+<div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>D.</b> Keep a min-heap of size k with the best seen so far, evicting the smallest on each new arrival</p><div>A size-k heap holds the k largest with O(log k) per element instead of sorting the whole stream.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>A.</b> The search bounds or the lo/hi and mid update, which must preserve progress over a monotonic feasibility check</p><div>Binary search on the answer needs explicit bounds and an update that always shrinks the range over feasible(x).</div></div>
+<p class="nav"><a href="pat-graphs.html">← Graphs: BFS, DFS &amp; shortest paths</a> · <a href="pat-dp.html">Dynamic programming →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

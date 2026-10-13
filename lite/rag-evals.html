@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RAG &amp; evaluation · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#ai">AI-Era Engineering</a> · lesson 2 of 4 · 40 min</p>
+<h1>RAG &amp; evaluation</h1>
+<p class="sum">Chunking, similarity search, and how you know it works.</p>
+<div class="sec">
+<p><b>RAG</b> (retrieval-augmented generation): split documents into chunks → embed each into a vector → at question time embed the query, fetch the top-k most similar chunks, put them in the prompt. Quality is mostly decided by <b>chunking and retrieval</b>, not the generator.</p>
+<pre><code>cosine(a, b) = (a · b) / (|a| · |b|)</code></pre>
+<h3>Evaluate or you are guessing</h3>
+<ul><li>Build a small <b>golden set</b> (30-100 real questions with expected sources/answers) before tuning anything.</li>
+<li>Measure <b>retrieval</b> (recall@k: was the right chunk in the top k?) separately from <b>generation</b> (faithfulness to context, correctness).</li>
+<li>LLM-as-judge is useful but must itself be spot-checked by humans. Run evals in CI so prompt changes cannot silently regress.</li></ul></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Cosine similarity &amp; top-k retrieval</p><p>Implement <code>cosine(a, b)</code> (return <code>0.0</code> if either vector has zero length) and <code>top_k_docs(query_vec, docs, k)</code> where each doc is a dict <code>{'id', 'vec'}</code>. Return the ids of the <code>k</code> most similar docs, best first.</p><p><b>Starter:</b></p><pre>import math
+
+def cosine(a, b):
+    pass
+
+def top_k_docs(query_vec, docs, k):
+    pass
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Chunk text with overlap</p><p>Implement <code>chunk_text(text, size, overlap)</code> returning chunks of at most <code>size</code> characters, where each chunk starts <code>size - overlap</code> characters after the previous one. Stop once a chunk reaches the end of the text. Raise <code>ValueError</code> if <code>overlap &gt;= size</code>.</p><p><b>Starter:</b></p><pre>def chunk_text(text, size, overlap):
+    pass
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Users say the RAG assistant is “often wrong”. You have no metrics. First step?</div><ol class="opts"><li><b>A.</b> Switch to a bigger model</li><li><b>B.</b> Build a golden question set and measure retrieval recall@k and answer faithfulness separately</li><li><b>C.</b> Re-chunk everything at 200 tokens</li><li><b>D.</b> Add more documents</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Your RAG bot misses key contract clauses even though the generator model is strong. Where should you investigate first?</div><ol class="opts"><li><b>A.</b> The GPU type serving the generator</li><li><b>B.</b> The temperature slider in the demo UI</li><li><b>C.</b> The system prompt font size</li><li><b>D.</b> Chunking and retrieval: chunk boundaries, embeddings, and whether the right chunk is in the top-k</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. Your golden eval shows the right clause was retrieved but the answer contradicts it. Which half is broken and what does it mean?</div><ol class="opts"><li><b>A.</b> Generation: faithfulness to the retrieved context failed, so fix instructions, grounding, or validation</li><li><b>B.</b> Retrieval: recall@k failed, so re-chunk everything immediately</li><li><b>C.</b> The cosine formula failed and must be replaced</li><li><b>D.</b> The chunk_text code sample failed and must be deleted</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="llm-mental-model.html">← LLMs: the mental model you need</a> · <a href="agents-security.html">Agents, tools &amp; prompt-injection security →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Cosine similarity &amp; top-k retrieval</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> dot / (|a| * |b|) with math.sqrt, guarding the zero case. Then sort the docs by similarity, descending, and slice k. (At scale: approximate nearest-neighbour indexes such as HNSW.)</p><p><b>Reference solution:</b></p><pre>import math
+
+def cosine(a, b):
+    dot = sum(x * y for x, y in zip(a, b))
+    na = math.sqrt(sum(x * x for x in a))
+    nb = math.sqrt(sum(y * y for y in b))
+    if na == 0 or nb == 0:
+        return 0.0
+    return dot / (na * nb)
+
+def top_k_docs(query_vec, docs, k):
+    ranked = sorted(docs, key=lambda d: cosine(query_vec, d['vec']), reverse=True)
+    return [d['id'] for d in ranked[:k]]</pre><p>In production you would use numpy and normalise vectors once so similarity becomes a dot product. For millions of vectors use an ANN index (HNSW, IVF) rather than a full scan.</p></div>
+<div class="ans" id="a2"><p><b>2. Chunk text with overlap</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> step = size - overlap. Walk i in steps, take text[i:i + size], and stop as soon as i + size >= len(text).</p><p><b>Reference solution:</b></p><pre>def chunk_text(text, size, overlap):
+    if overlap &gt;= size:
+        raise ValueError('overlap must be smaller than size')
+    step = size - overlap
+    chunks = []
+    for i in range(0, len(text), step):
+        chunks.append(text[i:i + size])
+        if i + size &gt;= len(text):
+            break
+    return chunks</pre><p>In practice split on semantic boundaries (headings, paragraphs) first, keep metadata (source, section) with each chunk, and test the chunk size against your retrieval evals rather than guessing.</p></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Build a golden question set and measure retrieval recall@k and answer faithfulness separately</p><div>Without measurement every change is a coin flip. Separating retrieval from generation tells you which half is broken.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>D.</b> Chunking and retrieval: chunk boundaries, embeddings, and whether the right chunk is in the top-k</p><div>RAG quality is mostly decided by chunking and retrieval, not by upgrading the generator.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>A.</b> Generation: faithfulness to the retrieved context failed, so fix instructions, grounding, or validation</p><div>Measure retrieval (recall@k) separately from generation (faithfulness). Right chunk plus wrong answer points at generation.</div></div>
+<p class="nav"><a href="llm-mental-model.html">← LLMs: the mental model you need</a> · <a href="agents-security.html">Agents, tools &amp; prompt-injection security →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

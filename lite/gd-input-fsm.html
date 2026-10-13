@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Input, buffering and state machines · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdloop">Game Loop &amp; Architecture</a> · lesson 2 of 4 · 35 min</p>
+<h1>Input, buffering and state machines</h1>
+<p class="sum">How games read input, why they forgive players, and how to stop booleans multiplying into bugs.</p>
+<div class="sec">
+<h3>Input is a sampled signal</h3>
+<p>The game does not receive "a press", it samples the keyboard or pad once per frame. Two models:</p>
+<ul><li><b>Polling</b>: ask "is jump held right now?" every frame. Simple, perfect for continuous things (moving left, holding a charge).</li><li><b>Events</b>: the engine tells you "jump was pressed" or "released". Better for one-shot actions (the press itself matters, not the state).</li></ul>
+<p>Most engines give you both (<code>Input.is_action_pressed</code> versus <code>Input.is_action_just_pressed</code>, or the <code>_input(event)</code> callback). Always bind <b>actions</b> ("jump", "attack") rather than physical keys so rebinding and gamepads are free.</p>
+<h3>Forgive the player</h3>
+<p>Humans press buttons a few frames early or late and a game that checks the exact frame feels broken. Cheap, invisible tricks fix that:</p>
+<ul><li><b>Coyote time</b>: keep allowing the jump for ~100 ms after leaving a ledge.</li><li><b>Jump buffering</b>: remember a jump pressed ~100 ms before landing and fire it on touchdown.</li><li><b>Input buffering</b> in action games: queue the next attack during the current animation.</li><li><b>Corner correction</b>: nudge the player around a block's corner instead of bonking the head.</li></ul>
+<p>Implement the first two in the drill: it is a small problem and the code is short.</p></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Coyote time and jump buffering</p><p>Two tricks make platformers feel fair. <b>Coyote time</b>: you may still jump for a few ms after walking off a ledge. <b>Jump buffering</b>: a jump pressed a few ms before landing still fires on landing. Times are in ms.</p>
+<ul><li><code>leave_ground(t)</code>: the player walked off a ledge at time <code>t</code>.</li><li><code>press(t, grounded)</code>: jump pressed. Return <code>true</code> if the jump happens now (grounded, or within <code>coyote</code> ms of leaving the ground). Otherwise remember the press and return <code>false</code>. A coyote jump uses up the coyote window (no double jump).</li><li><code>land(t)</code>: the player touched the ground. Return <code>true</code> if a press happened within <code>buffer</code> ms before <code>t</code> (the buffered jump fires). Clear the buffer and coyote state either way.</li></ul>
+<p>Both windows default to 100 ms.</p><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub const Jumper = struct {
+    coyote: i64 = 100,
+    buffer: i64 = 100,
+    left_at: ?i64 = null,
+    pressed_at: ?i64 = null,
+
+    pub fn leaveGround(self: *Jumper, t: i64) void {
+        _ = self;
+        _ = t;
+    }
+
+    /// true if the jump happens right now
+    pub fn press(self: *Jumper, t: i64, grounded: bool) bool {
+        _ = self;
+        _ = t;
+        _ = grounded;
+        return false;
+    }
+
+    /// true if a buffered jump fires on landing
+    pub fn land(self: *Jumper, t: i64) bool {
+        _ = self;
+        _ = t;
+        return false;
+    }
+};
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec">
+<h3>State machines</h3>
+<p>A player can idle, run, jump, fall, dash, attack, take damage and die. The tempting implementation is a pile of booleans: <code>is_jumping</code>, <code>is_attacking</code>, <code>is_hurt</code>... With 6 booleans there are 64 combinations and most are nonsense ("hurt and dashing and dead"). Each new feature multiplies the bug surface.</p>
+<p>A <b>finite state machine</b> allows exactly one state at a time, and only listed transitions. Impossible combinations are unrepresentable. The usual shapes:</p>
+<ul><li><b>Enum + match</b>: the smallest thing that works. Good for 3 to 8 states.</li><li><b>State objects</b> (or child nodes in Godot): each state owns its <code>enter</code>, <code>update</code>, <code>exit</code>. Scales to big characters and keeps code per state together.</li><li><b>Hierarchical</b>: "airborne" contains "jumping" and "falling" and shares their gravity logic.</li><li><b>Pushdown (stack)</b>: hit-stun pushes on top of running, and popping returns to what you were doing. Menus and dialogue use the same idea.</li></ul>
+<pre><code>enum State { IDLE, RUN, AIR }
+var state = State.IDLE
+
+func _physics_process(delta):
+    match state:
+        State.IDLE: if Input.get_axis("left", "right") != 0: state = State.RUN
+        State.RUN:  if not is_on_floor(): state = State.AIR
+        State.AIR:  if is_on_floor(): state = State.IDLE</code></pre>
+<p>In Zig or C++ an exhaustive <code>switch</code> over an enum is checked by the compiler: add a state and every switch that forgets it stops compiling. That is the real win over a pile of <code>if</code> statements.</p></div>
+<div class="sec"><div class="box"><p class="kind">Drill: A state machine you cannot misuse</p><p>Model a player with three states <code>idle</code>, <code>running</code>, <code>air</code> and five events <code>run</code>, <code>stop</code>, <code>jump</code>, <code>land</code>, <code>wait</code>. The valid transitions:</p>
+<table><tr><th>from</th><th>event</th><th>to</th></tr><tr><td>idle</td><td>run</td><td>running</td></tr><tr><td>idle</td><td>jump</td><td>air</td></tr><tr><td>idle</td><td>wait</td><td>idle</td></tr><tr><td>running</td><td>stop</td><td>idle</td></tr><tr><td>running</td><td>jump</td><td>air</td></tr><tr><td>air</td><td>land</td><td>idle</td></tr></table>
+<p>Everything else is invalid. <code>transition(state, event)</code> returns the next state or "nothing". <code>Machine::send</code> applies an event: it returns <code>true</code> when the event was valid. It increments <code>enter_count</code> only when the state actually <b>changes</b> (so idle + wait is valid but does not count as entering a state).</p><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub const State = enum { idle, running, air };
+pub const Event = enum { run, stop, jump, land, wait };
+
+/// The next state, or null if the event is not valid in this state.
+pub fn transition(s: State, e: Event) ?State {
+    _ = s;
+    _ = e;
+    return null;
+}
+
+pub const Machine = struct {
+    state: State = .idle,
+    enter_count: u32 = 0,
+
+    /// true if the event was valid. enter_count only grows when the state changes.
+    pub fn send(self: *Machine, e: Event) bool {
+        _ = self;
+        _ = e;
+        return false;
+    }
+};
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Your boss fight has phases (idle, charge, slam, stunned) and a new "enraged" mode that changes how every one of them behaves. What is the cleanest way to model it?</div><ol class="opts"><li><b>A.</b> Add an is_enraged boolean and check it inside every state</li><li><b>B.</b> Make a second copy of the state machine for enraged mode</li><li><b>C.</b> Use a hierarchical or parameterised machine: the enraged flag selects a different set of timings and transitions, while the states stay the same</li><li><b>D.</b> Use a deeper if/else chain in the update function</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">The player presses jump 60 ms before touching the ground and nothing happens. Which technique fixes it?</div><ol class="opts"><li><b>A.</b> Coyote time</li><li><b>B.</b> Jump buffering</li><li><b>C.</b> Corner correction</li><li><b>D.</b> A higher jump</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Holding left to run versus tapping jump to leap: which input model fits each, and why?</div><ol class="opts"><li><b>A.</b> Poll the held state for running, use a press event or just-pressed check for the jump</li><li><b>B.</b> Use press events for both, since polling misses fast taps</li><li><b>C.</b> Poll every frame for both, since events are unreliable</li><li><b>D.</b> Read raw key codes for both to avoid the action layer</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. A player script tracks is_jumping, is_dashing, is_hurt and is_dead as separate booleans, and testers find impossible states like hurt plus dashing plus dead. What is the structural fix?</div><ol class="opts"><li><b>A.</b> Add more booleans to cover the missing combinations</li><li><b>B.</b> Reset all booleans every frame before reading input</li><li><b>C.</b> Replace the flags with one state machine state plus listed transitions, so impossible combinations cannot be represented</li><li><b>D.</b> Move the booleans into separate scripts</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="gd-loop.html">← The game loop and delta time</a> · <a href="gd-entities.html">Entities, components and scenes →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Coyote time and jump buffering</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Keep two optionals: left_at and pressed_at. press: if grounded or (left_at set and t - left_at <= coyote) then clear both and return true, else pressed_at = t. land: clear left_at, fire if pressed_at is set and within buffer, then clear pressed_at.</p><p>Celeste uses roughly 5 frames of coyote time and a similar jump buffer. Players never notice these, only their absence ("the game ate my jump"). The same idea (input forgiveness) applies to attack buffering in action and fighting games.</p></div>
+<div class="ans" id="a2"><p><b>2. A state machine you cannot misuse</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> A nested switch on state, then event. Let the compiler check you covered every state: do not use a default branch on the outer switch.</p><p>Explicit states beat a pile of booleans (is_jumping, is_attacking, can_dash...) because impossible combinations cannot exist. In Godot you would write this as an enum plus match, or as child nodes per state. A pushdown automaton (a stack of states) handles "go back to what I was doing", like hit-stun interrupting a run. In Zig and C++ an exhaustive switch over an enum is a compile error when you add a state and forget a branch.</p></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>C.</b> Use a hierarchical or parameterised machine: the enraged flag selects a different set of timings and transitions, while the states stay the same</p><div>Keep the state set small and put the variation in data (timings, damage) or a parent state. A boolean sprinkled through every state is exactly the pile-of-flags problem again, only one level up.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Jump buffering</p><div>Buffering stores the press and fires it on landing. Coyote time is the mirror image: jumping shortly <i>after</i> leaving the ground.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>A.</b> Poll the held state for running, use a press event or just-pressed check for the jump</p><div>Polling suits continuous held input; one-shot actions need the press itself, so events or just-pressed checks fit the jump.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>C.</b> Replace the flags with one state machine state plus listed transitions, so impossible combinations cannot be represented</p><div>One state at a time with explicit transitions removes the combinatorial bug surface that piles of flags create.</div></div>
+<p class="nav"><a href="gd-loop.html">← The game loop and delta time</a> · <a href="gd-entities.html">Entities, components and scenes →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

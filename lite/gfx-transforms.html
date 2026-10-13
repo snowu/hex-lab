@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transforms, matrices and hierarchies · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdgfx">Graphics, UI &amp; Audio</a> · lesson 2 of 5 · 45 min</p>
+<h1>Transforms, matrices and hierarchies</h1>
+<p class="sum">Position, rotation and scale as matrices, why order matters, parent-child hierarchies, pivots, and a first look at 3D.</p>
+<div class="sec">
+<h3>Why matrices</h3>
+<p>Moving, rotating and scaling a sprite are three separate operations, but a hierarchy of them (a hand on an arm on a body on a platform) needs to be combined and undone. A <b>matrix</b> packs any combination into one object you can multiply, invert and apply to many points cheaply. In 2D, an <b>affine</b> transform needs six numbers (a 2×2 matrix for rotation, scale and shear plus a translation); in 3D, twelve (a 4×4 matrix with a fixed last row, which is what engines store).</p>
+<h3>Homogeneous coordinates in one paragraph</h3>
+<p>Translation is an <i>addition</i>, rotation and scale are <i>multiplications</i>, so they do not combine with a single operation. The trick: add a third coordinate that is always 1, <code>(x, y, 1)</code>. Then translation also becomes a multiplication (the translation numbers sit in the third column), and all three combine by plain matrix multiplication. That is the whole reason 3×3 matrices appear in 2D and 4×4 in 3D.</p>
+<h3>Order of operations</h3>
+<p>Matrix multiplication is <b>not commutative</b>: <code>A * B</code> is not <code>B * A</code>. With column vectors (the convention in most maths and in Godot), <code>M = T * R * S</code> means <b>scale first, then rotate, then translate</b>: the sprite scales around its own origin, turns around it, then moves to its place. That is almost always what you want, and it is the order every engine uses for a node's local transform. Reverse it and the object swings around the world origin instead of its own pivot. The simulation shows it.</p>
+<h3>Parents and children</h3>
+<p>A child's world transform is <code>world = parent_world * child_local</code>. Walk the tree from the root multiplying. Moving the parent moves everything below it for free; the child only knows its offset. This is how skeletons, turrets on tanks, UI panels and vehicles carrying passengers work. Because multiplications are cheap but a tree can be large, engines cache world transforms and recompute only the changed part (the dirty flag lesson).</p>
+<h3>Pivot, origin and anchor</h3>
+<p>The <b>pivot</b> is the point the sprite rotates and scales around. A character's pivot at its feet makes y-sorting and ground contact simple; a pivot at the centre is natural for a spinning coin. Changing the pivot without moving the picture means translating the sprite by the pivot offset. Put the pivot where the gameplay needs it, and be consistent across a set of sprites.</p>
+<h3>Non-uniform scale and shear</h3>
+<p>Scale a parent by (2, 1) and rotate a child inside it: the child's axes are no longer perpendicular, the child is <b>sheared</b>. Engines either forbid it, apply it only at the leaf, or accept the shear. In the simulation, drag <b>parent x-scale</b> away from 1 and watch the axes of the last node. Rule: avoid non-uniform scale on nodes that have rotating children.</p>
+<h3>Inverse transforms</h3>
+<p>To convert a mouse position (world or screen) into a node's local coordinates, apply the <b>inverse</b> of its world matrix. An inverse exists only if the transform does not flatten space (a scale of 0 does not have one). The drill implements <code>inverse</code> for the 2D case.</p>
+<h3>A look at 3D</h3>
+<ul><li><b>Model → world → view → projection.</b> The classic pipeline multiplies four matrices: the model matrix places the object, the view matrix is the inverse of the camera's transform, and the <b>projection</b> maps the view volume (a frustum for perspective, a box for orthographic) into the screen cube. Orthographic projection has no perspective; many "2.5D" games use it.</li><li><b>Rotations.</b> Euler angles (three angles) are intuitive but suffer <b>gimbal lock</b> and awkward interpolation. <b>Quaternions</b> (four numbers) have no lock, interpolate smoothly with <b>slerp</b> and compose cheaply; engines store rotation as quaternions and expose Euler angles for editing.</li><li><b>Normals</b> (directions perpendicular to surfaces) transform with the inverse-transpose of the model matrix, not the model matrix itself, once non-uniform scale is involved.</li></ul>
+<h3>Debugging transforms</h3>
+<ol><li>Draw the axes of the node (red x, green y in many tools).</li><li>Print the local and world positions and compare.</li><li>Check the order: does it rotate around its pivot or around the origin?</li><li>Check units (degrees vs radians; pixels vs tiles).</li><li>Check handedness: 2D screen y points <i>down</i>, which flips rotation direction compared with a maths textbook.</li></ol></div>
+<div class="sec"><div class="box"><p class="kind">Simulation: A three-bone arm and the order of operations</p><p>Each bone is a child of the previous one. Magenta lines are each node's x axis, cyan its y axis. Switch the order to the wrong one and compare.</p><p><b>Try this in the full app:</b></p><ul><li>Move the <b>shoulder</b> slider: the whole arm rotates and the child bones follow for free.</li><li>Change the <b>order</b> to <i>rotate · translate · scale</i>: the arm no longer bends at the joints, it swings about the origin.</li><li>Back in the correct order, set <b>parent x-scale</b> to 2 and rotate the <b>elbow</b>: the axes of the later bones stop being perpendicular (shear).</li><li>Set the parent scale back to 1 and watch the shear warning disappear.</li></ul><p class="note">Interactive: needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Drill: 2D transforms: matrices and the order of operations</p><p>A 2D transform (move, rotate, scale) is an <b>affine matrix</b> stored as six numbers: <code>x' = a*x + c*y + tx</code> and <code>y' = b*x + d*y + ty</code>. Parent and child nodes combine by multiplying their matrices. Implement:</p>
+<ul><li><code>identity</code>, <code>translate(x, y)</code>, <code>rotate(radians)</code> (counter-clockwise: rotating <code>(1, 0)</code> by 90° gives <code>(0, 1)</code>), <code>scale(sx, sy)</code>.</li><li><code>mul(parent, child)</code>: the matrix that applies the <b>child first</b>, then the parent. This is how a child's local transform becomes a world transform.</li><li><code>apply(m, x, y)</code>: transform a point.</li><li><code>inverse(m)</code>: the matrix that undoes <code>m</code>, or nothing if it cannot be undone (a zero determinant, e.g. <code>scale(0, 1)</code>). You need it to turn a mouse position back into local coordinates.</li></ul><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+/// x' = a*x + c*y + tx ; y' = b*x + d*y + ty
+pub const Mat = struct { a: f64, b: f64, c: f64, d: f64, tx: f64, ty: f64 };
+pub const identity = Mat{ .a = 1, .b = 0, .c = 0, .d = 1, .tx = 0, .ty = 0 };
+
+pub fn translate(x: f64, y: f64) Mat {
+    _ = x;
+    _ = y;
+    return identity;
+}
+
+pub fn rotate(rad: f64) Mat {
+    _ = rad;
+    return identity;
+}
+
+pub fn scale(sx: f64, sy: f64) Mat {
+    _ = sx;
+    _ = sy;
+    return identity;
+}
+
+/// The matrix that applies c first and then p (a child inside a parent).
+pub fn mul(p: Mat, c: Mat) Mat {
+    _ = p;
+    return c;
+}
+
+pub fn apply(m: Mat, x: f64, y: f64) [2]f64 {
+    _ = m;
+    return .{ x, y };
+}
+
+pub fn inverse(m: Mat) ?Mat {
+    _ = m;
+    return null;
+}
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A turret sprite should rotate around its own base, but it orbits the world origin instead. What is the most likely mistake?</div><ol class="opts"><li><b>A.</b> The texture is too big</li><li><b>B.</b> Translate and rotate were composed in the wrong order, or the pivot is not at the base</li><li><b>C.</b> The camera is zoomed</li><li><b>D.</b> The frame rate is low</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Why do engines store 3D rotations as quaternions?</div><ol class="opts"><li><b>A.</b> They use less memory than matrices only</li><li><b>B.</b> No gimbal lock, smooth interpolation (slerp) and cheap composition</li><li><b>C.</b> They are easier to read</li><li><b>D.</b> The GPU requires them</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">To find which tile the mouse is over, given the mouse position in screen space and a camera that zooms and scrolls, you should…</div><ol class="opts"><li><b>A.</b> Divide the screen position by the tile size</li><li><b>B.</b> Convert the screen position to world space with the inverse of the camera transform, then divide by the tile size</li><li><b>C.</b> Multiply by the zoom twice</li><li><b>D.</b> Use the camera position only</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A parent node has scale (2, 1) and its child rotates. The child sprite skews instead of rotating cleanly. What is the rule?</div><ol class="opts"><li><b>A.</b> This is gimbal lock and needs quaternions</li><li><b>B.</b> The pivot is too accurate</li><li><b>C.</b> Non-uniform parent scale plus a rotating child produces shear; avoid non-uniform scale on nodes that have rotating children</li><li><b>D.</b> Matrices cannot represent scale</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. Why does 2D use 3x3 matrices with points written as (x, y, 1)?</div><ol class="opts"><li><b>A.</b> To use more memory per sprite</li><li><b>B.</b> The extra 1 turns translation into a multiplication so translation, rotation and scale combine with plain matrix multiplication</li><li><b>C.</b> To make the shader compile faster</li><li><b>D.</b> Because the GPU only accepts three numbers</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="gfx-pipeline.html">← From sprite to screen</a> · <a href="gfx-shaders.html">Shaders, effects and 2D lighting →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. 2D transforms: matrices and the order of operations</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Treat it as the 3×3 matrix [[a c tx], [b d ty], [0 0 1]] and multiply: for mul(p, c): a = p.a*c.a + p.c*c.b; b = p.b*c.a + p.d*c.b; c = p.a*c.c + p.c*c.d; d = p.b*c.c + p.d*c.d; tx = p.a*c.tx + p.c*c.ty + p.tx; ty = p.b*c.tx + p.d*c.ty + p.ty. Inverse: det = a*d - b*c; the 2×2 part inverts to [d -c; -b a] / det, and the translation becomes -(inverse2x2 · (tx, ty)).</p><p>Order of operations is the number-one transform bug. "Rotate then translate" and "translate then rotate" are different things: the first spins a thing around its own centre and then moves it, the second moves it and then swings it around the origin. Scene graphs (Godot Node2D, Unity Transform) store position/rotation/scale per node and multiply down the tree, usually caching the result with a dirty flag (see the patterns track). Non-uniform scale combined with rotation produces shear, which is why some engines forbid it on parents. 3D uses 4×4 matrices and quaternions for rotation, but the ideas are the same.</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Translate and rotate were composed in the wrong order, or the pivot is not at the base</p><div>Rotate-then-translate swings the object around the origin. Translate · rotate applies rotation around the object's own origin, which must be at the pivot.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> No gimbal lock, smooth interpolation (slerp) and cheap composition</p><div>Euler angles are good for editing, quaternions are good for computing and blending.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Convert the screen position to world space with the inverse of the camera transform, then divide by the tile size</p><div>World space is where tiles live. The inverse of the world→screen transform brings the mouse into it.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>C.</b> Non-uniform parent scale plus a rotating child produces shear; avoid non-uniform scale on nodes that have rotating children</p><div>Scaled axes are no longer perpendicular, so child rotation shears. Keep ancestor scale uniform or apply it at the leaf.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>B.</b> The extra 1 turns translation into a multiplication so translation, rotation and scale combine with plain matrix multiplication</p><div>Homogeneous coordinates unify addition and multiplication into one operation that composes and inverts cleanly.</div></div>
+<p class="nav"><a href="gfx-pipeline.html">← From sprite to screen</a> · <a href="gfx-shaders.html">Shaders, effects and 2D lighting →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

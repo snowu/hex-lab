@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raycasts, shape casts and spatial queries · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdphysics">Simulation &amp; Physics</a> · lesson 4 of 5 · 50 min</p>
+<h1>Raycasts, shape casts and spatial queries</h1>
+<p class="sum">Asking the world questions: what is in front of me, can I see it, what is inside this area, did the bullet hit.</p>
+<div class="sec">
+<h3>Queries are different from simulation</h3>
+<p>Simulation moves bodies and resolves contacts. A <b>query</b> asks a question about the current state without changing it: <i>is there a wall between the guard and the player? what is under the mouse? what is inside this explosion? can I step forward without falling?</i> Game code makes far more queries than people expect: AI line of sight, hitscan weapons, ground checks, interaction prompts, camera collision, placement previews.</p>
+<table><tr><th>Query</th><th>Question</th><th>Typical use</th></tr>
+<tr><td>Raycast</td><td>First thing hit by an infinitely thin ray, and where</td><td>hitscan, line of sight, ground check, mouse picking</td></tr>
+<tr><td>Shape cast (sweep)</td><td>First thing hit by a moving shape (circle, box, capsule)</td><td>thick projectiles, character movement, camera boom</td></tr>
+<tr><td>Overlap / area query</td><td>Everything inside a shape right now</td><td>explosions, pickups, auras, attack hitboxes</td></tr>
+<tr><td>Point query</td><td>What is at this point</td><td>clicking, placing, "am I in water"</td></tr></table>
+<h3>Rays</h3>
+<p>A ray is an origin plus a direction. The result you almost always want is the <b>closest</b> hit: the distance along the ray (<code>t</code>), the point (<code>origin + dir * t</code>), the surface normal (for decals and bounce) and which object was hit. Always give a <b>maximum distance</b> and a <b>layer mask</b> so the query ignores things it should not see (your own body, triggers, other team).</p>
+<h3>Ray against a box: the slab method</h3>
+<p>An axis-aligned box is the intersection of two "slabs" (the space between two parallel lines on each axis). Find where the ray enters and leaves each slab; the ray hits the box if the <b>latest entry</b> is before the <b>earliest exit</b>.</p>
+<pre><code data-check="zig">const std = @import("std");
+
+const Box = struct { x: f32, y: f32, w: f32, h: f32 };
+
+/// Distance along the ray where it first enters the box, or null. The direction does not have to be normalised (t is in units of the direction).
+fn rayBox(ox: f32, oy: f32, dx: f32, dy: f32, b: Box) ?f32 {
+    var t_min: f32 = 0; // ignore hits behind the origin
+    var t_max: f32 = std.math.inf(f32);
+    const axes = [2][4]f32{ .{ ox, dx, b.x, b.x + b.w }, .{ oy, dy, b.y, b.y + b.h } };
+    for (axes) |a| {
+        const o = a[0];
+        const d = a[1];
+        if (d == 0) {
+            if (o &lt; a[2] or o &gt; a[3]) return null; // parallel to the slab and outside it
+        } else {
+            var t1 = (a[2] - o) / d;
+            var t2 = (a[3] - o) / d;
+            if (t1 &gt; t2) std.mem.swap(f32, &amp;t1, &amp;t2);
+            t_min = @max(t_min, t1);
+            t_max = @min(t_max, t2);
+            if (t_min &gt; t_max) return null;
+        }
+    }
+    return t_min;
+}
+
+test "ray against a box" {
+    const box = Box{ .x = 4, .y = 2, .w = 2, .h = 2 };
+    try std.testing.expectEqual(@as(?f32, 4), rayBox(0, 3, 1, 0, box)); // straight in from the left
+    try std.testing.expectEqual(@as(?f32, null), rayBox(0, 0, 1, 0, box)); // passes below
+    try std.testing.expectEqual(@as(?f32, null), rayBox(10, 3, 1, 0, box)); // box is behind the origin
+    try std.testing.expectEqual(@as(?f32, 0), rayBox(5, 3, 1, 0, box)); // starting inside
+    try std.testing.expectApproxEqAbs(@as(f32, 2), rayBox(0, 0, 2, 1, box).?, 1e-5); // diagonal: enters the left edge at (4, 2)
+}</code></pre>
+<h3>Rays on a grid: DDA</h3>
+<p>On a tile map, step from cell border to cell border instead of testing shapes (the next drill and simulation). It visits exactly the cells the ray crosses: ideal for line of sight in tile games, shadow casting, and Wolfenstein-style rendering.</p>
+<h3>Shape casts</h3>
+<p>A ray is infinitely thin: it slips through a gap smaller than a character. For things with width (a thrown axe, a character about to walk) <b>sweep the shape</b> along the movement and find the first impact (time of impact). Engines implement it by inflating the obstacle by the shape's size (Minkowski sum) and raycasting against that. Use it for character movement, thick projectiles and camera collision.</p>
+<h3>Layers and masks</h3>
+<p>Every query takes a <b>mask</b> of layers to consider. Set a sensible default and name your layers (walls, enemies, player, projectiles, triggers, pickups). Most "my raycast hits itself" and "my bullet hits the pickup" bugs are mask bugs. Starting a ray <i>inside</i> the shooter's own collider is the classic: exclude the shooter or start just past its edge.</p>
+<h3>Performance</h3>
+<ul><li>Queries use the broadphase (a grid or tree), so cost is roughly logarithmic in the number of objects, but not free: hundreds per frame is fine, thousands needs care.</li><li><b>Share and cache</b>: if ten enemies ask "can I see the player" each frame, stagger checks across frames (enemy i checks on frame i mod 5).</li><li>Prefer cheap first: a distance check before a raycast; a field-of-view dot product before line of sight.</li></ul>
+<h3>Hitscan, projectiles and fairness</h3>
+<p>A hitscan weapon is one raycast in the frame you shoot: instant, cheap, exact. Projectiles are bodies that move and collide over several frames (travel time, drop, dodgeable). Online, hitscan needs lag compensation (networking track). Choose by the gameplay you want, not by cost.</p></div>
+<div class="sec"><div class="box"><p class="kind">Simulation: A DDA raycast on a tile grid</p><p>The ray goes from the green dot toward your pointer. Shaded cells are the ones the DDA visits; the amber outline is the wall it hits. Tick <b>paint walls</b> to edit the map, or <b>drag the origin</b>.</p><p><b>Try this in the full app:</b></p><ul><li>Move the pointer: the visited cells form exactly the line of tiles the ray crosses, no more.</li><li>Compare the number of cells visited with the number of lookups you would need by sampling every 0.05 cells.</li><li>Paint a wall right next to the origin and aim along it: grazing hits at cell corners are where DDA and sampling disagree.</li><li>Aim at a gap one cell wide diagonally: a ray passes between two diagonal walls exactly at the corner. Is that a hit? Decide what your game wants.</li></ul><p class="note">Interactive: needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Raycast on a grid (DDA)</p><p>Hitscan weapons, line of sight and "what is under the cursor" all need a <b>raycast</b>. On a tile grid the fast, exact method is the <b>DDA</b> (digital differential analyzer, Amanatides and Woo): instead of sampling along the ray, jump from one cell border to the next.</p>
+<p>The grid is a list of rows; a cell is 1×1; <code>'#'</code> is a wall; the position <code>(ox, oy)</code> is in cell units (so <code>(0.5, 0.5)</code> is the middle of the top-left cell, x grows right, y grows down). <code>(dx, dy)</code> is the direction (any length except zero). Return the <b>first wall cell</b> the ray enters and the distance along the ray at which it enters it, or nothing if the ray leaves the grid or travels more than <code>max_dist</code> without hitting one. If the origin is already inside a wall, that is a hit at distance 0. An origin outside the grid has no hit.</p><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub const Hit = struct { col: usize, row: usize, dist: f64 };
+
+/// grid rows of '.' and '#', cells are 1x1, y grows down. Returns the first wall cell entered by the ray.
+pub fn raycast(grid: []const []const u8, ox: f64, oy: f64, dx: f64, dy: f64, max_dist: f64) ?Hit {
+    _ = grid;
+    _ = ox;
+    _ = oy;
+    _ = dx;
+    _ = dy;
+    _ = max_dist;
+    return null;
+}
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A guard's line-of-sight raycast sometimes reports the guard itself as the first thing hit. What is the standard fix?</div><ol class="opts"><li><b>A.</b> Make the ray longer</li><li><b>B.</b> Exclude the guard's own collider (or its layer) from the query, or start the ray outside its shape</li><li><b>C.</b> Use a bigger guard</li><li><b>D.</b> Cast the ray backwards</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A raycast-based ground check lets the character fall through 1 pixel gaps between tiles. Which query avoids it?</div><ol class="opts"><li><b>A.</b> A longer ray</li><li><b>B.</b> A shape cast (a small box or circle the width of the character's feet) instead of a single ray</li><li><b>C.</b> More gravity</li><li><b>D.</b> Turn off collisions</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Eighty enemies each raycast to the player every frame and the game stutters. Which change helps most without changing behaviour noticeably?</div><ol class="opts"><li><b>A.</b> Remove the player</li><li><b>B.</b> Check a cheap distance and field-of-view test first, and stagger the raycasts across frames</li><li><b>C.</b> Raise the frame rate</li><li><b>D.</b> Make rays shorter than 1 pixel</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. In the slab method for ray versus axis-aligned box, when does the ray hit?</div><ol class="opts"><li><b>A.</b> When the latest slab entry is before the earliest slab exit, with hits behind the origin ignored</li><li><b>B.</b> When it enters any single slab on either axis</li><li><b>C.</b> When the ray direction is normalised, regardless of geometry</li><li><b>D.</b> Only when the ray starts inside the box</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. You must choose between a hitscan rifle and a slow plasma projectile for a new weapon. What should drive the decision?</div><ol class="opts"><li><b>A.</b> Cost: hitscan is always better because it is one raycast</li><li><b>B.</b> The gameplay you want: instant exact shots versus travel time, drop and dodgeability, plus online lag compensation for hitscan</li><li><b>C.</b> Whichever needs fewer art assets</li><li><b>D.</b> The weapon name length</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="phy-constraints.html">← Constraints, ropes and cloth</a> · <a href="phy-controllers.html">Character controllers and platformer physics →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Raycast on a grid (DDA)</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Normalise the direction. cell = floor(origin). For each axis keep tMax = distance along the ray to the next border on that axis, and tDelta = distance between borders (1/|d|, or infinity when d is 0). Loop: step on the axis with the smaller tMax (the distance you report is that tMax BEFORE you add tDelta), check bounds, check the new cell. Beware exact corner crossings in your own tests: both axes tie.</p><p>The DDA visits exactly the cells the ray passes through, so the cost is proportional to the distance, not to the number of samples. The same loop draws lines on a grid, does shadow casting, and (with a height per cell) renders the classic Wolfenstein-style 3D view. In 3D engines the equivalent is a ray through a BVH or the physics broadphase. For rays against shapes (circles, boxes) use analytic tests instead, and for a thick "projectile" use a shape cast, as in the collision lesson.</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Exclude the guard's own collider (or its layer) from the query, or start the ray outside its shape</p><div>A ray that starts inside a shape immediately hits it. Exclusions and masks are part of every query.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> A shape cast (a small box or circle the width of the character's feet) instead of a single ray</p><div>A ray has zero width and can slip through seams; a swept shape covers the character's footprint.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Check a cheap distance and field-of-view test first, and stagger the raycasts across frames</p><div>Cull with cheap tests and spread the expensive ones. Reaction time of a few frames is invisible for AI.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>A.</b> When the latest slab entry is before the earliest slab exit, with hits behind the origin ignored</p><div>The box is the intersection of its slabs. Overlapping entry-exit intervals mean the ray passes through all of them.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>B.</b> The gameplay you want: instant exact shots versus travel time, drop and dodgeability, plus online lag compensation for hitscan</p><div>Both are cheap enough. Fairness, feel and networking decide, not performance alone.</div></div>
+<p class="nav"><a href="phy-constraints.html">← Constraints, ropes and cloth</a> · <a href="phy-controllers.html">Character controllers and platformer physics →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

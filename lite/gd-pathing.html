@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grids, pathfinding and simple AI · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdmath">Game Math &amp; Physics</a> · lesson 4 of 4 · 30 min</p>
+<h1>Grids, pathfinding and simple AI</h1>
+<p class="sum">Tile maps as graphs, BFS, Dijkstra and A*, plus the steering and state-based AI that makes enemies look alive.</p>
+<div class="sec">
+<h3>A map is a graph</h3>
+<p>A tile map is a graph: each walkable tile is a node, neighbours are edges. Pathfinding asks for the cheapest route between two nodes.</p>
+<ul><li><b>BFS</b> (breadth-first): finds the shortest path when every step costs the same. Spreads like a flood.</li><li><b>Dijkstra</b>: handles different costs (mud costs 3, road costs 1). Uses a priority queue.</li><li><b>A*</b>: Dijkstra plus a <b>heuristic</b> that estimates the remaining distance, so it heads toward the goal instead of flooding in all directions. The heuristic must never <i>overestimate</i> (be admissible) to stay optimal. Manhattan distance on a 4-way grid, octile or Euclidean on 8-way.</li></ul>
+<h3>When one path is not enough</h3>
+<ul><li><b>Many units, one goal</b>: compute one <b>flow field</b> (a BFS/Dijkstra from the goal, storing direction per tile) and every unit just reads its tile.</li><li><b>Open worlds</b>: grids get huge. Use a <b>navmesh</b> (walkable polygons) or a coarse waypoint graph, then steer locally.</li><li><b>Moving obstacles</b>: replan only when blocked, not every frame. Path requests can be queued and spread over several frames.</li></ul>
+<h3>Steering behaviours</h3>
+<p>The path says where; <i>steering</i> says how to move so it looks natural: <b>seek</b> (toward a point), <b>arrive</b> (slow down near it), <b>flee</b>, <b>avoid</b> obstacles, <b>separate</b> from neighbours to avoid stacking. Add up the weighted vectors, clamp the result (the same accelerate-and-cap function from the first drill), and you have boids and crowds.</p>
+<h3>Decision making</h3>
+<p>Most game AI is far simpler than people expect: a <b>state machine</b> (patrol → chase → attack → return), sometimes a <b>behaviour tree</b> or utility scoring. Believable beats smart: add reaction delay, limited vision and mistakes. Players read intent, so telegraph attacks before they land.</p></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Shortest path on a tile map</p><p>The grid is a list of equal-length rows. <code>'#'</code> is a wall, anything else is floor. Return the number of steps of the shortest <b>4-directional</b> path from <code>start</code> to <code>goal</code> (both <code>(row, col)</code>), or <code>-1</code> if there is none. A start or goal inside a wall is unreachable.</p>
+<p>Zig: take an allocator and return an error union (you need scratch memory for the search; free it with <code>defer</code>).</p><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+/// Steps in the shortest 4-directional path, or -1 if unreachable.
+pub fn shortestPath(allocator: std.mem.Allocator, grid: []const []const u8, start: [2]usize, goal: [2]usize) !i32 {
+    _ = allocator;
+    _ = grid;
+    _ = start;
+    _ = goal;
+    return -2;
+}
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You use A* on a 4-way grid with the heuristic <code>2 * manhattan_distance</code>. What goes wrong?</div><ol class="opts"><li><b>A.</b> Nothing, it is just faster</li><li><b>B.</b> The heuristic can overestimate, so A* may return a path that is not the shortest</li><li><b>C.</b> It will never terminate</li><li><b>D.</b> It turns into BFS</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">500 zombies all chase the player across the same map. What is the best approach?</div><ol class="opts"><li><b>A.</b> 500 A* searches every frame</li><li><b>B.</b> One BFS/flow field from the player each time the player moves tile, and each zombie follows its tile's direction</li><li><b>C.</b> Teleport them</li><li><b>D.</b> Give each zombie its own navmesh</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Every tile on your map costs the same to cross. Which search finds the shortest path, and why not reach for A* immediately?</div><ol class="opts"><li><b>A.</b> BFS: it finds the shortest path on uniform costs without needing a heuristic</li><li><b>B.</b> Dijkstra with random weights: it looks smarter</li><li><b>C.</b> Depth-first search: it uses the least memory</li><li><b>D.</b> Greedy search on raw distance: it is always optimal</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. A teammate proposes an A* heuristic that sometimes estimates more than the true remaining distance because it explores fewer tiles. What is the trade-off?</div><ol class="opts"><li><b>A.</b> It will never terminate on a grid</li><li><b>B.</b> It may return a non-shortest path: overestimating heuristics break admissibility and optimality</li><li><b>C.</b> It turns A* back into exact BFS with no downside</li><li><b>D.</b> It only affects memory, never the path returned</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="gd-smoothing.html">← Interpolation, easing and smoothing</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Shortest path on a tile map</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Breadth-first search: a queue of cell indices and a distance array filled with -1 (doubles as the visited set). Set a cell's distance when you enqueue it, not when you pop it, or the queue grows huge on open maps.</p><p>BFS is optimal when every step costs the same. With terrain costs use Dijkstra, and add a heuristic (Manhattan distance on a 4-way grid) to get A*. Games also cache paths, share one flow field between many units, or spread the search across frames. In Zig note how the allocator is an explicit parameter: the caller decides where the memory comes from, which makes tests catch leaks for free (std.testing.allocator fails the test on a leak).</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> The heuristic can overestimate, so A* may return a path that is not the shortest</p><div>An inadmissible heuristic trades optimality for speed (“weighted A*”). That is sometimes a good deal in games, but know that you are making it.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> One BFS/flow field from the player each time the player moves tile, and each zombie follows its tile's direction</p><div>A flow field is computed once for the goal and shared. Per-unit cost is a single array lookup.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>A.</b> BFS: it finds the shortest path on uniform costs without needing a heuristic</p><div>BFS is the right tool for uniform costs; Dijkstra and A-star pay off once costs differ or a heuristic can guide the search.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>B.</b> It may return a non-shortest path: overestimating heuristics break admissibility and optimality</p><div>An admissible heuristic never overestimates. Inflating it (weighted A-star) speeds up search but sacrifices the shortest-path guarantee.</div></div>
+<p class="nav"><a href="gd-smoothing.html">← Interpolation, easing and smoothing</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

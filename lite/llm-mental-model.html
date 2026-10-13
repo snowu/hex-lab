@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLMs: the mental model you need · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#ai">AI-Era Engineering</a> · lesson 1 of 4 · 5 min</p>
+<h1>LLMs: the mental model you need</h1>
+<p class="sum">Tokens, context, sampling, cost/latency, and where they fail.</p>
+<div class="sec">
+<ul>
+<li><b>Tokens, not characters.</b> Cost and latency scale with input + output tokens. Output tokens are generated one at a time, so long outputs are slow.</li>
+<li><b>Stateless.</b> The model remembers nothing between calls. “Memory” is you re-sending context. The <b>context window</b> is a hard budget; quality also degrades with noisy, very long context.</li>
+<li><b>Sampling.</b> Temperature/top-p trade determinism for variety. Use low temperature for extraction/classification. Even at 0, treat output as non-deterministic across versions.</li>
+<li><b>Probabilistic, not authoritative.</b> Models produce plausible text. They hallucinate, especially on rare facts, exact numbers, and APIs that changed. Ground with retrieved sources and verify with code.</li>
+<li><b>Structured output &amp; tools.</b> Constrain outputs with schemas, let the model call tools (functions) for facts and actions, and validate everything it returns like untrusted input.</li>
+<li><b>Prompt caching.</b> Stable prefixes (system prompt, docs) can be cached to cut cost and latency. Put the stable content first.</li>
+</ul>
+<h3>Engineering levers when quality is poor</h3>
+<p>In order of cost: clearer instructions and examples → better context/retrieval → structured output + validation → tools → smaller task decomposition → a stronger model → fine-tuning (rarely first).</p></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Your support bot invents refund policy details. Cheapest effective fix to try first?</div><ol class="opts"><li><b>A.</b> Fine-tune a new model</li><li><b>B.</b> Retrieve the actual policy text and instruct the model to answer only from it, citing the source (and say “I don’t know” otherwise)</li><li><b>C.</b> Raise the temperature</li><li><b>D.</b> Make the prompt longer with “do not hallucinate”</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A feature sends the full 50-page contract to the model on every chat turn. Costs explode. Which change helps most?</div><ol class="opts"><li><b>A.</b> Use a bigger context window</li><li><b>B.</b> Retrieve only relevant passages, and cache the stable prefix if the whole document is genuinely needed</li><li><b>C.</b> Lower the temperature</li><li><b>D.</b> Ask the user to type less</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A demo chatbot “remembers” the user’s account tier across turns. Where does that memory actually live?</div><ol class="opts"><li><b>A.</b> In the model weights, which update themselves each turn</li><li><b>B.</b> In a database row the model edits directly</li><li><b>C.</b> In context you re-send every call, bounded by the context window</li><li><b>D.</b> In the temperature setting</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<div class="box"><div class="q">2. Your invoice extractor must return stable JSON with exact field names on every run. What is the best setup?</div><ol class="opts"><li><b>A.</b> Constrain the output with a schema, validate it like untrusted input, and use a low temperature</li><li><b>B.</b> Raise the temperature for more variety and retry until it looks right</li><li><b>C.</b> Send the full document archive on every call with no validation</li><li><b>D.</b> Fine-tune a new model before trying anything else</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<p class="nav"><a href="rag-evals.html">RAG &amp; evaluation →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Retrieve the actual policy text and instruct the model to answer only from it, citing the source (and say “I don’t know” otherwise)</p><div>Grounding with retrieval + a refusal path addresses the root cause (missing facts). Telling a model not to hallucinate does little by itself.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Retrieve only relevant passages, and cache the stable prefix if the whole document is genuinely needed</p><div>Tokens drive cost and latency: send fewer of them (retrieval, summarisation) or make repeated ones cheap (prompt caching).</div></div>
+<div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>C.</b> In context you re-send every call, bounded by the context window</p><div>LLMs are stateless. Memory is re-sent context, so noisy or overlong context degrades quality and raises cost.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>A.</b> Constrain the output with a schema, validate it like untrusted input, and use a low temperature</p><div>Structured output plus validation enforces the contract and low temperature favours determinism; fine-tuning is the last resort, not the first.</div></div>
+<p class="nav"><a href="rag-evals.html">RAG &amp; evaluation →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

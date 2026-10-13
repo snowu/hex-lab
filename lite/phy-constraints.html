@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Constraints, ropes and cloth · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdphysics">Simulation &amp; Physics</a> · lesson 3 of 5 · 10 min</p>
+<h1>Constraints, ropes and cloth</h1>
+<p class="sum">Position-based dynamics: keep points at distance by relaxing constraints, the trick behind ropes, chains and cloth.</p>
+<div class="sec">
+<h3>What a constraint is</h3>
+<p>A <b>constraint</b> is a rule the simulation must keep true: "these two points stay 10 units apart" (a rope segment), "this point stays here" (a pin), "this angle stays between 10° and 90°" (an elbow), "this body stays on this line" (a slider). Hinges, ropes, chains, ragdolls, vehicles and cloth are collections of constraints.</p>
+<h3>Position-based dynamics with Verlet</h3>
+<p>Instead of computing constraint <i>forces</i> (hard and stiff), do this each step:</p>
+<ol><li><b>Integrate</b> every point freely (Verlet, which stores the previous position instead of a velocity: <code>velocity = position - previous</code>).</li><li><b>Relax</b> the constraints: for each distance constraint between points A and B, measure the current distance, and move both points along the line between them by half of the error each (or all of it for the free one when the other is pinned).</li><li>Repeat step 2 several times (the <b>iterations</b>): fixing one constraint disturbs its neighbours, and a few passes converge towards a state that satisfies all of them.</li></ol>
+<p>Because the velocity is <i>derived</i> from positions, correcting a position automatically corrects the motion. It is unconditionally stable (it cannot explode), simple to write and cheap, which is why it is everywhere in games (rope, hair, cloth, soft bodies, grappling hooks). The cost: the "stiffness" depends on the iteration count and the time step, so it is not physically exact, and long chains look stretchy unless you add iterations.</p>
+<pre><code data-check="zig">const std = @import("std");
+
+const N = 8;
+const REST: f32 = 10;
+
+/// A rope of N points hanging from a pin at the origin. y grows downward.
+const Rope = struct {
+    x: [N]f32 = undefined,
+    y: [N]f32 = undefined,
+    px: [N]f32 = undefined, // previous positions: velocity is x - px
+    py: [N]f32 = undefined,
+
+    fn init() Rope {
+        var r = Rope{};
+        for (0..N) |i| {
+            r.x[i] = @as(f32, @floatFromInt(i)) * REST; // starts stretched out horizontally
+            r.y[i] = 0;
+            r.px[i] = r.x[i];
+            r.py[i] = r.y[i];
+        }
+        return r;
+    }
+
+    fn step(self: *Rope, dt: f32, iterations: usize) void {
+        // 1. Verlet integration with gravity (point 0 is pinned)
+        for (1..N) |i| {
+            const vx = (self.x[i] - self.px[i]) * 0.99; // a little damping
+            const vy = (self.y[i] - self.py[i]) * 0.99;
+            self.px[i] = self.x[i];
+            self.py[i] = self.y[i];
+            self.x[i] += vx;
+            self.y[i] += vy + 400.0 * dt * dt;
+        }
+        // 2. relax the distance constraints several times
+        for (0..iterations) |_| {
+            for (0..N - 1) |i| {
+                const dx = self.x[i + 1] - self.x[i];
+                const dy = self.y[i + 1] - self.y[i];
+                const dist = @sqrt(dx * dx + dy * dy);
+                if (dist == 0) continue;
+                const diff = (dist - REST) / dist;
+                if (i == 0) { // the pinned point does not move: the other one takes the whole correction
+                    self.x[1] -= dx * diff;
+                    self.y[1] -= dy * diff;
+                } else {
+                    self.x[i] += dx * 0.5 * diff;
+                    self.y[i] += dy * 0.5 * diff;
+                    self.x[i + 1] -= dx * 0.5 * diff;
+                    self.y[i + 1] -= dy * 0.5 * diff;
+                }
+            }
+        }
+    }
+};
+
+test "the rope hangs under gravity, stays pinned, and keeps its segment lengths" {
+    var r = Rope.init();
+    for (0..600) |_| r.step(1.0 / 60.0, 30);
+    try std.testing.expectEqual(@as(f32, 0), r.x[0]);
+    try std.testing.expectEqual(@as(f32, 0), r.y[0]);
+    // it has swung down below the pin
+    try std.testing.expect(r.y[N - 1] &gt; 40);
+    // every segment is close to its rest length
+    for (0..N - 1) |i| {
+        const dx = r.x[i + 1] - r.x[i];
+        const dy = r.y[i + 1] - r.y[i];
+        const len = @sqrt(dx * dx + dy * dy);
+        try std.testing.expect(@abs(len - REST) &lt; 0.5);
+    }
+}</code></pre>
+<h3>Other constraints</h3>
+<ul><li><b>Pin / anchor</b>: set the point's position each step (the first point above).</li><li><b>Max-length (rope) vs rod</b>: a rope only <i>pulls</i> (correct only if too long), a rod keeps both directions. Change the sign check.</li><li><b>Angle limits</b> and <b>bending</b> (for stiff cloth, constrain the point two apart).</li><li><b>Collisions</b> are just another constraint: if a point is inside a shape, project it to the surface after the distance constraints.</li><li><b>Joints in rigid-body engines</b> (hinge, slider, spring) use the same sequential impulse machinery as contacts, applied to velocities instead of positions.</li></ul>
+<h3>Cloth, hair and soft bodies</h3>
+<p>A cloth is a grid of points with <b>structural</b> constraints (neighbours), <b>shear</b> constraints (diagonals) and optionally <b>bend</b> constraints. Hair and tails are ropes. Soft bodies add a pressure or volume constraint. The expensive parts are the many iterations and collision, so games simulate the cloth at low resolution, only near the camera, and often only for decoration (capes, flags) that does not affect gameplay.</p>
+<h3>Choosing: rigid body engine or hand-made?</h3>
+<p>Use the engine's joints for gameplay-relevant physical objects (a swinging platform, a vehicle). Write a small Verlet system for cosmetic, high-count, or highly controllable things (a rope the player grapples, hair, tentacles, a chain of fish). It is a few dozen lines and you control the cost.</p></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">In position-based dynamics a long chain looks stretchy. What is the most direct way to make it stiffer?</div><ol class="opts"><li><b>A.</b> Make the points heavier</li><li><b>B.</b> Run more constraint-relaxation iterations per step (or use substeps)</li><li><b>C.</b> Reduce gravity</li><li><b>D.</b> Use explicit Euler</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Why is Verlet integration convenient for constraints?</div><ol class="opts"><li><b>A.</b> It is the most accurate method</li><li><b>B.</b> Velocity is derived from the positions, so moving a point to satisfy a constraint also corrects its velocity automatically</li><li><b>C.</b> It needs no gravity</li><li><b>D.</b> It is faster than Euler</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><h3>Exercise: design a grappling hook</h3><p>The player fires a hook that sticks to a wall; a rope connects it to the player, who can swing and reel in.</p><ul><li>Is it a rope or a rod constraint while swinging? (Rope: only pulls when taut.)</li><li>Where does the constraint act: on the player's <b>position</b> (Verlet-style: clamp distance to the rope length) or on its <b>velocity</b> (remove the outward component along the rope)? Which feels more controllable?</li><li>How do you reel in? (Decrease the maximum length over time.)</li><li>Does the rope need to wrap around corners? (A list of anchor points updated when the line of sight is blocked: your raycast lesson.)</li><li>Should the rope be a visual Verlet chain while the gameplay uses one distance constraint? (Usually yes: cosmetic detail separate from gameplay.)</li></ul></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. In a distance constraint between a pinned point and a free point, how is the length error corrected?</div><ol class="opts"><li><b>A.</b> Each point moves by half the error, including the pinned one</li><li><b>B.</b> The pinned point does not move; the free point takes the whole correction along the line between them</li><li><b>C.</b> Neither point moves and the error is ignored</li><li><b>D.</b> Gravity is increased until the error disappears</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<div class="box"><div class="q">2. Your swinging grappling hook should go slack when the player moves toward the anchor but snap taut when they swing too far. Which constraint and setup fits?</div><ol class="opts"><li><b>A.</b> A max-length rope constraint that only pulls when overstretched, ideally with one gameplay distance constraint plus a separate cosmetic Verlet chain for the visual</li><li><b>B.</b> A rod constraint that pushes and pulls in both directions at all times</li><li><b>C.</b> No constraint, just animate the rope by hand</li><li><b>D.</b> A rigid hinge welded to the camera</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<p class="nav"><a href="phy-impulses.html">← Collision response with impulses</a> · <a href="phy-queries.html">Raycasts, shape casts and spatial queries →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Run more constraint-relaxation iterations per step (or use substeps)</p><div>Each iteration passes the correction one link further. Few iterations cannot propagate a pin's influence down a long chain.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Velocity is derived from the positions, so moving a point to satisfy a constraint also corrects its velocity automatically</p><div>There is no separate velocity to keep consistent: position is the state.</div></div>
+<div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>B.</b> The pinned point does not move; the free point takes the whole correction along the line between them</p><div>Anchors are infinitely heavy. Moving only the free end keeps the pin exactly in place.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>A.</b> A max-length rope constraint that only pulls when overstretched, ideally with one gameplay distance constraint plus a separate cosmetic Verlet chain for the visual</p><div>Ropes constrain only over-length. Gameplay needs one reliable limit while looks can be a cheap visual chain.</div></div>
+<p class="nav"><a href="phy-impulses.html">← Collision response with impulses</a> · <a href="phy-queries.html">Raycasts, shape casts and spatial queries →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

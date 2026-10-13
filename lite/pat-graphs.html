@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Graphs: BFS, DFS &amp; shortest paths · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#patterns">Coding Patterns</a> · lesson 4 of 7 · 50 min</p>
+<h1>Graphs: BFS, DFS &amp; shortest paths</h1>
+<p class="sum">Implicit graphs on grids, and Dijkstra with a heap.</p>
+<div class="sec">
+<p>Many problems are graphs in disguise: grids (cells are nodes), dependencies, payment routes, service call chains. Pick the traversal by the question:</p>
+<table>
+<tr><th>Question</th><th>Tool</th></tr>
+<tr><td>Is X reachable? How many groups?</td><td>DFS / BFS with a visited set, or union-find</td></tr>
+<tr><td>Fewest steps (unweighted)</td><td>BFS (queue); first time you reach a node is the shortest</td></tr>
+<tr><td>Cheapest path, non-negative weights</td><td>Dijkstra with a min-heap</td></tr>
+<tr><td>Order with dependencies / detect cycles</td><td>Topological sort (Kahn) as in the Terraform exercise</td></tr>
+</table>
+<div class="callout warn"><b>Python gotcha:</b> the default recursion limit is about 1000 frames. Recursive DFS on a big grid or a long chain crashes with <code>RecursionError</code>. Use an explicit stack or deque.</div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Count islands</p><p>Write <code>num_islands(grid)</code>: <code>grid</code> is a list of strings of <code>'1'</code> (land) and <code>'0'</code> (water). Return the number of islands (groups of land connected up, down, left or right). Do not mutate the input and avoid recursion depth problems on a big grid.</p><p><b>Starter:</b></p><pre>def num_islands(grid):
+    pass
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Cheapest route (Dijkstra)</p><p>Payments can be routed through intermediaries, each hop with a fee. Write <code>cheapest_route(edges, src, dst)</code> where <code>edges</code> is a list of <code>(from, to, cost)</code> for a <b>directed</b> graph with non-negative costs. Return the minimum total cost from <code>src</code> to <code>dst</code>, or <code>None</code> if unreachable. <code>src == dst</code> costs 0.</p><p><b>Starter:</b></p><pre>def cheapest_route(edges, src, dst):
+    pass
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A grid has 1,000 × 1,000 cells and you need the shortest path (in steps) between two cells with obstacles. Which is the most appropriate?</div><ol class="opts"><li><b>A.</b> Recursive DFS and take the minimum over all paths</li><li><b>B.</b> BFS with a queue and a visited set</li><li><b>C.</b> Dijkstra with a heap, and it is strictly required</li><li><b>D.</b> Dynamic programming over all paths</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. You need the cheapest payment route where every hop has a non-negative fee. Which tool fits?</div><ol class="opts"><li><b>A.</b> BFS with a queue, which always finds the cheapest path</li><li><b>B.</b> DFS, taking the first path found</li><li><b>C.</b> Dijkstra with a min-heap, because edge weights are non-negative</li><li><b>D.</b> Topological sort, because weights imply an order</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. A teammate writes recursive DFS for a 100000-cell grid. What should you warn about?</div><ol class="opts"><li><b>A.</b> Use an explicit stack or deque instead of recursion, since the default limit near 1000 frames crashes on deep grids</li><li><b>B.</b> Keep recursion but add more base cases to avoid the limit</li><li><b>C.</b> Switch to Dijkstra for plain reachability</li><li><b>D.</b> Sort the grid cells first to reduce recursion depth</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="pat-intervals.html">← Intervals &amp; scheduling</a> · <a href="pat-heap-search.html">Heaps &amp; binary search on the answer →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Count islands</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Scan every cell. When you find unvisited land, count an island and flood-fill it with an explicit stack or deque (BFS) while marking cells in a visited set. Recursion would exceed Python’s default recursion limit on a 400x400 grid.</p><p><b>Reference solution:</b></p><pre>def num_islands(grid):
+    seen = set()
+    count = 0
+    rows = len(grid)
+    for r in range(rows):
+        for c in range(len(grid[r])):
+            if grid[r][c] == '1' and (r, c) not in seen:
+                count += 1
+                seen.add((r, c))
+                stack = [(r, c)]
+                while stack:
+                    y, x = stack.pop()
+                    for ny, nx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                        if 0 &lt;= ny &lt; rows and 0 &lt;= nx &lt; len(grid[ny]) and grid[ny][nx] == '1' and (ny, nx) not in seen:
+                            seen.add((ny, nx))
+                            stack.append((ny, nx))
+    return count</pre><p>Grid problems are graph problems with implicit edges. Use a visited set (or mutate a copy) and an explicit stack when the depth can be large. Union-find is the alternative when cells arrive incrementally.</p></div>
+<div class="ans" id="a2"><p><b>2. Cheapest route (Dijkstra)</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> Build an adjacency dict. Use a min-heap of (cost_so_far, node). Pop the cheapest; skip it if you already have a better distance recorded; relax its neighbours. Stop early when you pop dst.</p><p><b>Reference solution:</b></p><pre>import heapq
+from collections import defaultdict
+
+def cheapest_route(edges, src, dst):
+    graph = defaultdict(list)
+    for u, v, cost in edges:
+        graph[u].append((v, cost))
+    best = {src: 0}
+    heap = [(0, 0, src)]  # (cost, tiebreak, node): the tiebreak keeps non-comparable node ids out of comparisons
+    counter = 1
+    while heap:
+        cost, _, node = heapq.heappop(heap)
+        if node == dst:
+            return cost
+        if cost &gt; best.get(node, float('inf')):
+            continue
+        for nxt, w in graph[node]:
+            new = cost + w
+            if new &lt; best.get(nxt, float('inf')):
+                best[nxt] = new
+                heapq.heappush(heap, (new, counter, nxt))
+                counter += 1
+    return None</pre><p>Dijkstra needs non-negative weights; with negative edges use Bellman-Ford. The tiebreak counter avoids comparing node objects that may not be orderable. For a source-to-target query on a huge graph, mention bidirectional search and A*.</p></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> BFS with a queue and a visited set</p><div>All steps cost the same, so BFS finds the shortest path in O(cells). Dijkstra also works but adds a log factor for no benefit. Recursive DFS over all paths is exponential and would overflow the stack.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>C.</b> Dijkstra with a min-heap, because edge weights are non-negative</p><div>BFS is for uniform cost; with non-negative weights Dijkstra with a heap gives the cheapest path.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>A.</b> Use an explicit stack or deque instead of recursion, since the default limit near 1000 frames crashes on deep grids</p><div>Deep recursive DFS overflows the call stack; an explicit stack visits the same nodes without that limit.</div></div>
+<p class="nav"><a href="pat-intervals.html">← Intervals &amp; scheduling</a> · <a href="pat-heap-search.html">Heaps &amp; binary search on the answer →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

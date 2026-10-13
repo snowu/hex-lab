@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HTTP, caching, CORS and cookies · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#fullstack">Full-Stack: Browser to Edge to Postgres</a> · lesson 1 of 6 · 55 min</p>
+<h1>HTTP, caching, CORS and cookies</h1>
+<p class="sum">What the browser, the CDN and your server each decide.</p>
+<div class="sec">
+<h3>A request, end to end</h3>
+<pre><code>browser cache → (DNS, TCP, TLS) → CDN / edge cache → your app → database
+     each layer can answer instead of the next one</code></pre>
+<p>Most performance and many bugs come from not knowing <b>which layer answered</b>. Your tools: <code>Cache-Control</code>, validators (<code>ETag</code>), <code>Vary</code>, and the status code.</p>
+<h3>Cache-Control in one table</h3>
+<table><tr><th>Directive</th><th>Meaning</th></tr>
+<tr><td><code>max-age=N</code></td><td>fresh for N seconds in any cache</td></tr>
+<tr><td><code>s-maxage=N</code></td><td>same, but only for shared caches (CDNs); overrides max-age there</td></tr>
+<tr><td><code>no-store</code></td><td>never keep a copy (sensitive data)</td></tr>
+<tr><td><code>no-cache</code></td><td>may be kept, but <b>must revalidate</b> before every reuse (not “do not cache”)</td></tr>
+<tr><td><code>private</code> / <code>public</code></td><td>only the user's browser vs also shared caches</td></tr>
+<tr><td><code>immutable</code></td><td>never changes: skip revalidation (use with hashed file names)</td></tr>
+<tr><td><code>stale-while-revalidate=N</code></td><td>serve stale for N more seconds while refreshing in the background</td></tr>
+<tr><td><code>stale-if-error=N</code></td><td>serve stale if the origin is failing</td></tr></table>
+<ul>
+<li><b>Validators:</b> <code>ETag</code> + <code>If-None-Match</code> returns <code>304 Not Modified</code> with no body, so revalidation is cheap.</li>
+<li><b>Vary:</b> lists request headers that change the response (<code>Accept-Encoding</code>, <code>Origin</code>). A cache keys on them. Never publicly cache a response that depends on <code>Authorization</code> or a cookie.</li>
+<li><b>Cache busting:</b> a static host that serves <code>max-age=600</code> keeps yesterday's script on phones. Put a version in the URL (<code>app.js?v=&lt;commit&gt;</code> or a content hash in the file name) so every deploy is a new URL no cache can hold.</li>
+<li><b>Version your cache keys</b> when the shape of a cached payload changes, or old objects will be served to new code.</li>
+</ul>
+<h3>CORS: what it is and is not</h3>
+<p>The <b>same-origin policy</b> stops a page on origin A from reading responses from origin B. <b>CORS</b> is how B opts in. It protects the <b>user's browser</b>, not your server: curl ignores it. That is also why a public page cannot call a third-party API directly (it has no CORS headers and you cannot hide a secret in a page): a small backend does the call.</p>
+<ul>
+<li><b>Simple requests</b> (GET/HEAD/POST with plain content types, no custom headers) are sent directly; the browser then checks <code>Access-Control-Allow-Origin</code>.</li>
+<li><b>Preflighted requests</b> (<code>PUT/DELETE</code>, <code>Authorization</code>, <code>Content-Type: application/json</code>) first send <code>OPTIONS</code> with <code>Access-Control-Request-Method/Headers</code>. Answer with allowed methods/headers and <code>Access-Control-Max-Age</code>.</li>
+<li><b>Credentials:</b> cookies need <code>Access-Control-Allow-Credentials: true</code> and an <b>explicit</b> origin (never <code>*</code>). Never reflect any <code>Origin</code> back with credentials: any website could then read your users' private data.</li>
+<li>Add <code>Vary: Origin</code> whenever the allowed origin varies.</li>
+</ul>
+<h3>Cookies and CSRF</h3>
+<ul><li><code>HttpOnly</code> (JavaScript cannot read it, limiting XSS damage), <code>Secure</code> (HTTPS only), <code>SameSite=Lax|Strict|None</code> (cross-site sending), the <code>__Host-</code> prefix.</li><li><b>CSRF</b> exists because browsers attach cookies automatically. Defences: <code>SameSite</code>, anti-CSRF tokens, checking <code>Origin</code>. A bearer token in the <code>Authorization</code> header is not attached automatically, so it is not CSRF-prone (but it is exposed to XSS if kept in <code>localStorage</code>).</li></ul>
+<h3>Status codes people mix up</h3>
+<table><tr><th>Code</th><th>Use</th></tr>
+<tr><td>401</td><td>not authenticated (no/invalid credentials)</td></tr><tr><td>403</td><td>authenticated but not allowed</td></tr>
+<tr><td>404 / 410</td><td>not found / gone for good</td></tr><tr><td>409</td><td>conflict with current state (version mismatch, duplicate)</td></tr>
+<tr><td>412</td><td>precondition failed (<code>If-Match</code> did not match)</td></tr><tr><td>422</td><td>well-formed but semantically invalid</td></tr>
+<tr><td>429</td><td>rate limited; send <code>Retry-After</code></td></tr><tr><td>502 / 503 / 504</td><td>bad upstream / unavailable / upstream timeout</td></tr></table></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Parse a Cache-Control header</p><p>Write <code>parse_cache_control(header)</code> returning a dict of the directives it understands. Numeric directives (<code>max-age</code>, <code>s-maxage</code>, <code>stale-while-revalidate</code>, <code>stale-if-error</code>) become ints. Flag directives (<code>public</code>, <code>private</code>, <code>no-store</code>, <code>no-cache</code>, <code>immutable</code>, <code>must-revalidate</code>) become <code>True</code>. Rules: names are case-insensitive, whitespace is ignored, values may be quoted (<code>max-age="60"</code>), unknown directives and invalid numbers are ignored, and if a directive appears twice the first one wins. <code>None</code> or an empty header gives <code>{}</code>.</p><p><b>Starter:</b></p><pre>def parse_cache_control(header):
+    pass
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): CORS response headers</p><p>Write <code>cors_headers(method, request_headers, allowed_origins, allow_credentials=False, allowed_methods=('GET','POST','PUT','DELETE'), allowed_headers=('content-type','authorization'), max_age=600)</code> returning the CORS headers to add to the response (a dict, possibly empty). Rules:</p>
+<ul><li>Header names in <code>request_headers</code> are case-insensitive. No <code>Origin</code> header, or an origin that is not allowed → <code>{}</code> (the browser will block it).</li><li>An allowed origin gets <code>Access-Control-Allow-Origin: &lt;that origin&gt;</code> and <code>Vary: Origin</code>. If <code>'*'</code> is in the allow list <b>and credentials are off</b>, any origin gets <code>Access-Control-Allow-Origin: *</code> (no Vary). A wildcard never works with credentials.</li><li>With credentials add <code>Access-Control-Allow-Credentials: true</code>.</li><li>A <b>preflight</b> is <code>OPTIONS</code> with <code>Access-Control-Request-Method</code>. The requested method and every requested header must be allowed, otherwise return <code>{}</code>. If allowed add <code>Access-Control-Allow-Methods</code> (all allowed methods, comma-joined), <code>Access-Control-Allow-Headers</code> (the requested headers, only if any were requested) and <code>Access-Control-Max-Age</code> (as a string).</li><li>Any other method is a normal request: no preflight headers.</li></ul><p><b>Starter:</b></p><pre>def cors_headers(method, request_headers, allowed_origins, allow_credentials=False,
+                 allowed_methods=('GET', 'POST', 'PUT', 'DELETE'),
+                 allowed_headers=('content-type', 'authorization'), max_age=600):
+    pass
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Bug hunt: Spot the session and CORS mistakes</p><p>This endpoint logs a user in for a single-page app on another origin. Click the <b>2</b> lines that create a security hole.</p><pre>1  def login(request, user):
+2      resp = jsonify({'ok': True})
+3      resp.set_cookie('session', create_session(user))
+4      resp.headers['Access-Control-Allow-Origin'] = request.headers['Origin']
+5      resp.headers['Access-Control-Allow-Credentials'] = 'true'
+6      return resp</pre><p>2 buggy lines. Find them, then check.</p><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A response has Cache-Control: no-cache. What does the browser do?</div><ol class="opts"><li><b>A.</b> Never stores it</li><li><b>B.</b> May store it, but must revalidate with the server (for example with an ETag) before reusing it</li><li><b>C.</b> Stores it for one hour</li><li><b>D.</b> Ignores the header unless it is HTTPS</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A teammate says “we enabled CORS so the API is now secure against other sites”. What is wrong with that?</div><ol class="opts"><li><b>A.</b> Nothing, CORS is an authentication mechanism</li><li><b>B.</b> CORS only tells browsers which origins may read responses; it is not authentication and does not stop curl or a server-side attacker. You still need real auth and authorisation</li><li><b>C.</b> CORS only applies to GET</li><li><b>D.</b> CORS makes requests slower but safer</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Your single-page app stores its API bearer token in localStorage. What is the main risk compared with an HttpOnly cookie?</div><ol class="opts"><li><b>A.</b> localStorage is slower</li><li><b>B.</b> Any XSS (including a compromised third-party script) can read the token and exfiltrate it</li><li><b>C.</b> Bearer tokens cannot be sent cross-origin</li><li><b>D.</b> localStorage is cleared on refresh</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A static host serves app JS with a long max-age and each deploy leaves yesterday’s script on phones. What is the standard fix?</div><ol class="opts"><li><b>A.</b> Set no-store on everything and accept slower loads</li><li><b>B.</b> Put a version or content hash in the URL so each deploy is a new cache key, served with long max-age plus immutable</li><li><b>C.</b> Reflect the Origin header back to every requester</li><li><b>D.</b> Store the script in localStorage instead of the HTTP cache</li></ol><p class="tolink" id="q7"><a href="#a7">answer 7 ↓</a></p></div>
+<div class="box"><div class="q">2. An API echoes the request Origin into Access-Control-Allow-Origin together with Allow-Credentials true. Why is this a hole?</div><ol class="opts"><li><b>A.</b> Because any website can then read authenticated responses in the victim’s browser, so allow-list exact origins instead of reflecting</li><li><b>B.</b> Because OPTIONS preflights become slightly slower</li><li><b>C.</b> Because ETags stop working once CORS is enabled</li><li><b>D.</b> Because browsers cache the response for too long</li></ol><p class="tolink" id="q8"><a href="#a8">answer 8 ↓</a></p></div>
+<p class="nav"><a href="fs-auth.html">Auth: sessions, JWTs, OAuth and row-level security →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Parse a Cache-Control header</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Split on commas, strip, then str.partition("=") into name and value. Lowercase the name, strip quotes from the value, and use str.isdigit() to accept only non-negative integers.</p><p><b>Reference solution:</b></p><pre>NUMERIC = {'max-age', 's-maxage', 'stale-while-revalidate', 'stale-if-error'}
+FLAGS = {'public', 'private', 'no-store', 'no-cache', 'immutable', 'must-revalidate'}
+
+def parse_cache_control(header):
+    out = {}
+    for part in (header or '').split(','):
+        part = part.strip()
+        if not part:
+            continue
+        name, _, value = part.partition('=')
+        name, value = name.strip().lower(), value.strip().strip('&quot;')
+        if name in out:
+            continue
+        if name in NUMERIC:
+            if value.isdigit():
+                out[name] = int(value)
+        elif name in FLAGS:
+            out[name] = True
+    return out</pre><p>Remember the semantics too: no-store means never keep it; no-cache means keep it but revalidate every time; s-maxage applies only to shared caches (CDNs); immutable promises the URL never changes (use with hashed file names).</p></div>
+<div class="ans" id="a2"><p><b>2. CORS response headers</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> Lowercase the request header names first. Decide the origin headers, then (only for OPTIONS plus Access-Control-Request-Method) validate the requested method and every requested header against the allow lists, returning {} on any miss.</p><p><b>Reference solution:</b></p><pre>def cors_headers(method, request_headers, allowed_origins, allow_credentials=False,
+                 allowed_methods=('GET', 'POST', 'PUT', 'DELETE'),
+                 allowed_headers=('content-type', 'authorization'), max_age=600):
+    req = {k.lower(): v for k, v in request_headers.items()}
+    origin = req.get('origin')
+    if not origin:
+        return {}
+    if origin in allowed_origins:
+        out = {'Access-Control-Allow-Origin': origin, 'Vary': 'Origin'}
+    elif '*' in allowed_origins and not allow_credentials:
+        out = {'Access-Control-Allow-Origin': '*'}
+    else:
+        return {}
+    if allow_credentials:
+        out['Access-Control-Allow-Credentials'] = 'true'
+    wanted = req.get('access-control-request-method')
+    if method.upper() == 'OPTIONS' and wanted:
+        if wanted.upper() not in {m.upper() for m in allowed_methods}:
+            return {}
+        asked = [h.strip() for h in req.get('access-control-request-headers', '').split(',') if h.strip()]
+        permitted = {h.lower() for h in allowed_headers}
+        if any(h.lower() not in permitted for h in asked):
+            return {}
+        out['Access-Control-Allow-Methods'] = ', '.join(allowed_methods)
+        if asked:
+            out['Access-Control-Allow-Headers'] = ', '.join(asked)
+        out['Access-Control-Max-Age'] = str(max_age)
+    return out</pre><p>CORS protects the <b>user’s browser</b>, not your server: curl ignores it. Never reflect an arbitrary Origin together with credentials, because then any website can read the logged-in user’s data. Vary: Origin keeps shared caches from serving one origin’s headers to another. This is exactly why a public page cannot call an upstream API directly and a small backend (a Worker) does it.</p></div>
+<div class="ans" id="a3"><p><b>3. Spot the session and CORS mistakes</b> <a href="#q3">back ↑</a></p><p><b>Hint:</b> One line is about how the cookie is protected. The other is about who may read authenticated responses.</p><ul><li><b>Line 3:</b> The session cookie has no <code>HttpOnly</code>, <code>Secure</code> or <code>SameSite</code> attributes: scripts can read it (XSS steals the session), it can travel over HTTP, and it is attached to cross-site requests (CSRF).</li><li><b>Line 4:</b> Reflecting <b>whatever Origin the request sent</b> is the same as allowing every website. Combined with credentials (next line) any malicious page can make the victim’s browser call this API with their cookie and <b>read the response</b>. Allow-list exact origins.</li></ul></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> May store it, but must revalidate with the server (for example with an ETag) before reusing it</p><div>no-store forbids keeping a copy. no-cache allows a copy but forces revalidation on every use, which is cheap with a 304 Not Modified.</div></div>
+<div class="ans" id="a5"><p><b>5. Quick check</b> <a href="#q5">back ↑</a></p><p><b>B.</b> CORS only tells browsers which origins may read responses; it is not authentication and does not stop curl or a server-side attacker. You still need real auth and authorisation</p><div>CORS relaxes the browser’s same-origin policy for specific origins. It is not an access control mechanism for the server.</div></div>
+<div class="ans" id="a6"><p><b>6. Quick check</b> <a href="#q6">back ↑</a></p><p><b>B.</b> Any XSS (including a compromised third-party script) can read the token and exfiltrate it</p><div>HttpOnly cookies are invisible to JavaScript, while anything in localStorage is readable by every script on the page. The trade-off: cookies need CSRF protection. Short-lived tokens and a strict CSP reduce the risk either way.</div></div>
+<div class="ans" id="a7"><p><b>7. Check 1</b> <a href="#q7">back ↑</a></p><p><b>B.</b> Put a version or content hash in the URL so each deploy is a new cache key, served with long max-age plus immutable</p><div>Cache busting by URL makes new code unmissable by old caches while keeping long lifetimes for hashed assets.</div></div>
+<div class="ans" id="a8"><p><b>8. Check 2</b> <a href="#q8">back ↑</a></p><p><b>A.</b> Because any website can then read authenticated responses in the victim’s browser, so allow-list exact origins instead of reflecting</p><div>Reflecting arbitrary origins with credentials turns CORS into allow-everyone; credentials require an explicit allow-listed origin.</div></div>
+<p class="nav"><a href="fs-auth.html">Auth: sessions, JWTs, OAuth and row-level security →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

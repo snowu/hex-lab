@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The open banking landscape · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#openbanking">Neonomics &amp; Open Banking</a> · lesson 1 of 5 · 6 min</p>
+<h1>The open banking landscape</h1>
+<p class="sum">PSD2, the players, and the end-to-end account-data flow.</p>
+<div class="sec">
+<div class="callout warn"><b>Source note:</b> this track combines general PSD2 knowledge with details from Neonomics’ <a href="https://docs.neonomics.io" target="_blank" rel="noopener">public developer docs</a> (UAPI v3.x at the time of writing). It is <b>not</b> insider knowledge of their internals. Read their docs yourself before the interview; being able to discuss their actual API is a strong signal.</div>
+<p><b>PSD2</b> (EU Payment Services Directive 2) obliges banks to give licensed third parties access to customer accounts, with customer consent, via secure APIs. In Norway it applies through the EEA agreement and Norwegian law, with <b>Finanstilsynet</b> as the supervisor.</p>
+<table>
+<tr><th>Term</th><th>Meaning</th></tr>
+<tr><td><b>ASPSP</b></td><td>The bank (Account Servicing Payment Service Provider).</td></tr>
+<tr><td><b>PSU</b></td><td>The end user (Payment Service User) who owns the account.</td></tr>
+<tr><td><b>TPP</b></td><td>Third-Party Provider: regulated actor accessing bank APIs.</td></tr>
+<tr><td><b>AISP</b></td><td>Account Information Service Provider: reads balances and transactions.</td></tr>
+<tr><td><b>PISP</b></td><td>Payment Initiation Service Provider: starts payments from the user’s account (“pay by bank”).</td></tr>
+<tr><td><b>CBPII</b></td><td>Card-based payment instrument issuer: funds-confirmation checks.</td></tr>
+<tr><td><b>SCA</b></td><td>Strong Customer Authentication: two of knowledge/possession/inherence (e.g. BankID).</td></tr>
+</table>
+<p>An <b>aggregator</b> like Neonomics holds the TPP licence and certificates once, and exposes <b>one API</b> to its customers (fintechs, merchants, lenders) over many banks, each with its own quirks. The customer builds against one integration instead of thousands.</p></div>
+<div class="sec"><h3>Account-data flow, as described in Neonomics’ public docs (simplified)</h3><p>Step through it:</p></div>
+<div class="sec"><h3>1. Authenticate your application</h3><p>Your backend gets an access (and refresh) token from the token endpoint using the <b>client id and secret</b> from the developer portal. Requests are additionally <b>signed (QSeal)</b>. See the signature-generation guide in their docs.</p>
+<h3>2. Create a session</h3><p><code>POST /ics/v3/session</code> returns a <b>session id</b> tied to a bank. You then send the session id in a header on account and payment calls. Deleting the session invalidates it.</p>
+<h3>3. Call accounts, hit “consent required”</h3><p>Listing accounts without consent yields an error <b>1426</b>. That error is the signal to start consent, you do not guess.</p>
+<h3>4. Initiate consent → user does SCA</h3><p>The consent endpoint returns a <b>URL</b>. You redirect the PSU there; they authenticate with their bank (e.g. BankID) and approve access. Some banks (Swedish ones, Handelsbanken Finland per the docs) need the PSU’s IP in a header.</p>
+<h3>5. Fetch data</h3><p>Now <code>GET /ics/v3/accounts</code>, then balances and transactions by <b>account id</b>. Remember normalisation: banks differ in formats, pagination, and what “booked” versus “pending” means.</p></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Your product shows users their balances across banks, and never moves money. Which licence role do you need (directly or via an aggregator)?</div><ol class="opts"><li><b>A.</b> PISP</li><li><b>B.</b> AISP</li><li><b>C.</b> CBPII</li><li><b>D.</b> ASPSP</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">The accounts call returns error 1426 (consent required). What should your integration do?</div><ol class="opts"><li><b>A.</b> Retry in a loop until it works</li><li><b>B.</b> Treat it as a normal state transition: start the consent flow, redirect the user to the returned URL, and resume after they return</li><li><b>C.</b> Create a new session each time</li><li><b>D.</b> Alert the on-call engineer</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A merchant wants “pay by bank” at checkout: move money out of the shopper’s account. Which role covers that, and how does an aggregator help?</div><ol class="opts"><li><b>A.</b> CBPII, which moves money directly</li><li><b>B.</b> ASPSP, which is the shopper themselves</li><li><b>C.</b> PISP, which initiates payments; the aggregator holds the licence and exposes one API over many banks</li><li><b>D.</b> SCA, which is a licence type for moving money</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<div class="box"><div class="q">2. Two banks report “pending” transactions with different meanings, and paginate differently. Your aggregator dashboard must combine them. What is the correct approach?</div><ol class="opts"><li><b>A.</b> Normalise into one canonical model (keeping the raw payload for debugging) and document what booked versus pending means per bank</li><li><b>B.</b> Pick one bank’s definition and silently apply it to all banks</li><li><b>C.</b> Show whichever bank responds first and drop the other</li><li><b>D.</b> Store the amounts as floats and merge the pages by timestamp alone</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<p class="nav"><a href="ob-security.html">Consent, SCA &amp; security model →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> AISP</p><div>Read-only account data is the AISP role. Paying out of the user’s account is PISP. Aggregators let customers rely on the aggregator’s licence rather than obtaining their own.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Treat it as a normal state transition: start the consent flow, redirect the user to the returned URL, and resume after they return</p><div>“Consent required” is expected, not an incident. Model the integration as a state machine: no session → session → consented → data, and handle expiry of each state.</div></div>
+<div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>C.</b> PISP, which initiates payments; the aggregator holds the licence and exposes one API over many banks</p><div>Starting a payment from the user account is the PISP role. An aggregator carries the licence once so customers integrate a single API.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>A.</b> Normalise into one canonical model (keeping the raw payload for debugging) and document what booked versus pending means per bank</p><div>Banks differ in formats, pagination, and field semantics. Normalise above an adapter layer but keep the original payload.</div></div>
+<p class="nav"><a href="ob-security.html">Consent, SCA &amp; security model →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

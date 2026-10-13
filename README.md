@@ -43,6 +43,7 @@ Notes: the URL and *publishable* key in `cloud-config.js` are public by design (
 ```sh
 python3 -m http.server 8000   # any static server; workers need http(s), not file://
 node scripts/test-sync.mjs    # sync engine against simulated devices + server (no network)
+node scripts/gen-lite.mjs     # regenerate lite/ after any content change (CI runs it with --check)
 node scripts/validate.mjs     # needs node + python3: every Python/SQL solution must pass, every starter must fail, SQL reference results must match their declared rows
 ```
 
@@ -50,6 +51,9 @@ node scripts/validate.mjs     # needs node + python3: every Python/SQL solution 
 Lessons live in `content/t*.js` as plain objects (`text`, `quiz`, `reveal`, `steps`, `code` sections).
 Interactive sections (`sim`, `bug`, `predict`) are added with `INSERT(lessonId, position, section)` in `content/t8-interactive.js`, each with a unique `pid`; simulations are implemented in `assets/sims.js`.
 Code exercises live in `content/exercises-py.js` (lessons reference them with `{ type: 'code', ref: 'id' }`). An exercise needs `starter`, `tests` (Python: `test(name, fn)` or `@test(name)`, `eq`, `raises`, `close`; sync or async) and `solution`. The same `assets/harness.py` runs them in the browser (Pyodide) and in CI (CPython). A `predict` section declares its expected `output`. CI (`scripts/validate.mjs`) runs all of them for real.
+
+## Kindle / e-reader (lite) version
+`lite/` is a static, script-free copy of every lesson, flashcard, mock question and link, generated from `content/` by `scripts/gen-lite.mjs`. A tiny ES5 check at the top of `index.html` sends e-readers (Kindle, Kobo, …) and any browser that cannot run the app (no ES2021 syntax) there; everyone else never sees it. Quiz answers sit in an answer key at the bottom of each page. `index.html?full` skips the redirect, and the footer links to the lite copy.
 
 ## Accuracy note
 Neonomics details come from their public docs and general PSD2 knowledge, not insider information. Verify against <https://docs.neonomics.io>.

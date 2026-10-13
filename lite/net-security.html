@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cheating, trust and hostile input · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdnet">Multiplayer &amp; Networking</a> · lesson 4 of 4 · 10 min</p>
+<h1>Cheating, trust and hostile input</h1>
+<p class="sum">The client is in the player's hands: validate everything on the server, leak nothing you do not need to, and treat every packet as an attack.</p>
+<div class="sec">
+<h3>The golden rule</h3>
+<p><b>The client is controlled by the player.</b> Anything the client does or reports can be faked: memory can be edited, packets forged, the program replaced. So a networked game must be designed so that a hacked client <b>can only ask</b>, never <b>tell</b>. The server decides what is true.</p>
+<h3>Typical cheats and the design that stops them</h3>
+<table><tr><th>Cheat</th><th>Design response</th></tr>
+<tr><td>Speed hack / teleport (send a position)</td><td>Clients send <i>inputs</i>, the server simulates movement. Or, if clients send positions, the server validates against the maximum speed and rejects impossible moves (snippet below).</td></tr>
+<tr><td>Aimbot, auto-fire</td><td>Cannot be fully prevented client-side. Server-side statistics and behavioural detection, rate limits on fire, review tools. Be honest about the limits.</td></tr>
+<tr><td>Wallhack / map hack</td><td>Do not send information the player should not have (enemies behind walls, hidden cards, the other team's resources). Fog-of-war on the <b>server</b>.</td></tr>
+<tr><td>Item or currency duplication, impossible purchases</td><td>The server owns inventory and balances and checks every transaction (idempotent operations, transactions with ids).</td></tr>
+<tr><td>Replay or forged packets</td><td>Sequence numbers, session tokens, authenticated and encrypted transport; reject out-of-window sequences.</td></tr>
+<tr><td>Modified game files / values</td><td>Never trust a stat the client sends (damage, health, cooldown). The server holds the numbers.</td></tr>
+<tr><td>Random outcomes chosen by the client</td><td>Roll on the server (loot, crits). A client that picks its own roll always gets the best one.</td></tr></table>
+<h3>Validate on the server</h3>
+<p>For each request ask: is the sender who they claim to be? Is the action <b>allowed in the current state</b> (is it their turn, do they have the item, is the cooldown over)? Is the argument in <b>range</b> (position within the map, speed under the maximum, count between 1 and 99)? How <b>often</b> may they do this (rate limit per player and per action)? Reject and (rarely) log, never crash and never "try to make sense of it".</p>
+<pre><code data-check="zig">const std = @import("std");
+
+const Move = struct { seq: u32, x: f32, y: f32 };
+
+const Player = struct {
+    x: f32 = 0,
+    y: f32 = 0,
+    last_seq: u32 = 0,
+    rejected: u32 = 0,
+};
+
+const MAX_SPEED: f32 = 300; // units per second, from the game rules: the server's number, not the client's
+const MAP: f32 = 1000;
+
+/// Accept a client-reported position only if it is physically possible since the last accepted one.
+fn acceptMove(p: *Player, m: Move, dt: f32) bool {
+    if (m.seq &lt;= p.last_seq) return reject(p); // replayed or reordered packet
+    if (std.math.isNan(m.x) or std.math.isNan(m.y) or std.math.isInf(m.x) or std.math.isInf(m.y)) return reject(p); // hostile floats
+    if (m.x &lt; 0 or m.y &lt; 0 or m.x &gt; MAP or m.y &gt; MAP) return reject(p); // outside the world
+    const dx = m.x - p.x;
+    const dy = m.y - p.y;
+    const max_step = MAX_SPEED * dt * 1.1; // a little slack for timing jitter
+    if (dx * dx + dy * dy &gt; max_step * max_step) return reject(p); // teleport or speed hack
+    p.x = m.x;
+    p.y = m.y;
+    p.last_seq = m.seq;
+    return true;
+}
+
+fn reject(p: *Player) bool {
+    p.rejected += 1;
+    return false;
+}
+
+test "plausible moves are accepted, impossible ones are not, and hostile numbers are survived" {
+    var p = Player{ .x = 100, .y = 100 };
+    try std.testing.expect(acceptMove(&amp;p, .{ .seq = 1, .x = 104, .y = 100 }, 1.0 / 60.0)); // 4 units in 1/60 s is 240 u/s
+    try std.testing.expect(!acceptMove(&amp;p, .{ .seq = 2, .x = 400, .y = 100 }, 1.0 / 60.0)); // teleport
+    try std.testing.expect(!acceptMove(&amp;p, .{ .seq = 1, .x = 105, .y = 100 }, 1.0 / 60.0)); // replayed sequence
+    try std.testing.expect(!acceptMove(&amp;p, .{ .seq = 3, .x = std.math.nan(f32), .y = 0 }, 1.0 / 60.0));
+    try std.testing.expect(!acceptMove(&amp;p, .{ .seq = 4, .x = -5, .y = 100 }, 1.0 / 60.0));
+    try std.testing.expectEqual(@as(f32, 104), p.x); // state only moved for the accepted move
+    try std.testing.expectEqual(@as(u32, 4), p.rejected);
+}</code></pre>
+<h3>Hostile bytes</h3>
+<p>Treat every incoming packet like a file from a stranger (the same rule as the save-file lesson): check the length before reading, never trust a count or index inside it, cap allocations, and parse with code that fails safely. Memory-unsafe parsers (C and C++) are where most real remote-code-execution bugs come from; bounds-checked code and fuzzing the parser with random and mutated packets finds them early.</p>
+<h3>Denial of service</h3>
+<ul><li>Rate limit by connection and by action; drop clients that flood.</li><li>Make the handshake <b>cheap for the server and expensive for the attacker</b> (stateless cookies so spoofed connection requests allocate nothing).</li><li>Cap per-connection memory and message size. Bound everything that grows with player input.</li><li>Do not let a small request trigger a large response (amplification).</li></ul>
+<h3>Accounts, privacy and safety</h3>
+<ul><li>Use established authentication (platform tokens, OAuth), never roll your own password storage; send secrets only over encrypted channels (TLS, DTLS).</li><li>Collect the minimum personal data, and know the rules that apply to you (GDPR, children's privacy laws). Chat and names need moderation tools: reporting, mutes, filters.</li><li>Log enough to investigate abuse, without logging secrets.</li></ul>
+<h3>Anti-cheat: be realistic</h3>
+<p>Client-side anti-cheat is an arms race and invasive; server authority and good design remove entire classes of cheating cheaply. Decide per game: a co-op game with friends needs little; a ranked competitive game needs authoritative servers, statistical detection, report tools and a ban process. Never put a secret in the client and assume it stays secret.</p></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">In your card game the client sends "I played the Ace of Spades" and the server just applies it. What is wrong?</div><ol class="opts"><li><b>A.</b> Nothing, it is efficient</li><li><b>B.</b> The server must verify the player actually holds that card and that it is legal now; otherwise a modified client can play any card</li><li><b>C.</b> The card name is too long</li><li><b>D.</b> Cards should be sent as strings</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Which design choice prevents wallhacks most completely?</div><ol class="opts"><li><b>A.</b> Encrypt the packets</li><li><b>B.</b> Do not send the positions of enemies the player cannot currently see (or could not know about); the server decides visibility</li><li><b>C.</b> Hide the wallhack process</li><li><b>D.</b> Make walls thicker</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A loot box result is decided by a random number generated on the client and reported to the server. Why is that a problem?</div><ol class="opts"><li><b>A.</b> It is slow</li><li><b>B.</b> A modified client can always report the best result; randomness that matters must be rolled on the server</li><li><b>C.</b> Random numbers cannot be sent</li><li><b>D.</b> It uses too much bandwidth</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Clients report positions and a hacked client teleports across the map. What server-side check stops it?</div><ol class="opts"><li><b>A.</b> Trust the newest position</li><li><b>B.</b> Encrypt the position</li><li><b>C.</b> Accept a position only if it is within max speed times dt of the last accepted one, with fresh sequence numbers and in-bounds finite values</li><li><b>D.</b> Send positions more often</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. A packet carries a count field and the parser allocates that many objects before checking the real length. What is the fix?</div><ol class="opts"><li><b>A.</b> Check the length before reading, never trust an embedded count or index, and cap allocations with fail-safe parsing</li><li><b>B.</b> Allocate faster</li><li><b>C.</b> Trust counts from authenticated users</li><li><b>D.</b> Use a bigger server</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="net-lockstep.html">← Deterministic lockstep and rollback</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> The server must verify the player actually holds that card and that it is legal now; otherwise a modified client can play any card</p><div>The server owns the hands and the rules. Requests must be checked against the authoritative state.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Do not send the positions of enemies the player cannot currently see (or could not know about); the server decides visibility</p><div>If the data is on the client, the client can read it, encrypted or not. Only data that is never sent is safe.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> A modified client can always report the best result; randomness that matters must be rolled on the server</p><div>Authority over outcomes must live where the player cannot change it.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>C.</b> Accept a position only if it is within max speed times dt of the last accepted one, with fresh sequence numbers and in-bounds finite values</p><div>The server owns movement rules and rejects impossible moves instead of applying whatever the client claims.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>A.</b> Check the length before reading, never trust an embedded count or index, and cap allocations with fail-safe parsing</p><div>Every packet is hostile bytes: validate, bound, and fuzz the parser rather than believing its contents.</div></div>
+<p class="nav"><a href="net-lockstep.html">← Deterministic lockstep and rollback</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

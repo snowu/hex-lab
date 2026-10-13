@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Postgres in production · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#data">Databases &amp; SQL</a> · lesson 5 of 5 · 15 min</p>
+<h1>Postgres in production</h1>
+<p class="sum">Pooling, replicas, migrations without downtime, pagination, N+1.</p>
+<div class="sec">
+<h3>Connections</h3>
+<p>Each Postgres connection is a server process using several MB of memory, so thousands of direct connections fall over. Put a <b>pooler</b> (PgBouncer, RDS Proxy) in front. In <i>transaction pooling</i> mode a connection is lent for one transaction, so session state (<code>SET</code>, session-level advisory locks, historically prepared statements) is unreliable. Size the pool from the database's capacity, not from the number of app instances.</p>
+<h3>Replicas and lag</h3>
+<p>Streaming replicas serve reads, but replication is asynchronous: a user can write, then read stale data. Use <b>read-your-writes</b> routing (read from the primary for a short window after a write, or track the commit position), and monitor lag. Replicas also fail over, but promotion loses unreplicated writes unless you use synchronous replication.</p>
+<h3>Zero-downtime migrations (expand / contract)</h3>
+<ol>
+<li><b>Expand:</b> add the new column as nullable (or with a constant default, which is instant since PG 11). Never a volatile default on a big table: it rewrites the whole table.</li>
+<li><b>Backfill</b> in small batches with pauses, never in one giant transaction.</li>
+<li>Deploy code that writes both, then reads the new one.</li>
+<li><b>Contract:</b> add constraints safely (<code>ADD CONSTRAINT ... NOT VALID</code>, then <code>VALIDATE CONSTRAINT</code>), set <code>NOT NULL</code> once a validated check proves it, then drop the old column in a later release.</li>
+</ol>
+<ul><li><code>CREATE INDEX CONCURRENTLY</code> instead of a blocking build.</li><li>Set <code>lock_timeout</code> on migrations so a DDL statement waiting for a lock cannot queue behind a long transaction and block every query behind it.</li></ul>
+<h3>Pagination and the N+1 trap</h3>
+<ul><li><code>OFFSET 100000</code> reads and discards 100,000 rows, and shifts when rows are inserted. Use <b>keyset pagination</b>: <code>WHERE (created_at, id) &lt; ($1, $2) ORDER BY created_at DESC, id DESC LIMIT 20</code> with a matching index.</li><li><b>N+1:</b> one query for a list, then one per row. Fix with a join, <code>WHERE id = ANY($1)</code>, or the ORM's eager loading.</li></ul>
+<h3>Other things worth naming</h3>
+<ul><li><b>Autovacuum and bloat:</b> MVCC leaves dead rows; long-running transactions stop cleanup. Watch for idle-in-transaction sessions.</li><li><b>Partitioning</b> (by time) for huge tables: pruning speeds queries, and dropping an old partition is instant.</li><li><b>Backups:</b> base backup plus WAL archiving gives point-in-time recovery. A backup you have never restored is not a backup.</li><li><b>Observability:</b> <code>pg_stat_statements</code> for the slowest queries, plus locks, replication lag and connection saturation.</li></ul></div>
+<div class="sec"><div class="box"><p class="kind">Bug hunt: Spot the database anti-patterns</p><p>An assistant wrote this “list payments” endpoint. It works on the demo data. Click the <b>2</b> lines that will hurt in production.</p><pre>1  def list_payments(db, page):
+2      rows = db.execute(&quot;SELECT * FROM payments ORDER BY created_at LIMIT 20 OFFSET %s&quot;, (page * 20,))
+3      for r in rows:
+4          r.merchant = db.execute(&quot;SELECT name FROM merchants WHERE id = %s&quot;, (r.merchant_id,)).one()
+5      return rows</pre><p>2 buggy lines. Find them, then check.</p><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You must add a NOT NULL column with a default to a 500-million-row table in Postgres 15 with no downtime. What is the safest approach?</div><ol class="opts"><li><b>A.</b> ALTER TABLE ... ADD COLUMN x int NOT NULL DEFAULT 0 (a constant default is metadata-only since Postgres 11), after setting lock_timeout</li><li><b>B.</b> Take the application offline and run the ALTER</li><li><b>C.</b> Add a trigger that copies data row by row</li><li><b>D.</b> Create a new table and rename it during peak hours</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Users write a comment and immediately see it missing on reload, but it appears a second later. The app reads from a replica. What is the cause and the lightest fix?</div><ol class="opts"><li><b>A.</b> The cache is corrupt</li><li><b>B.</b> Replication lag: route reads to the primary for a short window after a write (or until the replica has caught up to the write’s position)</li><li><b>C.</b> The database lost the write</li><li><b>D.</b> The load balancer is broken</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Connections to Postgres spike to 2,000 after you scale the app to 200 instances, and the database slows to a crawl. What should you do?</div><ol class="opts"><li><b>A.</b> Raise max_connections to 5,000</li><li><b>B.</b> Put a connection pooler in front (PgBouncer/RDS Proxy) and cap pool sizes</li><li><b>C.</b> Add more replicas only</li><li><b>D.</b> Restart the database nightly</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<div class="sec"><h3>Design prompts to practise out loud</h3><ul><li>“Our <code>payments</code> table has 2 billion rows and queries are slowing down. What do you do?” (indexes, partitioning, archiving, query patterns, read replicas, only then sharding)</li><li>“How would you shard a ledger?” (shard by account, cross-shard transfers need a saga or a two-account design, hot accounts, re-sharding)</li><li>“Zero-downtime rename of a column used by 40 services.” (expand/contract, dual write, views, deprecation)</li><li>“Multi-tenant SaaS: schema per tenant, or row-level tenant_id?” (isolation vs operability, row-level security)</li></ul></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Page 5000 of a payments list uses LIMIT 20 OFFSET 100000 and gets slower while rows repeat between pages. What is the fix?</div><ol class="opts"><li><b>A.</b> Increase LIMIT to fetch more rows per page</li><li><b>B.</b> Add planner hints for OFFSET</li><li><b>C.</b> Cache OFFSET pages in the application</li><li><b>D.</b> Use keyset pagination on (created_at, id) with a matching index, passing the last seen position as the cursor</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. A list endpoint runs one query for 20 payments, then one merchant query per row. What is the fix?</div><ol class="opts"><li><b>A.</b> Join merchants in the main query or fetch all needed merchants with one WHERE id = ANY query</li><li><b>B.</b> Raise the connection pool size</li><li><b>C.</b> Paginate with a larger OFFSET</li><li><b>D.</b> Build a trie over merchant names</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="db-transactions.html">← Transactions, isolation and locking</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Spot the database anti-patterns</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> One line gets slower the further you page. The other runs once per row.</p><ul><li><b>Line 2:</b> <code>OFFSET</code> pagination reads and throws away every earlier row, so deep pages get slower and slower. And with a non-unique <code>created_at</code> as the only sort key, rows can repeat or vanish between pages. Use keyset pagination on <code>(created_at, id)</code>.</li><li><b>Line 4:</b> The classic N+1: one extra query per row (20 round trips for one page). Join the merchants table, or fetch all merchants with one <code>WHERE id = ANY(...)</code> query.</li></ul></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>A.</b> ALTER TABLE ... ADD COLUMN x int NOT NULL DEFAULT 0 (a constant default is metadata-only since Postgres 11), after setting lock_timeout</p><div>Adding a column with a constant default does not rewrite the table in modern Postgres, so it is near-instant. A volatile default (like random() or clock_timestamp()) would rewrite everything. Always set lock_timeout so the DDL cannot queue behind long transactions.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Replication lag: route reads to the primary for a short window after a write (or until the replica has caught up to the write’s position)</p><div>Asynchronous replication means a replica can briefly be behind. Read-your-writes routing is the standard fix.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Put a connection pooler in front (PgBouncer/RDS Proxy) and cap pool sizes</p><div>Each connection is a process with real memory and scheduling cost. A pooler multiplexes many app connections onto a small number of server connections.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>D.</b> Use keyset pagination on (created_at, id) with a matching index, passing the last seen position as the cursor</p><div>OFFSET reads and discards earlier rows and shifts under inserts; a keyset seeks directly to the cursor and stays stable.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>A.</b> Join merchants in the main query or fetch all needed merchants with one WHERE id = ANY query</p><div>One query per row means 20 round trips per page; a join or a single batched lookup removes the N+1.</div></div>
+<p class="nav"><a href="db-transactions.html">← Transactions, isolation and locking</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

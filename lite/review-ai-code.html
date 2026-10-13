@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reviewing AI-written code · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#ai">AI-Era Engineering</a> · lesson 4 of 4 · 30 min</p>
+<h1>Reviewing AI-written code</h1>
+<p class="sum">Recurring failure patterns and a checklist.</p>
+<div class="sec">
+<p>Generated code is fluent and confident, so review fatigue is the risk. Patterns to hunt:</p>
+<ul>
+<li><b>Boundary bugs:</b> off-by-one, empty input, None / empty values, unicode, timezones.</li>
+<li><b>Hallucinated APIs:</b> a method or option that does not exist, or existed in an older version.</li>
+<li><b>Money &amp; time:</b> floats for currency, local time instead of UTC, DST.</li>
+<li><b>Security:</b> string-built SQL, missing authorisation checks (only authentication), secrets in logs, SSRF, unsafe deserialisation.</li>
+<li><b>Concurrency:</b> check-then-act races, missing awaits, fire-and-forget tasks, unbounded <code>asyncio.gather</code>, mutable default arguments.</li>
+<li><b>Over-engineering:</b> abstractions nobody asked for. Delete them.</li>
+<li><b>Tests that assert the implementation</b> rather than the behaviour, or mock away the thing under test.</li>
+</ul></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Review this: <code>total = sum(i.price * i.qty for i in items)  # prices are floats like 19.99</code>. What is the most serious issue for a payments system?</div><ol class="opts"><li><b>A.</b> sum() is slow on large lists</li><li><b>B.</b> Floating-point arithmetic on currency (0.1 + 0.2 ≠ 0.3); use integer minor units (cents) or a decimal type</li><li><b>C.</b> Missing type hints</li><li><b>D.</b> Variable naming</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Review: <code>@app.get("/accounts/{account_id}") async def get_account(account_id: str, user=Depends(auth)): return await db.accounts.find(account_id)</code>. What is missing?</div><ol class="opts"><li><b>A.</b> Pagination</li><li><b>B.</b> An authorisation check that the authenticated user owns or may access account :id (IDOR / BOLA)</li><li><b>C.</b> A try/except around the call</li><li><b>D.</b> Caching headers</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Bug hunt: Review this AI-written endpoint</p><p>An assistant generated this Flask route. It passes the happy-path test. Click the <b>2</b> lines a security review would reject.</p><pre>1  @app.get('/accounts/&lt;account_id&gt;/transactions')
+2  @login_required
+3  def transactions(account_id):
+4      rows = db.execute(f&quot;SELECT * FROM transactions WHERE account_id = '{account_id}'&quot;)
+5      app.logger.info('fetched %d rows for %s', len(rows), request.headers['Authorization'])
+6      return jsonify(rows)</pre><p>2 buggy lines. Find them, then check.</p><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Bug hunt: Plausible but wrong helpers</p><p>Two small helpers an assistant wrote for a dashboard. Click the <b>2</b> lines that fail on realistic use.</p><pre>1  def add_tag(tag, tags=[]):
+2      tags.append(tag)
+3      return tags
+4  
+5  def average(xs):
+6      return sum(xs) / len(xs)</pre><p>2 buggy lines. Find them, then check.</p><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Fix the AI-written discount function</p><p>This was generated for “apply a percentage discount to a price in cents”. Make it correct: result as an <b>int</b> of cents rounded <b>half up</b>, reject percentages outside 0–100 (and NaN), reject prices that are not non-negative ints. Example: <code>apply_discount(1999, 15)</code> → <code>1699</code> (1999 × 0.85 = 1699.15 → 1699). Careful: Python's built-in <code>round()</code> uses banker's rounding.</p><p><b>Starter:</b></p><pre>def apply_discount(price_cents, percent):
+    return price_cents - price_cents * (percent / 100)
+</pre><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Generated code calls db.query_async_batched(), which you cannot find in the library docs for your installed version. What is the right move?</div><ol class="opts"><li><b>A.</b> Trust it: fluent generated code rarely invents APIs, so ship it</li><li><b>B.</b> Treat it as a possible hallucinated API and verify against the installed version’s docs and CHANGELOG before keeping it</li><li><b>C.</b> Add a retry loop so the missing method eventually appears</li><li><b>D.</b> Suppress the linter warning and move on</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<div class="box"><div class="q">2. The assistant writes tests that mock the pricing module and assert an internal helper was called once. Why should you reject these tests?</div><ol class="opts"><li><b>A.</b> Mocks are never allowed in any test</li><li><b>B.</b> The tests run too fast to be meaningful</li><li><b>C.</b> The tests assert the implementation instead of behaviour and mock away the thing under test; rewrite them to assert observable outcomes</li><li><b>D.</b> The tests use too few abstractions</li></ol><p class="tolink" id="q7"><a href="#a7">answer 7 ↓</a></p></div>
+<p class="nav"><a href="agents-security.html">← Agents, tools &amp; prompt-injection security</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Floating-point arithmetic on currency (0.1 + 0.2 ≠ 0.3); use integer minor units (cents) or a decimal type</p><div>Represent money as integer minor units (or <code>decimal.Decimal</code>) and round explicitly with a defined rule.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> An authorisation check that the authenticated user owns or may access account :id (IDOR / BOLA)</p><div>Authentication ≠ authorisation. Without an ownership check any logged-in user can read any account by changing the id. A top-10 API vulnerability (BOLA).</div></div>
+<div class="ans" id="a3"><p><b>3. Review this AI-written endpoint</b> <a href="#q3">back ↑</a></p><p><b>Hint:</b> One line builds a query from user input. The other writes something secret to the logs.</p><ul><li><b>Line 4:</b> An f-string builds the SQL, so it is injectable. It also queries by whatever id the caller supplies, with no check that the logged-in user owns that account, which is broken object-level authorisation (BOLA/IDOR). Use parameterised queries and filter by the caller's accounts.</li><li><b>Line 5:</b> Logs the Authorization header, so bearer tokens end up in log storage. Never log credentials or tokens, and keep PII out of application logs.</li></ul></div>
+<div class="ans" id="a4"><p><b>4. Plausible but wrong helpers</b> <a href="#q4">back ↑</a></p><p><b>Hint:</b> Think about when Python evaluates default argument values, and what an empty list does to the division.</p><ul><li><b>Line 1:</b> A mutable default argument is created once, when the function is defined, and shared by every call: <code>add_tag("a")</code> then <code>add_tag("b")</code> returns <code>["a", "b"]</code>. Use <code>tags=None</code> and create the list inside the function.</li><li><b>Line 6:</b> Raises <code>ZeroDivisionError</code> on an empty list. Decide what the average of nothing should be (<code>None</code>, <code>0</code>, or a clear error) and handle it explicitly.</li></ul></div>
+<div class="ans" id="a5"><p><b>5. Fix the AI-written discount function</b> <a href="#q5">back ↑</a></p><p><b>Hint:</b> Use decimal.Decimal and quantize(Decimal(1), rounding=ROUND_HALF_UP). Build the Decimal from str(percent) so 33.5 does not carry binary-float noise.</p><p><b>Reference solution:</b></p><pre>import math
+from decimal import Decimal, ROUND_HALF_UP
+
+def apply_discount(price_cents, percent):
+    if not isinstance(price_cents, int) or isinstance(price_cents, bool) or price_cents &lt; 0:
+        raise ValueError('price must be a non-negative integer number of cents')
+    if not isinstance(percent, (int, float)) or not math.isfinite(percent) or not 0 &lt;= percent &lt;= 100:
+        raise ValueError('percent must be between 0 and 100')
+    result = Decimal(price_cents) * (100 - Decimal(str(percent))) / 100
+    return int(result.quantize(Decimal(1), rounding=ROUND_HALF_UP))</pre><p>round(52.5) is 52 in Python (round-half-to-even), which is a classic money bug. Use Decimal with an explicit rounding mode, or integer arithmetic, and agree the rule with finance.</p></div>
+<div class="ans" id="a6"><p><b>6. Check 1</b> <a href="#q6">back ↑</a></p><p><b>B.</b> Treat it as a possible hallucinated API and verify against the installed version’s docs and CHANGELOG before keeping it</p><div>Hallucinated or version-wrong APIs are a classic generation failure. Verify every unfamiliar call against the version you actually run.</div></div>
+<div class="ans" id="a7"><p><b>7. Check 2</b> <a href="#q7">back ↑</a></p><p><b>C.</b> The tests assert the implementation instead of behaviour and mock away the thing under test; rewrite them to assert observable outcomes</p><div>Good tests pin behaviour, not internals. Mocking away the unit under test only proves the mock was called.</div></div>
+<p class="nav"><a href="agents-security.html">← Agents, tools &amp; prompt-injection security</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

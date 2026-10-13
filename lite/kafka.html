@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kafka: partitions, groups, delivery guarantees · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#cloud">Scale, Kafka, AWS &amp; Terraform</a> · lesson 2 of 4 · 60 min</p>
+<h1>Kafka: partitions, groups, delivery guarantees</h1>
+<p class="sum">What you must be able to explain, plus partitioner and assignment code.</p>
+<div class="sec">
+<h3>Mental model</h3>
+<p>Kafka is a <b>distributed, partitioned, replicated commit log</b>. A <b>topic</b> is split into <b>partitions</b>; each partition is an ordered, append-only log with a <b>leader</b> and follower replicas. Messages keep their position (<b>offset</b>), and consumers track their own offsets, so reading does not delete data (retention is time/size based; <i>compacted</i> topics keep the latest value per key).</p>
+<table>
+<tr><th>Concept</th><th>Why it matters</th></tr>
+<tr><td>Key → partition</td><td><code>hash(key) mod partitions</code> keeps all events of one entity (e.g. a payment id) in one partition, so they stay <b>ordered</b>. Ordering is guaranteed <b>only within a partition</b>.</td></tr>
+<tr><td>Consumer group</td><td>Partitions are divided among the group’s consumers; each partition is read by <b>one consumer per group</b>. More consumers than partitions → idle ones. Different groups each get all messages.</td></tr>
+<tr><td>Rebalance</td><td>When members join/leave, partitions are reassigned and processing pauses. Prefer cooperative/sticky assignors, static membership, and short, idempotent processing.</td></tr>
+<tr><td>Replication</td><td><code>replication.factor=3</code>, <code>min.insync.replicas=2</code>, producer <code>acks=all</code>: survives a broker loss without losing acknowledged writes (at the cost of latency).</td></tr>
+<tr><td>Producer idempotence</td><td><code>enable.idempotence=true</code> dedupes producer retries inside a partition.</td></tr>
+</table>
+<h3>Delivery semantics</h3>
+<ul>
+<li><b>At-most-once:</b> commit offset <i>before</i> processing; a crash loses messages.</li>
+<li><b>At-least-once</b> (the usual default): process, <i>then</i> commit; a crash causes redelivery, so <b>consumers must be idempotent</b>.</li>
+<li><b>Exactly-once</b> exists inside Kafka (idempotent producer + transactions, read-process-write between topics), but not for external side effects such as calling a bank. For those: at-least-once + idempotency keys / dedupe table / outbox.</li>
+</ul>
+<h3>Operational realities</h3>
+<ul><li><b>Poison messages:</b> retry with backoff topics, then a <b>dead-letter topic</b>, never block a partition forever or silently skip.</li>
+<li><b>Hot partitions:</b> a skewed key (one huge merchant) overloads one partition. Salt the key if ordering allows.</li>
+<li><b>Consumer lag</b> is the key health metric. Alert on lag growth rate and age of the oldest unprocessed message.</li>
+<li><b>Schemas:</b> use a schema registry (Avro/Protobuf/JSON Schema) with compatibility rules so producers cannot break consumers.</li>
+<li><b>Partition count</b> is hard to change safely (it remaps keys), so size it for the future.</li></ul></div>
+<div class="sec"><div class="box"><p class="kind">Simulation: Partitions, keys and consumer groups</p><p>Send messages and watch how the key decides the partition, how partitions are divided between consumers, and what breaks when you change the numbers.</p><p><b>Try this in the full app:</b></p><ul><li>Click <b>pay-1</b> several times: it always lands on the same partition, which is why per-key ordering works.</li><li>Add consumers until one shows <b>IDLE</b>: parallelism is capped by the partition count.</li><li>Press <b>+ partition</b> and keep sending <b>pay-1</b>: the key now spans two partitions and ordering is lost.</li><li>Tick <b>hot key</b>, send <b>random ×10</b> a few times and see one partition take most of the backlog.</li><li>Remove a consumer and watch the partitions get reassigned (a rebalance).</li></ul><p class="note">Interactive: needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Keyed partitioner</p><p>Implement <code>partition_for(key, num_partitions)</code> using the provided <code>fnv1a</code>: deterministic, always in <code>[0, num_partitions)</code>, and raising <code>ValueError</code> if <code>num_partitions</code> is not a positive int.</p><p><b>Starter:</b></p><pre>def fnv1a(text):  # 32-bit FNV-1a
+    h = 2166136261
+    for ch in text:
+        h ^= ord(ch)
+        h = (h * 16777619) &amp; 0xFFFFFFFF
+    return h
+
+def partition_for(key, num_partitions):
+    pass
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Range assignment for a consumer group</p><p>Implement <code>assign_range(num_partitions, consumers)</code> mimicking Kafka’s range assignor for a single topic. Sort the consumer ids; each gets <code>n // c</code> <b>contiguous</b> partitions, and the first <code>n % c</code> consumers get one extra. Return a dict <code>{consumer_id: [partitions]}</code> including consumers with an empty list. No consumers → <code>{}</code>. Do not mutate the input list.</p><p><b>Starter:</b></p><pre>def assign_range(num_partitions, consumers):
+    pass
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Predict the output: What does a crash before the commit cause?</p><p>A tiny at-least-once consumer: process, then commit. It crashes while handling the second message, then restarts.</p><pre>log = ['pay-1', 'pay-2', 'pay-3']
+committed = 0                      # next offset to read
+processed = []
+
+def consume(crash_after):
+    global committed
+    for i in range(committed, len(log)):
+        processed.append(log[i])           # side effect
+        if i + 1 == crash_after:
+            return                         # crash before the commit below
+        committed = i + 1                  # commit after processing
+
+consume(2)    # crashes while handling pay-2
+consume(99)   # restart
+print(','.join(processed))
+print('committed', committed)</pre><div class="q">What is printed?</div><ol class="opts"><li><b>A.</b> pay-1,pay-2,pay-3 then "committed 3"</li><li><b>B.</b> pay-1,pay-2,pay-2,pay-3 then "committed 3"</li><li><b>C.</b> pay-1,pay-3 then "committed 3"</li><li><b>D.</b> pay-1,pay-2,pay-2,pay-3 then "committed 2"</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Payment events for the same payment id must be processed in order. Which design guarantees it?</div><ol class="opts"><li><b>A.</b> Many partitions with random keys</li><li><b>B.</b> Use the payment id as the message key so they hash to one partition, and process each partition sequentially</li><li><b>C.</b> One topic per consumer</li><li><b>D.</b> Timestamps on messages</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Your consumer does: poll → write to DB → commit offset. It crashes after the DB write, before the commit. What happens, and what must be true?</div><ol class="opts"><li><b>A.</b> Message lost; nothing to do</li><li><b>B.</b> The message is redelivered (at-least-once), so the DB write must be idempotent (upsert by event id / unique constraint)</li><li><b>C.</b> Kafka rolls back the DB</li><li><b>D.</b> Exactly-once is guaranteed automatically</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A group has 12 partitions and 20 consumers. What is true?</div><ol class="opts"><li><b>A.</b> All 20 consume in parallel</li><li><b>B.</b> 8 consumers are idle; parallelism is capped by the partition count</li><li><b>C.</b> Kafka creates more partitions</li><li><b>D.</b> Messages are duplicated to all consumers</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Bug hunt: Spot the Kafka consumer bugs</p><p>This consumer processes payment instructions. Click the <b>2</b> lines that will cost money or lose messages.</p><pre>1  consumer = KafkaConsumer('payments', group_id='billing', enable_auto_commit=False)
+2  for msg in consumer:
+3      consumer.commit()
+4      charge_customer(json.loads(msg.value))</pre><p>2 buggy lines. Find them, then check.</p><p class="tolink" id="q7"><a href="#a7">answer 7 ↓</a></p></div></div>
+<div class="sec"><h3>Kafka vs SQS/RabbitMQ: how to answer</h3><ul><li><b>Kafka:</b> replayable log, high throughput, ordering per key, multiple independent consumer groups, stream processing. You manage partitions/ordering; heavier to operate (or use MSK/Confluent).</li><li><b>SQS:</b> fully managed queue, per-message ack, visibility timeout, DLQ built in, effectively unlimited scale; no replay, no ordering unless FIFO queues (with throughput limits).</li><li><b>RabbitMQ:</b> rich routing (exchanges), per-message ack, good for task queues and complex routing; lower throughput than Kafka.</li><li>Pick by need: replay/fan-out/stream processing → Kafka; simple decoupled jobs → SQS; routing flexibility → RabbitMQ.</li></ul></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. One malformed event crashes your consumer on every retry and its partition has stalled for an hour. What is the correct handling?</div><ol class="opts"><li><b>A.</b> Block the partition forever until someone manually deletes the topic</li><li><b>B.</b> Retry with backoff topics and then park the event on a dead-letter topic so the partition can progress</li><li><b>C.</b> Silently skip the event with no record</li><li><b>D.</b> Stop all consumers in every group until the producer is fixed</li></ol><p class="tolink" id="q8"><a href="#a8">answer 8 ↓</a></p></div>
+<div class="box"><div class="q">2. Acknowledged payment events must survive the loss of one broker. Which configuration buys that, and at what price?</div><ol class="opts"><li><b>A.</b> A single replica with no acknowledgements, which is fastest and safest</li><li><b>B.</b> Compacted topics alone, which replicate automatically with no cost</li><li><b>C.</b> More consumer groups, which duplicate the data for safety</li><li><b>D.</b> Replication factor 3 with min.insync.replicas=2 and producer acks=all: acknowledged writes survive a broker loss but pay extra latency</li></ol><p class="tolink" id="q9"><a href="#a9">answer 9 ↓</a></p></div>
+<p class="nav"><a href="scalability.html">← Scalability fundamentals</a> · <a href="aws.html">AWS building blocks for senior engineers →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Keyed partitioner</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Validate first (bool is an int subclass, so rule it out), then fnv1a(str(key)) % num_partitions. Python’s % is already non-negative for a positive modulus.</p><p><b>Reference solution:</b></p><pre>def fnv1a(text):  # 32-bit FNV-1a
+    h = 2166136261
+    for ch in text:
+        h ^= ord(ch)
+        h = (h * 16777619) &amp; 0xFFFFFFFF
+    return h
+
+def partition_for(key, num_partitions):
+    if not isinstance(num_partitions, int) or isinstance(num_partitions, bool) or num_partitions &lt;= 0:
+        raise ValueError('num_partitions must be a positive integer')
+    return fnv1a(str(key)) % num_partitions</pre><p>Kafka’s default partitioner uses murmur2 on the key bytes. Never use Python’s built-in hash() for this: string hashing is randomised per process (PYTHONHASHSEED), so different producers would disagree. Follow-up: what happens to ordering if you increase the partition count?</p></div>
+<div class="ans" id="a2"><p><b>2. Range assignment for a consumer group</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> divmod(num_partitions, len(consumers)) gives the base size and the remainder. Walk the sorted consumers with a running start offset.</p><p><b>Reference solution:</b></p><pre>def assign_range(num_partitions, consumers):
+    ordered = sorted(consumers)
+    if not ordered:
+        return {}
+    base, extra = divmod(num_partitions, len(ordered))
+    out, start = {}, 0
+    for i, consumer in enumerate(ordered):
+        count = base + (1 if i &lt; extra else 0)
+        out[consumer] = list(range(start, start + count))
+        start += count
+    return out</pre><p>Compare with round-robin (spreads evenly across topics), sticky (minimises movement on a rebalance) and cooperative-sticky (incremental rebalance without stopping the world).</p></div>
+<div class="ans" id="a3"><p><b>3. What does a crash before the commit cause?</b> <a href="#q3">back ↑</a></p><p><b>B.</b> pay-1,pay-2,pay-2,pay-3 then "committed 3"</p><div><code>pay-2</code> was processed but never committed, so after the restart it is read again: the side effect runs twice. That is at-least-once delivery. The fix is not to avoid it but to make the handler idempotent.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Use the payment id as the message key so they hash to one partition, and process each partition sequentially</p><div>Per-key ordering comes from keyed partitioning plus sequential processing per partition. Parallelise <i>across</i> keys, not within one.</div></div>
+<div class="ans" id="a5"><p><b>5. Quick check</b> <a href="#q5">back ↑</a></p><p><b>B.</b> The message is redelivered (at-least-once), so the DB write must be idempotent (upsert by event id / unique constraint)</p><div>Kafka’s transactional exactly-once does not extend to your database. Make handlers idempotent or use the transactional outbox/inbox pattern.</div></div>
+<div class="ans" id="a6"><p><b>6. Quick check</b> <a href="#q6">back ↑</a></p><p><b>B.</b> 8 consumers are idle; parallelism is capped by the partition count</p><div>Within a group, one partition → one consumer. Extra members are standby for failover only.</div></div>
+<div class="ans" id="a7"><p><b>7. Spot the Kafka consumer bugs</b> <a href="#q7">back ↑</a></p><p><b>Hint:</b> One line is about ordering of commit vs work. The other is about what happens when the same message arrives twice.</p><ul><li><b>Line 3:</b> The offset is committed <i>before</i> the work is done, which is at-most-once. If the process crashes after the commit and before the charge, that payment is lost forever. Commit after processing (at-least-once).</li><li><b>Line 4:</b> <code>charge_customer</code> has no idempotency key, so once you fix the ordering and get redelivery, a retry double-charges. Also a malformed payload makes <code>json.loads</code> raise and blocks the partition. Use an idempotency key (for example topic-partition-offset), and send poison messages to a dead-letter topic.</li></ul></div>
+<div class="ans" id="a8"><p><b>8. Check 1</b> <a href="#q8">back ↑</a></p><p><b>B.</b> Retry with backoff topics and then park the event on a dead-letter topic so the partition can progress</p><div>Poison messages must never block a partition forever nor vanish silently. Bounded retries plus a dead-letter topic preserve progress and evidence.</div></div>
+<div class="ans" id="a9"><p><b>9. Check 2</b> <a href="#q9">back ↑</a></p><p><b>D.</b> Replication factor 3 with min.insync.replicas=2 and producer acks=all: acknowledged writes survive a broker loss but pay extra latency</p><div>Durability comes from synchronously replicated writes. The acks=all plus in-sync-replicas quorum trades latency for surviving broker loss.</div></div>
+<p class="nav"><a href="scalability.html">← Scalability fundamentals</a> · <a href="aws.html">AWS building blocks for senior engineers →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

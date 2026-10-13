@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terraform &amp; infrastructure as code · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#cloud">Scale, Kafka, AWS &amp; Terraform</a> · lesson 4 of 4 · 45 min</p>
+<h1>Terraform &amp; infrastructure as code</h1>
+<p class="sum">State, plan/apply, modules, drift, safety. Implement plan diffing and dependency order.</p>
+<div class="sec">
+<p><b>Terraform</b> (or the open-source fork <b>OpenTofu</b>) is <b>declarative</b>: you describe the desired infrastructure, it compares that with the recorded <b>state</b> and the real world, and produces a <b>plan</b> of creates, updates and destroys. It builds a <b>dependency graph</b> from references between resources and applies independent resources in parallel.</p>
+<pre><code>resource "aws_sqs_queue" "payments_dlq" { name = "payments-dlq" }
+
+resource "aws_sqs_queue" "payments" {
+  name = "payments"
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.payments_dlq.arn   # implicit dependency
+    maxReceiveCount     = 5
+  })
+}</code></pre>
+<h3>Things seniors are asked</h3>
+<ul>
+<li><b>State:</b> maps config to real resources and may contain <b>secrets in plain text</b>. Use a <b>remote backend</b> (e.g. S3, encrypted, versioned) with <b>locking</b> so two applies cannot race (DynamoDB table historically, S3 native lockfile in newer versions), restricted access, and never commit state.</li>
+<li><b>Drift:</b> reality differs from state (console clicks). <code>plan</code> reveals it; fix by reapplying, importing, or updating the config. Prevent with restricted console access and drift-detection CI.</li>
+<li><b>Safe delivery:</b> PR → <code>fmt/validate/lint/security scan</code> → <code>plan</code> posted for review → approved <code>apply</code> from CI with least-privilege role. Apply the <b>saved plan file</b> so what was reviewed is what runs.</li>
+<li><b>Modules:</b> reusable, versioned, small interfaces. Don’t over-abstract; prefer composition. Pin provider and module versions.</li>
+<li><b>Environments:</b> separate state per environment/account (directories or workspaces with care). Blast-radius control: split state by lifecycle and ownership, not one giant state.</li>
+<li><b><code>count</code> vs <code>for_each</code>:</b> with <code>count</code>, removing a middle element shifts indexes and may destroy/recreate resources. <code>for_each</code> with stable keys avoids that.</li>
+<li><b>Refactoring:</b> <code>moved</code> blocks rename without recreating; <code>import</code> adopts existing resources; <code>lifecycle { prevent_destroy = true }</code> guards stateful resources; <code>create_before_destroy</code> for zero-downtime replacement.</li>
+<li><b>Danger:</b> a plan that shows <code>-/+ destroy and then create replacement</code> on a database. Read plans carefully; <code>-target</code> is an escape hatch, not a workflow.</li>
+<li><b>Secrets:</b> don’t put them in variables with defaults or in state if avoidable; reference Secrets Manager/SSM, mark outputs <code>sensitive</code> (which only hides display, not state).</li>
+</ul></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Compute a plan (create / update / replace / delete)</p><p>Implement <code>plan(desired, current, immutable=frozenset())</code>. <code>desired</code> and <code>current</code> map a resource name to its config dict. Return <code>{'create', 'update', 'replace', 'delete'}</code>, each an <b>alphabetically sorted</b> list of names:</p>
+<ul><li><code>create</code>: only in desired; <code>delete</code>: only in current.</li><li>In both with equal configs: nothing. Key order never matters; nested dicts and lists compare by value; <code>None</code> and a missing key are different.</li><li>In both but different: <code>replace</code> if any attribute named in <code>immutable</code> differs (Terraform’s “forces replacement”), otherwise <code>update</code>.</li></ul><p><b>Starter:</b></p><pre>def plan(desired, current, immutable=frozenset()):
+    pass
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Apply order from a dependency graph</p><p>Implement <code>apply_order(graph)</code> where <code>graph</code> maps each resource to a list of resources it <b>depends on</b>. Return a list where every resource appears <b>after</b> its dependencies. Among resources that are ready at the same time, choose <b>alphabetically</b> for determinism. Raise <code>ValueError('cycle')</code> if there is a cycle and <code>ValueError('unknown dependency: X')</code> if a dependency is not a key of the graph.</p><p><b>Starter:</b></p><pre>def apply_order(graph):
+    pass
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A teammate changed a security group in the AWS console. Your next <code>terraform plan</code>…</div><ol class="opts"><li><b>A.</b> Shows no changes</li><li><b>B.</b> Detects the drift (refreshes real state) and proposes to revert it to match your code</li><li><b>C.</b> Fails</li><li><b>D.</b> Updates your code automatically</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A <code>plan</code> in CI shows “forces replacement” on the production RDS instance. What should you do?</div><ol class="opts"><li><b>A.</b> Apply anyway, CI is green</li><li><b>B.</b> Stop. Find which attribute forces replacement, avoid it (or plan a migration/snapshot), and protect the resource with <code>prevent_destroy</code></li><li><b>C.</b> Use -target to skip it</li><li><b>D.</b> Delete the state</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You use <code>count = length(var.names)</code> to create buckets and remove the first name from the list. What happens?</div><ol class="opts"><li><b>A.</b> Only the first bucket is destroyed</li><li><b>B.</b> Indexes shift, so many buckets are modified or destroyed and recreated; use <code>for_each</code> keyed by name</li><li><b>C.</b> Nothing</li><li><b>D.</b> Terraform refuses</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Two engineers run apply at the same time and the state file corrupts. Which setup prevents this class of failure?</div><ol class="opts"><li><b>A.</b> Committing the state file to git so merges resolve conflicts</li><li><b>B.</b> Keeping state on each laptop so nobody shares it</li><li><b>C.</b> Emailing the state file around before each apply</li><li><b>D.</b> A remote encrypted versioned backend with locking, restricted access, and state never committed to version control</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<div class="box"><div class="q">2. You must rename an SQS queue resource in config without destroying the live queue. What is the safe path?</div><ol class="opts"><li><b>A.</b> Delete the state file so Terraform forgets the old resource</li><li><b>B.</b> Use a moved block (or import for adopted resources) so the rename is recorded, and guard stateful resources with prevent_destroy</li><li><b>C.</b> Rename by hand in the console and ignore the next plan</li><li><b>D.</b> Apply with -target on everything except the queue</li></ol><p class="tolink" id="q7"><a href="#a7">answer 7 ↓</a></p></div>
+<p class="nav"><a href="aws.html">← AWS building blocks for senior engineers</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Compute a plan (create / update / replace / delete)</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Python’s == on dicts and lists is already a deep, key-order-insensitive comparison. The interesting part is deciding replace vs update: compare only the immutable attributes, using .get and “in” so a missing key counts as different from None.</p><p><b>Reference solution:</b></p><pre>def plan(desired, current, immutable=frozenset()):
+    out = {'create': [], 'update': [], 'replace': [], 'delete': []}
+    for name in sorted(desired):
+        if name not in current:
+            out['create'].append(name)
+            continue
+        want, have = desired[name], current[name]
+        if want == have:
+            continue
+        forced = any((k in want) != (k in have) or want.get(k) != have.get(k) for k in immutable)
+        out['replace' if forced else 'update'].append(name)
+    out['delete'] = sorted(name for name in current if name not in desired)
+    return out</pre><p>Real Terraform also computes values that are only known after apply, plans destroys in reverse dependency order, and shows a diff per attribute. Reading the plan for “forces replacement” on stateful resources is a core safety habit.</p></div>
+<div class="ans" id="a2"><p><b>2. Apply order from a dependency graph</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> Kahn’s algorithm: count unmet dependencies per node, keep the ready ones in a heap (heapq) so you always take the alphabetically first, and decrement the dependants of each node you place. If you cannot place everything, there is a cycle.</p><p><b>Reference solution:</b></p><pre>import heapq
+
+def apply_order(graph):
+    remaining, dependants = {}, {name: [] for name in graph}
+    for name, deps in graph.items():
+        for dep in deps:
+            if dep not in graph:
+                raise ValueError('unknown dependency: ' + dep)
+            dependants[dep].append(name)
+        remaining[name] = len(deps)
+    ready = [name for name, n in remaining.items() if n == 0]
+    heapq.heapify(ready)
+    order = []
+    while ready:
+        name = heapq.heappop(ready)
+        order.append(name)
+        for nxt in dependants[name]:
+            remaining[nxt] -= 1
+            if remaining[nxt] == 0:
+                heapq.heappush(ready, nxt)
+    if len(order) != len(graph):
+        raise ValueError('cycle')
+    return order</pre><p>The standard library has graphlib.TopologicalSorter (it raises graphlib.CycleError), but it does not guarantee a deterministic order among ready nodes. Terraform walks the same kind of DAG but runs independent nodes in parallel and applies destroys in reverse order.</p></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Detects the drift (refreshes real state) and proposes to revert it to match your code</p><div>Plan compares code with refreshed real-world state. Decide per change: revert (apply) or codify it in config. Better: remove console write access and run scheduled drift detection.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Stop. Find which attribute forces replacement, avoid it (or plan a migration/snapshot), and protect the resource with <code>prevent_destroy</code></p><div>Replacement of a stateful resource means data loss or downtime. Plan review is the safety net, and lifecycle guards back it up.</div></div>
+<div class="ans" id="a5"><p><b>5. Quick check</b> <a href="#q5">back ↑</a></p><p><b>B.</b> Indexes shift, so many buckets are modified or destroyed and recreated; use <code>for_each</code> keyed by name</p><div>count identifies instances by position. for_each identifies them by a stable key, so removing one entry only affects that resource.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 1</b> <a href="#q6">back ↑</a></p><p><b>D.</b> A remote encrypted versioned backend with locking, restricted access, and state never committed to version control</p><div>State maps config to real resources and can hold secrets. A locked remote backend serialises applies and protects the file.</div></div>
+<div class="ans" id="a7"><p><b>7. Check 2</b> <a href="#q7">back ↑</a></p><p><b>B.</b> Use a moved block (or import for adopted resources) so the rename is recorded, and guard stateful resources with prevent_destroy</p><div>Refactoring tools record the rename instead of destroy-and-create. Lifecycle guards back up plan review for stateful resources.</div></div>
+<p class="nav"><a href="aws.html">← AWS building blocks for senior engineers</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

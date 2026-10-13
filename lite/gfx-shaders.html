@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shaders, effects and 2D lighting · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdgfx">Graphics, UI &amp; Audio</a> · lesson 3 of 5 · 10 min</p>
+<h1>Shaders, effects and 2D lighting</h1>
+<p class="sum">What a shader is, the handful of tricks behind most 2D effects, and how to light a flat world.</p>
+<div class="sec">
+<h3>What a shader is</h3>
+<p>A <b>shader</b> is a tiny program that runs on the GPU, in parallel, for every vertex or every pixel. It cannot see the game; it only receives inputs and returns a colour. That restriction is why it is fast: thousands of copies run at once with no shared state.</p>
+<ul><li><b>Vertex shader</b>: runs per vertex; positions things (a wobbling flag, a swaying tree).</li><li><b>Fragment (pixel) shader</b>: runs per covered pixel; decides its colour. Most 2D effects live here.</li><li><b>Uniforms</b>: values you set from the game for the whole draw (time, a colour, a threshold).</li><li><b>Varyings / UV</b>: values interpolated per pixel; <code>UV</code> says which point of the texture this pixel is, from (0,0) to (1,1).</li><li><b>Textures</b>: images the shader can sample at any UV.</li></ul>
+<p>Mental model: <code>colour = f(uv, texture, uniforms, time)</code>, evaluated independently for each pixel. Anything that needs neighbours (blur) must sample the texture at several offsets; anything that needs history needs another render target.</p>
+<h3>Your first shader (Godot 4 shading language)</h3>
+<pre><code>shader_type canvas_item;
+
+uniform vec4 flash_color : source_color = vec4(1.0);
+uniform float flash_amount : hint_range(0.0, 1.0) = 0.0;
+
+void fragment() {
+    vec4 tex = texture(TEXTURE, UV);
+    COLOR = vec4(mix(tex.rgb, flash_color.rgb, flash_amount), tex.a);   // hit flash: blend toward white
+}</code></pre>
+<p>Set <code>flash_amount</code> to 1 for a frame or two when the enemy is hit and tween it back to 0: that is the white flash from the juice lesson, with no extra art.</p>
+<h3>The classic 2D effects</h3>
+<ul><li><b>Palette swap.</b> Store the sprite in greyscale or index colours and look the colour up in a small palette texture: <code>texture(palette, vec2(grey, row))</code>. One sprite, many enemy variants, and day/night palettes for free.</li><li><b>Outline.</b> Sample the alpha of the four neighbours; if this pixel is transparent but a neighbour is opaque, output the outline colour. (Mind the texture edge: pad the sprite by one pixel.)</li><li><b>Dissolve.</b> Compare a noise texture to a threshold uniform; discard (or fade) pixels below it, and paint a bright rim just above. Animate the threshold for death and teleport effects.</li><li><b>Scrolling and distortion.</b> Offset the UV by time (water, conveyor, heat haze) or by a noise texture (warp).</li><li><b>Scanlines and CRT.</b> Darken every n-th screen row and add curvature or chromatic offset. Subtle, or it hurts readability.</li><li><b>Colour grading.</b> A final full-screen pass: contrast, saturation, tint (damage vignette, underwater tint), usually via a lookup texture.</li></ul>
+<pre><code>// outline: if I am empty but a neighbour is not, I am part of the outline
+void fragment() {
+    vec2 px = TEXTURE_PIXEL_SIZE;
+    float a = texture(TEXTURE, UV).a;
+    float n = texture(TEXTURE, UV + vec2(px.x, 0.0)).a + texture(TEXTURE, UV - vec2(px.x, 0.0)).a
+            + texture(TEXTURE, UV + vec2(0.0, px.y)).a + texture(TEXTURE, UV - vec2(0.0, px.y)).a;
+    COLOR = a &gt; 0.5 ? texture(TEXTURE, UV) : (n &gt; 0.5 ? vec4(0.0, 0.0, 0.0, 1.0) : vec4(0.0));
+}</code></pre>
+<h3>2D lighting</h3>
+<p>A flat world can still be lit. The pieces, from cheap to rich:</p>
+<ol><li><b>Ambient tint.</b> Multiply the whole scene by a colour (night = dark blue). One line.</li><li><b>Light sprites.</b> Draw soft round textures with <b>additive</b> blending into a separate "light buffer", then multiply the scene by that buffer. Torches, lamps, the player's lantern. Cheap and fully controllable.</li><li><b>Shadows.</b> Occluder shapes block light; engines build a shadow mask per light (Godot's <code>PointLight2D</code> + <code>LightOccluder2D</code>). The cost grows with lights × occluders.</li><li><b>Normal maps.</b> A second texture per sprite whose colours encode the surface direction, so a flat sprite reacts to the angle of the light and looks bumpy. Authoring cost is high; for pixel art many teams hand-paint a few and use a subtle effect.</li><li><b>Emissive.</b> Mark pixels that glow regardless of lighting (the "emissive pixels" some pipelines mark in the alpha channel), so lava and eyes stay bright in the dark.</li></ol>
+<h3>Post-processing</h3>
+<p>Render the scene to a texture, then draw that texture to the screen through a shader. Bloom (blur the bright parts and add them back), screen shake of the whole view, pixelation, colour blindness simulation and fades are all post-effects. Each full-screen pass costs fill rate, so budget them on mobile.</p>
+<h3>Practical advice</h3>
+<ul><li><b>Output values as colours to debug</b>: <code>COLOR = vec4(UV, 0.0, 1.0)</code> shows the UV; <code>COLOR = vec4(vec3(my_value), 1.0)</code> shows any number as grey.</li><li><b>Avoid branching on uniforms per pixel</b> when you can use <code>mix</code> or <code>step</code>; avoid dependent texture reads in loops.</li><li><b>Keep a shader's parameters per material, not per sprite</b>, or batching breaks (graphics pipeline lesson).</li><li><b>Mobile precision</b>: some GPUs use half-precision floats in fragment shaders; large UV offsets and time values can jitter. Wrap time with <code>mod</code>.</li><li><b>Pixel art</b>: sample with nearest filtering and keep effects on whole pixels, or the effect shimmers.</li></ul></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You need 12 colour variants of an enemy and want to add more later without drawing new art. Which approach scales best?</div><ol class="opts"><li><b>A.</b> Draw 12 sprite sheets</li><li><b>B.</b> Palette-swap shader: one greyscale/indexed sprite and a small palette texture lookup per variant</li><li><b>C.</b> Tint with a flat colour only</li><li><b>D.</b> Use 12 scenes</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Why can a fragment shader not easily implement "remember what this pixel was last frame"?</div><ol class="opts"><li><b>A.</b> It is too slow</li><li><b>B.</b> Each pixel runs independently with no shared mutable state; you need a second render target holding the previous frame</li><li><b>C.</b> GPUs forbid it</li><li><b>D.</b> Shaders cannot read textures</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">What is the cheapest convincing way to add torches that light the area around them in a 2D game?</div><ol class="opts"><li><b>A.</b> Ray traced global illumination</li><li><b>B.</b> Additive soft light sprites drawn into a light buffer that the scene is multiplied by</li><li><b>C.</b> A shader per tile</li><li><b>D.</b> Draw the torch bigger</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><h3>Exercise: design the effects for a boss fight</h3><p>List the shader/effect for each beat and the uniform you would animate:</p><ol><li>Boss takes damage: hit flash (<code>flash_amount</code> 1 → 0 over 0.1 s).</li><li>Boss enters a rage phase: palette shift to red (<code>palette_row</code> or a tint uniform), screen vignette (post-process).</li><li>Boss dies: dissolve (<code>threshold</code> 0 → 1 over 2 s) with an additive ember rim, then a white screen flash.</li><li>Telegraphed attack: a pulsing outline or a warning decal on the floor (not a shader at all: a sprite!).</li></ol><p>Which of these must <b>not</b> hide gameplay information (the telegraph)? What accessibility option would you add for the flashing?</p></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. You need a crisp dark outline around a sprite. How does the classic fragment-shader version work, and what art requirement comes with it?</div><ol class="opts"><li><b>A.</b> Blur the whole sprite and call the halo an outline</li><li><b>B.</b> If this pixel is transparent but one of its four alpha neighbours is opaque, output the outline colour; pad the sprite texture by one pixel so the rim has room</li><li><b>C.</b> Draw the sprite twice at different resolutions</li><li><b>D.</b> Increase the mesh triangle count</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. Every enemy has its own shader with a per-sprite flash_amount parameter, and draw calls exploded even though all enemies share one texture. What is the fix?</div><ol class="opts"><li><b>A.</b> Keep shader parameters per material rather than per sprite, or batching breaks: unique state per sprite forces a new call</li><li><b>B.</b> Give each sprite even more unique parameters</li><li><b>C.</b> Switch to uncompressed audio</li><li><b>D.</b> Disable the fragment shader entirely forever</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="gfx-transforms.html">← Transforms, matrices and hierarchies</a> · <a href="gfx-ui.html">UI, HUD and text →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Palette-swap shader: one greyscale/indexed sprite and a small palette texture lookup per variant</p><div>A palette lookup replaces individual colours exactly, keeps shading, and a new variant is just a new row in a small texture.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Each pixel runs independently with no shared mutable state; you need a second render target holding the previous frame</p><div>The model is a pure function of inputs. History must be fed back in as a texture (ping-pong render targets).</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Additive soft light sprites drawn into a light buffer that the scene is multiplied by</p><div>It is just textures and blend modes: cheap, art-directable, and works on any hardware. Add occluders for shadows when needed.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>B.</b> If this pixel is transparent but one of its four alpha neighbours is opaque, output the outline colour; pad the sprite texture by one pixel so the rim has room</p><div>Outlines detect the alpha edge by sampling neighbours. Without padding the rim is clipped at the texture border.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>A.</b> Keep shader parameters per material rather than per sprite, or batching breaks: unique state per sprite forces a new call</p><div>Batching merges sprites sharing texture, material and blend mode. Per-sprite state splits every batch.</div></div>
+<p class="nav"><a href="gfx-transforms.html">← Transforms, matrices and hierarchies</a> · <a href="gfx-ui.html">UI, HUD and text →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

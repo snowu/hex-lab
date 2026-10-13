@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bytecode, scripting and data languages · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdpatterns">Game Programming Patterns</a> · lesson 10 of 12 · 40 min</p>
+<h1>Bytecode, scripting and data languages</h1>
+<p class="sum">Why games embed interpreters, how a stack machine works, and where to draw the line between code and scripts.</p>
+<div class="sec">
+<h3>Why not just write it in the engine language?</h3>
+<p>Native code is fast, but it has costs that games feel sharply: <b>iteration time</b> (recompiling a C++ or Zig game to tweak a boss takes minutes), <b>safety</b> (a modder's or designer's bug must not crash the game or hang it in an infinite loop), <b>who can write it</b> (designers, modders), and <b>portability</b> (the same behaviour on every platform). The answer in most engines is a <b>scripting layer</b>: GDScript in Godot, C# in Unity, Blueprints in Unreal, Lua in many studio engines.</p>
+<h3>Levels of "behaviour as data"</h3>
+<ol><li><b>Numbers</b>: damage 12, cooldown 0.4 (type object, previous lessons).</li><li><b>Choices of built-in behaviour</b>: "effect: burn, duration 3, damage 2". A fixed menu of effects with parameters. The easiest to make safe and fast.</li><li><b>Expressions</b>: damage = <code>10 + level * 2</code>. A tiny expression language, usually parsed at load time.</li><li><b>Programs</b>: loops, variables, conditions. Now you have a real language, and the safety questions begin.</li></ol>
+<p>Move down the list only when the level above cannot express what designers need. Each step multiplies the work of tooling, error messages and debugging.</p>
+<h3>Bytecode: a virtual machine</h3>
+<p>The <b>bytecode</b> pattern defines a tiny instruction set and an interpreter loop that runs it, so behaviour is stored as a flat array of instructions. A <b>stack machine</b> is the simplest design: instructions pop operands from a stack and push results. <code>(2 + 3) * 4</code> compiles to <code>push 2, push 3, add, push 4, mul</code>. Jumps give you loops and conditions. You write this interpreter in the drill.</p>
+<pre><code># the interpreter is a loop and a switch
+while true:
+    op = program[pc]; pc += 1
+    match op.kind:
+        PUSH:  stack.push(op.arg)
+        ADD:   b = stack.pop(); a = stack.pop(); stack.push(a + b)
+        JZ:    if stack.pop() == 0: pc = op.arg
+        HALT:  return stack.pop()</code></pre>
+<h3>What the VM gives you</h3>
+<ul><li><b>Sandboxing.</b> The script can only do what instructions allow. A <b>step limit</b> stops infinite loops, a stack limit stops runaway recursion, bounds-checked access stops memory errors. The host cannot be crashed by script bugs.</li><li><b>Determinism and serialisation.</b> A program is plain data: saveable, sendable over a network, diff-able, replayable.</li><li><b>Hot reload.</b> Swap the program array while the game runs.</li><li><b>Portability.</b> The same bytecode runs on every platform the VM runs on (WebAssembly is this idea taken to its conclusion).</li></ul>
+<h3>Stack vs register machines, and compilers</h3>
+<p>A <b>stack</b> VM has short instructions and a trivial compiler. A <b>register</b> VM (Lua 5, Dalvik) names its operands and needs fewer instructions to do the same work, which is often faster to interpret. Either way you usually do <b>not</b> write bytecode by hand: a compiler turns a friendly syntax (a visual graph, a text language) into it. Writing a compiler from expressions to a stack machine is a classic first compiler project (post-order traversal of the expression tree).</p>
+<h3>The honest costs</h3>
+<ul><li>You are building a language: syntax errors, line numbers in error messages, a debugger, documentation. Budget for it, or <b>use an existing one</b> (embed Lua, use GDScript) instead of inventing one.</li><li>Interpreted code is slower than native. Keep hot loops (physics, pathfinding) native, scripts for decisions and events.</li><li>The boundary between native and script (what functions the script may call) is the API of your game: design it deliberately and keep it small.</li></ul></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Bytecode: a tiny stack virtual machine</p><p>Game scripting often compiles to <b>bytecode</b>: a flat array of tiny instructions run by a loop. Write the interpreter for a stack machine. The stack holds at most <b>16</b> values. Each instruction executed counts as one step.</p>
+<table><tr><th>op</th><th>effect</th></tr>
+<tr><td><code>push n</code></td><td>push the number (fails with <b>StackOverflow</b> if full)</td></tr>
+<tr><td><code>add sub mul div</code></td><td>pop <code>b</code>, pop <code>a</code>, push <code>a op b</code> (<code>div</code> truncates toward zero; <code>b == 0</code> is <b>DivideByZero</b>). Too few values: <b>StackUnderflow</b></td></tr>
+<tr><td><code>dup</code> / <code>swap</code></td><td>duplicate the top / swap the top two</td></tr>
+<tr><td><code>jz addr</code></td><td>pop a value; if it is 0 continue at <code>addr</code>, else carry on</td></tr>
+<tr><td><code>jmp addr</code></td><td>continue at <code>addr</code></td></tr>
+<tr><td><code>halt</code></td><td>stop and return the value on top of the stack (<b>StackUnderflow</b> if empty)</td></tr></table>
+<p>A jump to an address outside the program is <b>BadJump</b>. Running past the end without <code>halt</code> is <b>NoHalt</b>. More than <code>max_steps</code> steps is <b>StepLimit</b> (this is what stops an infinite loop in a script from freezing the game).</p><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub const Op = union(enum) { push: i32, add, sub, mul, div, dup, swap, jz: usize, jmp: usize, halt };
+pub const VmError = error{ StackUnderflow, StackOverflow, DivideByZero, BadJump, StepLimit, NoHalt };
+
+/// Run the program and return the value on top of the stack when it halts.
+pub fn run(program: []const Op, max_steps: usize) VmError!i32 {
+    _ = program;
+    _ = max_steps;
+    return error.NoHalt;
+}
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A designer's script accidentally contains <code>while true: pass</code>. The game must not hang. Which feature of a VM protects you?</div><ol class="opts"><li><b>A.</b> A faster CPU</li><li><b>B.</b> A per-run instruction (step) budget that aborts the script with an error</li><li><b>C.</b> Garbage collection</li><li><b>D.</b> Compiling the script to machine code</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Which of these is the best candidate to stay in native code rather than move to scripts?</div><ol class="opts"><li><b>A.</b> The boss phase transitions</li><li><b>B.</b> Per-frame collision detection for thousands of objects</li><li><b>C.</b> Dialogue branching</li><li><b>D.</b> Quest conditions</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You need designers to define weapon effects like "burn for 3 seconds, 2 damage per tick". What is the simplest approach that works?</div><ol class="opts"><li><b>A.</b> Add a general-purpose scripting language to the game</li><li><b>B.</b> A fixed set of named effects with parameters in data (type object), and add new effect kinds in code when needed</li><li><b>C.</b> A neural network</li><li><b>D.</b> Hard-code every weapon</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. How does (2 + 3) * 4 compile for the stack machine in this lesson, and how do you get loops and conditions?</div><ol class="opts"><li><b>A.</b> push 2, push 3, add, push 4, mul, with jumps for control flow; the interpreter is a loop and a switch over PUSH, ADD, JZ and HALT</li><li><b>B.</b> mul 4, add 3, push 2, with no jumps needed</li><li><b>C.</b> One CALL instruction per whole expression</li><li><b>D.</b> Compile to x86 machine code directly</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. A prototype embeds a brand-new scripting language for a few dialogue branches. What does the lesson advise?</div><ol class="opts"><li><b>A.</b> Invent the language anyway because every game needs one</li><li><b>B.</b> Stay at the lowest behaviour-as-data level that works and budget for errors, debugging and docs, or embed an existing language like Lua or GDScript instead of inventing one</li><li><b>C.</b> Move physics and pathfinding into scripts too for consistency</li><li><b>D.</b> Let scripts call every native function with no boundary</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="pat-spatial.html">← Spatial partitioning</a> · <a href="pat-antipatterns.html">Singletons, globals and other traps →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Bytecode: a tiny stack virtual machine</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Keep pc (program counter), a stack array with a length, and a step counter. Loop: if steps == max_steps return StepLimit; if pc >= program.len return NoHalt; steps += 1; switch on the op. Write small helpers pop() and push() that return the stack errors, so every op stays short.</p><p>This is the Bytecode pattern at its smallest. Real engines (Lua, GDScript, Wren, the Godot VM, WebAssembly) are this loop with more opcodes, registers instead of a stack, and type tags. Why bother instead of calling native functions? Safety (a script cannot crash or hang the host: note the step limit and the stack checks), portability, hot reload and modding. Notice how every failure is an explicit error value: in Zig an error set, in C++ a result struct. A "switch (op)" loop is also the interpreter used inside most emulators.</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> A per-run instruction (step) budget that aborts the script with an error</p><div>Because the host controls the interpreter loop, it can count steps and stop. Native code cannot be stopped this way.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Per-frame collision detection for thousands of objects</p><div>Hot inner loops run every frame on lots of data; interpretation overhead hurts there. Decisions and events are rare and benefit from fast iteration.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> A fixed set of named effects with parameters in data (type object), and add new effect kinds in code when needed</p><div>Climb the ladder only as far as necessary. Data with a menu of effects is the cheapest, safest and most debuggable option.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>A.</b> push 2, push 3, add, push 4, mul, with jumps for control flow; the interpreter is a loop and a switch over PUSH, ADD, JZ and HALT</p><div>Operands are pushed and operators pop them and push results; jumps give branching and looping.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>B.</b> Stay at the lowest behaviour-as-data level that works and budget for errors, debugging and docs, or embed an existing language like Lua or GDScript instead of inventing one</p><div>A language means tooling and a designed native-script boundary. Climb the ladder only as far as designers need.</div></div>
+<p class="nav"><a href="pat-spatial.html">← Spatial partitioning</a> · <a href="pat-antipatterns.html">Singletons, globals and other traps →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

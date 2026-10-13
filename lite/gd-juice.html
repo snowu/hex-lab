@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game feel and juice · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gddesign">Game Design Theory</a> · lesson 3 of 5 · 10 min</p>
+<h1>Game feel and juice</h1>
+<p class="sum">Why two games with identical rules can feel completely different, and the small tools that make an action satisfying.</p>
+<div class="sec">
+<h3>Game feel</h3>
+<p>Steve Swink (<i>Game Feel</i>) splits it into: <b>real-time control</b> (input is immediate and responsive), <b>simulated space</b> (the world has weight and collision that makes sense) and <b>polish</b> (effects that sell the action). The first two are design and engineering; the third is “juice”.</p>
+<h3>Juice</h3>
+<p><b>Juice</b> is abundant, redundant feedback to an action: the player did something, so the whole game reacts. The two talks to watch are <i>Juice it or lose it</i> (Jonasson and Purho) and <i>The art of screenshake</i> (Nijman, Vlambeer). Common tools:</p>
+<ul><li><b>Screen shake</b>, short and decaying, scaled with the impact. Always give players a setting to reduce or disable it.</li><li><b>Hit stop</b> (a few frames of freeze on contact): the single cheapest way to make a hit feel heavy.</li><li><b>Squash and stretch</b> on landing and jumping, and a quick scale pulse on pickups.</li><li><b>Particles</b>: dust on landing, sparks on hits.</li><li><b>Flash</b> the sprite white for a frame on damage.</li><li><b>Sound</b>: a punchy layered sound with a little random pitch variation so repeated sounds do not fatigue. Audio is half of the feel.</li><li><b>Anticipation and follow-through</b> in animation: wind up, strike, recover.</li><li><b>Camera</b>: slight lead in the move direction, zoom punch on big events.</li></ul>
+<h3>Rules of thumb</h3>
+<ul><li>Juice multiplies a good loop. It does not rescue a bad one.</li><li>Scale feedback to importance: a coin pickup should not shake the screen like a boss death.</li><li>Keep the effects <b>readable</b>: do not hide gameplay information under particles.</li><li>Respect accessibility: flashing, shake and motion options.</li><li>Do the sim and effects in separate layers so juice never changes gameplay results (hit stop that pauses the game logic is fine; effects that move hitboxes are not).</li></ul></div>
+<div class="sec"><div class="box"><p class="kind">Simulation: The same click, with and without juice</p><p>Click or tap the green block. Underneath, the game only adds 1 to a counter. Turn the feedback layers on one by one.</p><p><b>Try this in the full app:</b></p><ul><li>With everything <b>off</b>, click a few times. Technically correct, emotionally dead.</li><li>Turn on <b>hitstop</b> only: the click feels heavier even though nothing visible was added.</li><li>Add <b>squash</b> and <b>flash</b>, then <b>particles</b>.</li><li>Turn on <b>sound</b> (a synthesized blip). Notice how much of the impression comes from audio.</li><li>Press <b>all on</b> and reflect: would this be too much for a coin pickup?</li></ul><p class="note">Interactive: needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Which single effect most cheaply makes melee hits feel powerful?</div><ol class="opts"><li><b>A.</b> A longer cooldown</li><li><b>B.</b> Hit stop (freezing a few frames on contact) combined with a short sound and flash</li><li><b>C.</b> A bigger sprite</li><li><b>D.</b> Slower walking</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A game adds screen shake on every footstep and players complain of nausea. What is the lesson?</div><ol class="opts"><li><b>A.</b> Remove all juice</li><li><b>B.</b> Scale feedback to the importance of the event and offer options to reduce shake</li><li><b>C.</b> Make the shake faster</li><li><b>D.</b> Players should adapt</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Two prototypes share identical rules but one feels dead and the other feels great. Which layer differs, in Swink terms?</div><ol class="opts"><li><b>A.</b> The rules layer: identical rules cannot feel different</li><li><b>B.</b> Real-time control, simulated space and polish: responsiveness, weight and feedback sell the same rules</li><li><b>C.</b> The business model behind each prototype</li><li><b>D.</b> The programming language used</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<div class="box"><div class="q">2. A designer wires damage numbers and particles into the same code that decides whether a hit lands. What rule does this break?</div><ol class="opts"><li><b>A.</b> Juice must live in a separate layer so effects never change gameplay results</li><li><b>B.</b> Every hit needs screen shake to feel fair</li><li><b>C.</b> Hit stop should pause rendering instead of logic</li><li><b>D.</b> Particles must be simulated on the GPU</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<p class="nav"><a href="gd-flow.html">← Flow, difficulty and teaching without text</a> · <a href="gd-economy.html">Progression, economies and randomness →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Hit stop (freezing a few frames on contact) combined with a short sound and flash</p><div>A few frames of freeze communicates mass and impact. It is a standard in fighting and action games.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Scale feedback to the importance of the event and offer options to reduce shake</p><div>Juice should be proportional and optional. Reserve strong effects for big moments.</div></div>
+<div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Real-time control, simulated space and polish: responsiveness, weight and feedback sell the same rules</p><div>Game feel comes from immediate control, a world with weight, and redundant polish feedback, not from the rules alone.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>A.</b> Juice must live in a separate layer so effects never change gameplay results</p><div>Effects sell the action but must not move hitboxes or decide outcomes; hit stop pausing logic is fine, effects altering results are not.</div></div>
+<p class="nav"><a href="gd-flow.html">← Flow, difficulty and teaching without text</a> · <a href="gd-economy.html">Progression, economies and randomness →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

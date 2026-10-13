@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SQL fluency: joins, windows, anti-joins · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#data">Databases &amp; SQL</a> · lesson 2 of 5 · 75 min</p>
+<h1>SQL fluency: joins, windows, anti-joins</h1>
+<p class="sum">The queries senior interviews actually ask, and the NULL traps.</p>
+<div class="sec">
+<h3>Mental model</h3>
+<p>A query logically runs: <code>FROM/JOIN → WHERE → GROUP BY → HAVING → window functions → SELECT → DISTINCT → ORDER BY → LIMIT</code>. That is why <code>WHERE</code> cannot see aggregates (use <code>HAVING</code>) and why you cannot filter on a window function directly (wrap it in a CTE).</p>
+<h3>Joins</h3>
+<table><tr><th>Need</th><th>Use</th></tr>
+<tr><td>Rows that match on both sides</td><td><code>INNER JOIN</code></td></tr>
+<tr><td>Everything from the left, matched where possible</td><td><code>LEFT JOIN</code> (right columns are NULL when no match)</td></tr>
+<tr><td>Rows with <b>no</b> match (anti-join)</td><td><code>NOT EXISTS (...)</code> or <code>LEFT JOIN ... WHERE right.id IS NULL</code></td></tr>
+<tr><td>Compare rows of one table with each other</td><td>self-join, or a window function</td></tr></table>
+<h3>NULL: three-valued logic</h3>
+<ul><li><code>NULL = NULL</code> is not true; use <code>IS NULL</code>. <code>x &lt;&gt; 1</code> is not true when x is NULL, so those rows disappear.</li><li><code>COUNT(*)</code> counts rows, <code>COUNT(col)</code> ignores NULLs, <code>SUM</code> of nothing is NULL (wrap in <code>COALESCE</code>).</li><li><code>x NOT IN (subquery)</code> returns <b>no rows at all</b> if the subquery yields any NULL. Prefer <code>NOT EXISTS</code>.</li></ul>
+<h3>Window functions</h3>
+<table><tr><th>Function</th><th>Use</th></tr>
+<tr><td><code>ROW_NUMBER() OVER (PARTITION BY g ORDER BY t DESC)</code></td><td>top-1 / top-N per group, dedupe</td></tr>
+<tr><td><code>RANK()</code> / <code>DENSE_RANK()</code></td><td>ranking with ties</td></tr>
+<tr><td><code>SUM(x) OVER (PARTITION BY g ORDER BY t)</code></td><td>running totals</td></tr>
+<tr><td><code>LAG(x) / LEAD(x)</code></td><td>compare with previous/next row (gaps, deltas)</td></tr></table>
+<div class="callout warn"><b>SQLite vs Postgres.</b> The exercises run on SQLite so they work in your browser. Window functions, CTEs and <code>NOT EXISTS</code> are identical. Differences you should know: Postgres has <code>DISTINCT ON</code>, <code>LATERAL</code>, <code>FILTER</code> on aggregates (SQLite has it too), real <code>timestamptz</code> and interval arithmetic (we use <code>julianday</code> here), and <code>RETURNING</code> on every DML statement.</div></div>
+<div class="sec"><div class="box"><p class="kind">Predict the output: NULL semantics in SQL</p><p>A tiny table with one NULL, queried three ways. Run it for real after you answer.</p><pre>import sqlite3
+
+db = sqlite3.connect(':memory:')
+db.executescript(&quot;CREATE TABLE t (x INTEGER); INSERT INTO t VALUES (1), (2), (NULL);&quot;)
+print(db.execute(&quot;SELECT COUNT(*), COUNT(x) FROM t&quot;).fetchone())
+print(db.execute(&quot;SELECT x FROM t WHERE x NOT IN (SELECT 1 UNION SELECT NULL)&quot;).fetchall())
+print(db.execute(&quot;SELECT x FROM t WHERE x &lt;&gt; 1&quot;).fetchall())</pre><div class="q">What is printed (one line per print)?</div><ol class="opts"><li><b>A.</b> (3, 3), then [(2,)], then [(2,), (None,)]</li><li><b>B.</b> (3, 2), then [], then [(2,)]</li><li><b>C.</b> (3, 2), then [(2,)], then [(2,), (None,)]</li><li><b>D.</b> (2, 2), then [], then [(2,)]</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (SQL): Latest entry per account (window function)</p><p>For every account that has entries, return <code>owner</code>, <code>tx_id</code> and <code>amount_minor</code> of its <b>most recent</b> entry, where recent means the transaction's <code>created_at</code> (break ties by the higher transaction id). One row per account.</p><p><b>Schema:</b></p><pre>CREATE TABLE accounts (id INTEGER PRIMARY KEY, owner TEXT NOT NULL, currency TEXT NOT NULL, opened_on TEXT NOT NULL);
+CREATE TABLE transactions (id INTEGER PRIMARY KEY, idempotency_key TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL, memo TEXT);
+CREATE TABLE entries (id INTEGER PRIMARY KEY, transaction_id INTEGER NOT NULL REFERENCES transactions(id), account_id INTEGER NOT NULL REFERENCES accounts(id), amount_minor INTEGER NOT NULL);</pre><p><b>Starter:</b></p><pre>-- owner, tx_id, amount_minor of each account's latest entry
+SELECT
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (SQL): Running balance</p><p>Produce an account statement: for every entry return <code>owner</code>, <code>created_at</code>, <code>amount_minor</code> and <code>running_balance</code> (the cumulative sum of that account's entries up to and including this one, in time order). Order the result by <code>owner</code>, then <code>created_at</code>, then transaction id.</p><p><b>Schema:</b></p><pre>CREATE TABLE accounts (id INTEGER PRIMARY KEY, owner TEXT NOT NULL, currency TEXT NOT NULL, opened_on TEXT NOT NULL);
+CREATE TABLE transactions (id INTEGER PRIMARY KEY, idempotency_key TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL, memo TEXT);
+CREATE TABLE entries (id INTEGER PRIMARY KEY, transaction_id INTEGER NOT NULL REFERENCES transactions(id), account_id INTEGER NOT NULL REFERENCES accounts(id), amount_minor INTEGER NOT NULL);</pre><p><b>Starter:</b></p><pre>-- owner, created_at, amount_minor, running_balance  ORDER BY owner, created_at, transaction id
+SELECT
+</pre><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (SQL): Accounts with no recent activity (anti-join)</p><p>Return the <code>owner</code> of every account that has <b>no entry in any transaction created on or after <code>'2024-06-05'</code></b>. Accounts that never had entries count as inactive too.</p><p><b>Schema:</b></p><pre>CREATE TABLE accounts (id INTEGER PRIMARY KEY, owner TEXT NOT NULL, currency TEXT NOT NULL, opened_on TEXT NOT NULL);
+CREATE TABLE transactions (id INTEGER PRIMARY KEY, idempotency_key TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL, memo TEXT);
+CREATE TABLE entries (id INTEGER PRIMARY KEY, transaction_id INTEGER NOT NULL REFERENCES transactions(id), account_id INTEGER NOT NULL REFERENCES accounts(id), amount_minor INTEGER NOT NULL);</pre><p><b>Starter:</b></p><pre>-- owner of accounts with no activity since 2024-06-05
+SELECT
+</pre><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (SQL): Find double charges (self-join)</p><p>Customers sometimes get charged twice by a retry. Find every pair of payments by the <b>same customer</b>, to the <b>same merchant</b>, for the <b>same amount</b>, created at most <b>10 minutes</b> apart. Return <code>first_id</code> and <code>second_id</code> with <code>first_id &lt; second_id</code>, each pair once. (SQLite: use <code>julianday()</code> for time arithmetic. In Postgres you would compare timestamps with an interval.)</p><p><b>Schema:</b></p><pre>CREATE TABLE payments (id INTEGER PRIMARY KEY, customer_id INTEGER NOT NULL, merchant_id INTEGER NOT NULL, amount_minor INTEGER NOT NULL, created_at TEXT NOT NULL);</pre><p><b>Starter:</b></p><pre>-- first_id, second_id  (same customer + merchant + amount, within 10 minutes)
+SELECT
+</pre><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You need the list of customers who have never placed an order. Which is the safest query shape?</div><ol class="opts"><li><b>A.</b> SELECT * FROM customers WHERE id NOT IN (SELECT customer_id FROM orders)</li><li><b>B.</b> SELECT * FROM customers c WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id)</li><li><b>C.</b> SELECT * FROM customers c JOIN orders o ON o.customer_id = c.id</li><li><b>D.</b> SELECT DISTINCT customer_id FROM orders</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. You need the latest order per customer with ROW_NUMBER() OVER (PARTITION BY customer ORDER BY created DESC). Where can you filter to rank 1?</div><ol class="opts"><li><b>A.</b> In the same WHERE clause as the window function</li><li><b>B.</b> Only in an outer query or CTE, because WHERE runs before window functions</li><li><b>C.</b> In the HAVING clause of the same query level</li><li><b>D.</b> By adding DISTINCT to the window definition</li></ol><p class="tolink" id="q7"><a href="#a7">answer 7 ↓</a></p></div>
+<div class="box"><div class="q">2. A query must keep only groups whose COUNT(*) exceeds 10, but the draft puts COUNT(*) > 10 in WHERE. What is the fix and why?</div><ol class="opts"><li><b>A.</b> Use HAVING for the aggregate condition, because WHERE cannot see aggregates</li><li><b>B.</b> Move the condition to ORDER BY</li><li><b>C.</b> Build a trie over the grouped column</li><li><b>D.</b> Add an index and keep the condition in WHERE</li></ol><p class="tolink" id="q8"><a href="#a8">answer 8 ↓</a></p></div>
+<p class="nav"><a href="db-ledger-model.html">← Modelling money in a relational database</a> · <a href="db-indexes.html">Indexes and query plans →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. NULL semantics in SQL</b> <a href="#q1">back ↑</a></p><p><b>B.</b> (3, 2), then [], then [(2,)]</p><div><code>COUNT(*)</code> counts all 3 rows but <code>COUNT(x)</code> skips the NULL, so (3, 2). <code>NOT IN</code> against a list that contains NULL makes every comparison UNKNOWN, so no rows are returned. And <code>x &lt;&gt; 1</code> is UNKNOWN for the NULL row, so only 2 comes back. Three-valued logic bites in production queries.</div></div>
+<div class="ans" id="a2"><p><b>2. Latest entry per account (window function)</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> ROW_NUMBER() OVER (PARTITION BY account ORDER BY created_at DESC, id DESC) numbers each account's entries newest first. Wrap it in a CTE and keep rn = 1. (In Postgres, DISTINCT ON does this in one line.)</p><p><b>Reference solution:</b></p><pre>WITH ranked AS (
+  SELECT a.owner, t.id AS tx_id, e.amount_minor,
+         ROW_NUMBER() OVER (PARTITION BY a.id ORDER BY t.created_at DESC, t.id DESC) AS rn
+  FROM accounts a
+  JOIN entries e ON e.account_id = a.id
+  JOIN transactions t ON t.id = e.transaction_id
+)
+SELECT owner, tx_id, amount_minor FROM ranked WHERE rn = 1</pre><p>The alternative is a correlated subquery or a self-join on MAX(created_at), which breaks on ties. Window functions are the standard answer for "top N per group".</p></div>
+<div class="ans" id="a3"><p><b>3. Running balance</b> <a href="#q3">back ↑</a></p><p><b>Hint:</b> SUM(...) OVER (PARTITION BY account ORDER BY time, id). Always include a unique tiebreaker in the window ORDER BY, otherwise rows with equal timestamps get an arbitrary order. The final ORDER BY is separate from the window ORDER BY.</p><p><b>Reference solution:</b></p><pre>SELECT a.owner, t.created_at, e.amount_minor,
+       SUM(e.amount_minor) OVER (PARTITION BY a.id ORDER BY t.created_at, t.id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running_balance
+FROM entries e
+JOIN accounts a ON a.id = e.account_id
+JOIN transactions t ON t.id = e.transaction_id
+ORDER BY a.owner, t.created_at, t.id</pre><p>The default frame with an ORDER BY is RANGE, which treats rows with equal sort keys as peers and can surprise you. Spell out ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW for a running total.</p></div>
+<div class="ans" id="a4"><p><b>4. Accounts with no recent activity (anti-join)</b> <a href="#q4">back ↑</a></p><p><b>Hint:</b> "No matching rows" is an anti-join: NOT EXISTS (correlated subquery) or LEFT JOIN ... WHERE right.id IS NULL. Prefer NOT EXISTS over NOT IN: if the subquery can return a NULL, NOT IN returns no rows at all.</p><p><b>Reference solution:</b></p><pre>SELECT a.owner
+FROM accounts a
+WHERE NOT EXISTS (
+  SELECT 1 FROM entries e
+  JOIN transactions t ON t.id = e.transaction_id
+  WHERE e.account_id = a.id AND t.created_at &gt;= '2024-06-05'
+)</pre><p>NOT IN (subquery containing NULL) evaluates to UNKNOWN for every row, a classic silent bug. The next predict question shows it.</p></div>
+<div class="ans" id="a5"><p><b>5. Find double charges (self-join)</b> <a href="#q5">back ↑</a></p><p><b>Hint:</b> Join the table to itself. a.id < b.id stops you matching a row with itself and listing every pair twice. Convert the time difference into minutes and check it is between 0 and 10.</p><p><b>Reference solution:</b></p><pre>SELECT a.id AS first_id, b.id AS second_id
+FROM payments a
+JOIN payments b
+  ON a.customer_id = b.customer_id
+ AND a.merchant_id = b.merchant_id
+ AND a.amount_minor = b.amount_minor
+ AND a.id &lt; b.id
+ AND (julianday(b.created_at) - julianday(a.created_at)) * 1440 BETWEEN 0 AND 10</pre><p>The proper fix is prevention: an idempotency key with a unique constraint. This query is the detective control that finds what slipped through. At scale you would self-join within a time window using an index on (customer_id, merchant_id, amount_minor, created_at).</p></div>
+<div class="ans" id="a6"><p><b>6. Quick check</b> <a href="#q6">back ↑</a></p><p><b>B.</b> SELECT * FROM customers c WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id)</p><div>NOT EXISTS is correct even if orders.customer_id contains NULLs, and the planner turns it into an efficient anti-join. NOT IN silently returns nothing if the subquery has a NULL.</div></div>
+<div class="ans" id="a7"><p><b>7. Check 1</b> <a href="#q7">back ↑</a></p><p><b>B.</b> Only in an outer query or CTE, because WHERE runs before window functions</p><div>Logical order runs window functions after WHERE and GROUP BY, so filter on their results one layer out.</div></div>
+<div class="ans" id="a8"><p><b>8. Check 2</b> <a href="#q8">back ↑</a></p><p><b>A.</b> Use HAVING for the aggregate condition, because WHERE cannot see aggregates</p><div>WHERE filters rows before grouping while HAVING filters groups after aggregation.</div></div>
+<p class="nav"><a href="db-ledger-model.html">← Modelling money in a relational database</a> · <a href="db-indexes.html">Indexes and query plans →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

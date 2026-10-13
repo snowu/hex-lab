@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What “senior” means in an interview · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#playbook">Senior Playbook</a> · lesson 1 of 3 · 5 min</p>
+<h1>What “senior” means in an interview</h1>
+<p class="sum">Scope, ambiguity, trade-offs, ownership, multiplying others.</p>
+<div class="sec">
+<p>Mid-level engineers are evaluated on <b>whether they can solve the problem</b>. Senior engineers are evaluated on <b>whether they pick the right problem, solve it in a way the team can live with, and leave others better off</b>. Interviewers listen for five signals:</p>
+<table><tr><th>Signal</th><th>What it sounds like</th></tr>
+<tr><td>Scope</td><td>“Before I design anything, who are the users and what happens if this is down for an hour?”</td></tr>
+<tr><td>Ambiguity</td><td>You state assumptions out loud, pick defaults, and move on instead of waiting to be told.</td></tr>
+<tr><td>Trade-offs</td><td>Every decision has a “because” and a “this costs us…”. No silver bullets.</td></tr>
+<tr><td>Ownership</td><td>You talk about operating it: on-call, rollouts, metrics, incidents, cost.</td></tr>
+<tr><td>Multiplying</td><td>Mentoring, writing design docs, unblocking, raising the bar in review.</td></tr></table>
+<div class="callout"><b>Rule of thumb:</b> if you answer in the form <i>“Option A is X, option B is Y, I would choose A because Z, and I would revisit if W”</i>, you already sound senior.</div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">An interviewer gives you a vague design prompt: “Build a notification system.” What is the strongest first move?</div><ol class="opts"><li><b>A.</b> Start drawing boxes for Kafka and Redis</li><li><b>B.</b> Ask clarifying questions, then state assumptions and a rough scale</li><li><b>C.</b> Ask the interviewer to give the full requirements</li><li><b>D.</b> Describe the tech stack you used last time</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Which statement signals seniority the most?</div><ol class="opts"><li><b>A.</b> “I used the latest framework so it scales.”</li><li><b>B.</b> “We chose a queue here; it adds operational cost and makes debugging harder, but it protects the bank API from our burst traffic.”</li><li><b>C.</b> “I can build anything given enough time.”</li><li><b>D.</b> “I always follow best practices.”</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><h3>Self-check: your five stories</h3><p>Prepare <b>five</b> real stories you can bend to many questions: (1) a technical decision with trade-offs, (2) a production incident you owned, (3) a conflict or disagreement, (4) a time you raised the bar for others, (5) a failure. Write each as: <i>context → your decision → result with a number → what you would do differently</i>.</p></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. You can only ask one question before a vague design prompt, then you must proceed. What shows you can drive under ambiguity?</div><ol class="opts"><li><b>A.</b> Wait for the interviewer to volunteer the missing requirements</li><li><b>B.</b> State your assumptions out loud, pick sensible defaults, and move on</li><li><b>C.</b> Pick the most familiar architecture so you cannot go wrong</li><li><b>D.</b> Solve the smallest slice you are sure about and stop there</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<div class="box"><div class="q">2. “We used Kafka because it is the industry standard.” What is missing from this answer?</div><ol class="opts"><li><b>A.</b> The version number of Kafka that was used</li><li><b>B.</b> The trade-off: what the choice costs and what it buys, plus when you would revisit it</li><li><b>C.</b> A comparison with every alternative message broker</li><li><b>D.</b> An apology for not using a newer system</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<p class="nav"><a href="behavioral.html">Behavioral answers that land →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Ask clarifying questions, then state assumptions and a rough scale</p><div>Clarifying <i>and then committing to explicit assumptions</i> shows you can drive under ambiguity. Handing the problem back (option 3) is the classic mid-level tell.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> “We chose a queue here; it adds operational cost and makes debugging harder, but it protects the bank API from our burst traffic.”</p><div>Naming the cost of your choice, and what it buys you, is the core senior skill.</div></div>
+<div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>B.</b> State your assumptions out loud, pick sensible defaults, and move on</p><div>The ambiguity signal is stating assumptions and committing to defaults instead of waiting to be told.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>B.</b> The trade-off: what the choice costs and what it buys, plus when you would revisit it</p><div>Senior answers name the cost of the choice and the revisit condition. “Industry standard” is not a reason.</div></div>
+<p class="nav"><a href="behavioral.html">Behavioral answers that land →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

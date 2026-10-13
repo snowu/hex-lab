@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interpolation, easing and smoothing · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdmath">Game Math &amp; Physics</a> · lesson 3 of 4 · 20 min</p>
+<h1>Interpolation, easing and smoothing</h1>
+<p class="sum">Lerp, easing curves, and the classic “lerp smoothing is broken” bug that makes cameras feel different at every frame rate.</p>
+<div class="sec">
+<h3>Lerp, and what it is not</h3>
+<p><code>lerp(a, b, t) = a + (b - a) * t</code>. For a fixed <code>t</code> from 0 to 1 it is a straight blend, and that is how you animate over a fixed duration: advance <code>t = elapsed / duration</code> and apply an <b>easing function</b> to change how it feels.</p>
+<h3>Easing</h3>
+<ul><li><b>Ease-out</b> (fast then slow) feels natural for things that arrive (UI sliding in, a card landing).</li><li><b>Ease-in</b> (slow then fast) for things leaving or accelerating.</li><li><b>Ease-in-out</b> for movement between two rest points.</li><li><b>Back/overshoot</b> and <b>bounce</b> for playful feedback, <b>elastic</b> sparingly.</li><li><b>Smoothstep</b> <code>3t² - 2t³</code> is the cheap polynomial ease you will see in shaders.</li></ul>
+<h3>The classic smoothing bug</h3>
+<p>Camera follow is often written <code>pos = lerp(pos, target, 0.1)</code> every frame. It looks fine and is wrong: the fraction closed per <i>second</i> depends on the frame rate. At 144 fps the camera is far snappier than at 30. The fix treats it as exponential decay:</p>
+<pre><code>pos = lerp(pos, target, 1.0 - exp(-k * delta))     # k is the "stiffness", 1/seconds</code></pre>
+<p>Splitting a second into 30 or 144 steps now gives the same result, because decay composes: exp(-k·a) · exp(-k·b) = exp(-k·(a+b)). The simulation below shows the naive version needing different times at different frame rates.</p>
+<h3>Springs</h3>
+<p>For motion that should overshoot and settle (camera shake recovery, UI bounce, a hanging sign), use a damped spring: accelerate toward the target with <code>a = stiffness * (target - x) - damping * v</code>. Integrate it in your fixed step, or use an analytic solution so large steps stay stable.</p>
+<h3>Other places this shows up</h3>
+<ul><li><b>Render interpolation</b>: draw between the previous and current physics state using the fixed-timestep remainder.</li><li><b>Animation blending</b> and <b>colour transitions</b>.</li><li><b>Audio</b>: fade volumes with a ramp, never snap (it clicks).</li></ul></div>
+<div class="sec"><div class="box"><p class="kind">Simulation: Easing curves and smoothing</p><p>Pick a curve and watch the cyan block follow it. The table below the canvas shows how long naive and exponential smoothing take to cover 90% of the distance at different frame rates.</p><p><b>Try this in the full app:</b></p><ul><li>Compare <b>linear</b> and <b>ease-out cubic</b>: same duration, very different feel.</li><li><b>ease-out back</b> overshoots past 1 and settles: that is the “pop” in many UI animations.</li><li>In the table, the <i>naive</i> column changes with frame rate, the <i>damped</i> column does not.</li></ul><p class="note">Interactive: needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Frame-rate independent smoothing</p><p>Smoothing a camera with <code>pos += (target - pos) * 0.1</code> every frame behaves differently at 30 and 144 fps. Implement <code>damp(current, target, k, dt)</code> so it moves toward <code>target</code> exponentially, and running it for 1 second as one step or as 60 steps of 1/60 s gives the same result. The starter is the naive version, which fails the frame-rate test.</p><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub fn damp(current: f64, target: f64, k: f64, dt: f64) f64 {
+    return current + (target - current) * k * dt;
+}
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A health bar should quickly drop to the new value and then settle gently. Which easing?</div><ol class="opts"><li><b>A.</b> Ease-in</li><li><b>B.</b> Ease-out</li><li><b>C.</b> Linear</li><li><b>D.</b> Bounce</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Why is <code>pos = lerp(pos, target, 0.1)</code> in <code>_process</code> a bug?</div><ol class="opts"><li><b>A.</b> lerp is slow</li><li><b>B.</b> The speed of convergence depends on the frame rate</li><li><b>C.</b> It never reaches the target</li><li><b>D.</b> It only works in 3D</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A menu panel should slide in quickly and then settle gently into place. Which easing fits, and why?</div><ol class="opts"><li><b>A.</b> Ease-out, because it starts fast for immediate feedback then decelerates into the final value</li><li><b>B.</b> Ease-in, because arrivals should accelerate</li><li><b>C.</b> Linear, because menus must move at constant speed</li><li><b>D.</b> Bounce, because every UI element should bounce</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. A pickup needs to overshoot its scale and wobble back (a pop). Lerp toward the target never overshoots. What should you use instead?</div><ol class="opts"><li><b>A.</b> A larger fixed lerp factor such as 0.5</li><li><b>B.</b> A damped spring that accelerates toward the target with stiffness minus damping, integrated in the fixed step</li><li><b>C.</b> A longer linear lerp duration</li><li><b>D.</b> Two lerps chained in the same frame</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="gd-collision.html">← Collision detection and response</a> · <a href="gd-pathing.html">Grids, pathfinding and simple AI →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Frame-rate independent smoothing</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> The exact solution of dp/dt = -k (p - target) is p = target + (p0 - target) * exp(-k * dt). Apply it twice and you get exp(-k * (dt1 + dt2)), which is why splitting the time changes nothing.</p><p>Search for "lerp smoothing is broken" for the well-known talk and write-ups. The naive version is also unstable: with k * dt above 2 it overshoots and oscillates. Godot users often write lerp(a, b, 1.0 - exp(-k * delta)) for exactly this reason.</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Ease-out</p><div>Ease-out starts fast (immediate feedback) and decelerates into the final value.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> The speed of convergence depends on the frame rate</p><div>Every frame closes 10%, so more frames per second means closing more per second. Use 1 - exp(-k * delta).</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>A.</b> Ease-out, because it starts fast for immediate feedback then decelerates into the final value</p><div>Ease-out matches arriving motion: fast response up front, gentle landing at the target.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>B.</b> A damped spring that accelerates toward the target with stiffness minus damping, integrated in the fixed step</p><div>Springs carry velocity through the target so they overshoot and settle; plain lerp can only approach monotonically.</div></div>
+<p class="nav"><a href="gd-collision.html">← Collision detection and response</a> · <a href="gd-pathing.html">Grids, pathfinding and simple AI →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

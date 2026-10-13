@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>State, hierarchies and stacks · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdpatterns">Game Programming Patterns</a> · lesson 4 of 12 · 35 min</p>
+<h1>State, hierarchies and stacks</h1>
+<p class="sum">From a switch statement to state objects, hierarchical machines and the pushdown automaton that remembers where you came from.</p>
+<div class="sec">
+<h3>Where state machines come from</h3>
+<p>Behaviour that depends on <i>what the character is currently doing</i> is a state machine, whether you call it that or not. The first version is booleans (<code>is_jumping</code>, <code>is_ducking</code>), which breed impossible combinations ("jumping and ducking and dead"). The <b>input, buffering and state machines</b> lesson showed the enum-and-switch version. This lesson goes further.</p>
+<h3>Step 1: enum and switch</h3>
+<p>One variable holds the state; one <code>match</code>/<code>switch</code> handles it. Good up to a handful of states. The compiler can check you handled every state (an exhaustive switch). It starts to hurt when each state needs its own data (how long have I been stunned?) and the function grows to hundreds of lines.</p>
+<h3>Step 2: state objects (the State pattern)</h3>
+<p>Each state becomes its own object or node with <code>enter()</code>, <code>exit()</code> and <code>update(dt)</code>. The actor holds a pointer to the current state and delegates to it. State-specific data lives inside the state, and adding a state is adding a file.</p>
+<pre><code># GDScript: states as child nodes
+class_name State extends Node
+func enter(actor): pass
+func exit(actor): pass
+func update(actor, delta): pass            # return the next State, or null to stay
+
+class_name Stunned extends State
+var time_left := 0.6
+func update(actor, delta):
+    time_left -= delta
+    return actor.get_node("States/Idle") if time_left &lt;= 0.0 else null</code></pre>
+<p>Rules that keep it clean: <b>transitions happen in one place</b> (the machine, not scattered <code>state = X</code> assignments), <code>exit</code> of the old state always runs before <code>enter</code> of the new one, and a state that is re-entered starts fresh.</p>
+<h3>Step 3: hierarchical state machines (HFSM)</h3>
+<p>Many states share behaviour. "Walking", "running" and "idle" are all <i>grounded</i>: they all let you jump and they all fall off ledges the same way. Put the shared behaviour in a parent state (<code>Grounded</code>) and let children inherit it, so you write "if not on floor, go to Falling" once. A child handles an event first; if it ignores it, the parent gets it. This is how you stop the combinatorial explosion of "(every state) × (every shared reaction)".</p>
+<h3>Step 4: concurrent machines</h3>
+<p>A character has independent concerns: movement (idle, run, jump) and weapon (holstered, aiming, reloading). One machine for both needs 3 × 3 = 9 states and grows multiplicatively. Two <b>separate</b> machines that run side by side need 3 + 3, and only interact where they must (cannot sprint while reloading).</p>
+<h3>Step 5: the pushdown automaton</h3>
+<p>A plain machine has no memory: when "stunned" ends, how does it know to go back to "running" rather than "idle"? Keep a <b>stack</b> of states. <code>push</code> a new state on top (the old one pauses), <code>pop</code> to resume exactly what was underneath. This is how game <b>flow</b> works: main menu, in game, pause menu, options, confirm dialog. Each push/pop runs the lifecycle callbacks <code>enter</code>, <code>pause</code>, <code>unpause</code>, <code>exit</code>, which is where you stop music, freeze physics and release held keys. You build it in the drill.</p>
+<h3>Behaviour trees: when states get too many</h3>
+<p>For complex AI, hand-written transitions between 30 states become a web. Behaviour trees (AI track) make the decision logic a hierarchy that is re-evaluated each tick, and are often a better fit than a state machine for deciding <i>what to do</i>, while state machines remain good for managing <i>what you are currently doing</i> (animation, movement modes).</p></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Pushdown automaton: a stack of states</p><p>A <b>state stack</b> remembers what you were doing: the pause menu goes on top of gameplay, a dialogue on top of that, and popping returns to exactly where you were. States are small integers here. Every change is written to an event <b>log</b> so you can see which lifecycle callbacks would run.</p>
+<ul><li><code>push(s)</code>: if there is a current top, log <code>pause</code> for it. Then log <code>enter</code> for <code>s</code> and put it on top. Returns <code>false</code> (and logs nothing) if the stack already holds 8 states.</li><li><code>pop()</code>: log <code>exit</code> for the top and remove it; if a state is now on top, log <code>unpause</code> for it. <code>false</code> if empty.</li><li><code>replace(s)</code>: log <code>exit</code> for the top, then <code>enter</code> for <code>s</code>, at the same depth (no pause or unpause). <code>false</code> if empty.</li><li><code>top()</code> is the current state; <code>events()</code> is the log so far.</li></ul><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub const Kind = enum { enter, exit, pause, unpause };
+pub const Event = struct { kind: Kind, state: u8 };
+
+pub const StateStack = struct {
+    stack: [8]u8 = undefined,
+    depth: usize = 0,
+    log: [64]Event = undefined,
+    log_len: usize = 0,
+
+    fn record(self: *StateStack, kind: Kind, state: u8) void {
+        self.log[self.log_len] = .{ .kind = kind, .state = state };
+        self.log_len += 1;
+    }
+
+    pub fn top(self: *const StateStack) ?u8 {
+        if (self.depth == 0) return null;
+        return self.stack[self.depth - 1];
+    }
+
+    pub fn events(self: *const StateStack) []const Event {
+        return self.log[0..self.log_len];
+    }
+
+    pub fn push(self: *StateStack, s: u8) bool {
+        _ = self;
+        _ = s;
+        return false;
+    }
+
+    pub fn pop(self: *StateStack) bool {
+        _ = self;
+        return false;
+    }
+
+    pub fn replace(self: *StateStack, s: u8) bool {
+        _ = self;
+        _ = s;
+        return false;
+    }
+};
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A character can be walking, running, crouching or swimming, and also holding a bow, a sword or nothing. A single state machine now needs 12 states and keeps growing. What is the standard fix?</div><ol class="opts"><li><b>A.</b> Add more booleans</li><li><b>B.</b> Use two concurrent state machines (movement and equipment) that interact only where needed</li><li><b>C.</b> Use inheritance with a class per combination</li><li><b>D.</b> Remove features</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Opening the pause menu from gameplay and closing it must return to <i>exactly</i> the gameplay state, including a half-finished jump. Which structure fits?</div><ol class="opts"><li><b>A.</b> A plain enum state machine with a "previous_state" variable</li><li><b>B.</b> A pushdown automaton: push the pause state on top, pop to resume the one below</li><li><b>C.</b> A behaviour tree</li><li><b>D.</b> A singleton</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><h3>Exercise: model the screens of a game as a pushdown stack</h3><p>Draw the stack for this sequence and write the lifecycle events (enter/pause/unpause/exit) that fire: <i>title screen → press start (replace with gameplay) → open pause (push) → open options (push) → back (pop) → back (pop) → quit to title (replace).</i></p><ul><li>Which transitions are <b>push/pop</b> and which are <b>replace</b>? (Pause and options remember where you came from; start and quit do not.)</li><li>Where do you stop the music, and where do you resume it? (<code>pause</code>/<code>unpause</code> of gameplay, not <code>exit</code>.)</li><li>What happens to input held down while a screen is pushed? (Release it in <code>pause</code>, or the character keeps running after the menu closes.)</li></ul></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Walking, running and idle all need the same rule: if not on the floor, go to Falling. Where should that rule live?</div><ol class="opts"><li><b>A.</b> Copied into each of the three states so each is self-contained</li><li><b>B.</b> In a shared parent Grounded state that children inherit, with the child handling an event first and the parent getting what the child ignores</li><li><b>C.</b> In the renderer, which already knows the animation</li><li><b>D.</b> In a global singleton checked once per second</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. A codebase sets state = X from a dozen places and sometimes skips the old exit and new enter hooks. What is the prescribed discipline?</div><ol class="opts"><li><b>A.</b> Transitions happen in one place in the machine, the old exit always runs before the new enter, and a re-entered state starts fresh</li><li><b>B.</b> Let each state assign the next state directly for speed</li><li><b>C.</b> Skip exit and enter when the frame rate is low</li><li><b>D.</b> Store the state in two variables so one is always correct</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="pat-observer.html">← Observer and event queue</a> · <a href="pat-pool.html">Object pool, flyweight and data locality →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Pushdown automaton: a stack of states</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Write a tiny record(kind, state) helper that appends to the log, and implement push/pop/replace as sequences of record calls plus the stack change. Mind the order: pause the old top BEFORE entering the new one, and unpause the new top AFTER exiting the old one.</p><p>A plain state machine has no memory ("go back to what I was doing" needs every state to know its predecessor). The pushdown automaton fixes that with a stack and is how most game flow works: main menu → game → pause → options. The lifecycle events (enter/exit/pause/unpause) are the important part: they are where you stop music, freeze the simulation, release held input. Hierarchical state machines are the other extension: states that share behaviour inherit it from a parent state.</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Use two concurrent state machines (movement and equipment) that interact only where needed</p><div>Independent concerns multiply when forced into one machine (3 × 4 = 12) but only add when separated (3 + 4 = 7).</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> A pushdown automaton: push the pause state on top, pop to resume the one below</p><div>The stack keeps the paused states intact (with their data), and pop resumes them. A single previous_state breaks as soon as menus nest (pause then options then confirm).</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>B.</b> In a shared parent Grounded state that children inherit, with the child handling an event first and the parent getting what the child ignores</p><div>Hierarchical machines factor shared reactions into a parent, stopping the every-state-times-every-reaction explosion.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>A.</b> Transitions happen in one place in the machine, the old exit always runs before the new enter, and a re-entered state starts fresh</p><div>Centralised transitions with paired exit and enter keep setup and teardown balanced and re-entry predictable.</div></div>
+<p class="nav"><a href="pat-observer.html">← Observer and event queue</a> · <a href="pat-pool.html">Object pool, flyweight and data locality →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

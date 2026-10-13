@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How to run a coding round · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#patterns">Coding Patterns</a> · lesson 1 of 7 · 6 min</p>
+<h1>How to run a coding round</h1>
+<p class="sum">A repeatable routine for the first five minutes, and for the last five.</p>
+<div class="sec">
+<p>Most candidates do not fail on the algorithm. They fail on <b>process under pressure</b>. Use the same routine every time, so it becomes automatic:</p>
+<ol>
+<li><b>Restate</b> the problem in your own words and confirm.</li>
+<li><b>Clarify</b> input size, types, empty input, duplicates, negative numbers, ordering, memory limits.</li>
+<li><b>Examples:</b> one normal, one edge case. Say the expected output.</li>
+<li><b>Brute force first</b> (say it and its complexity), then name the bottleneck.</li>
+<li><b>Pick the pattern</b> and state the invariant before you type.</li>
+<li><b>Code</b> in small, named steps. Narrate decisions, not syntax.</li>
+<li><b>Test by hand</b> on your examples, then on an edge case. Fix before the interviewer finds it.</li>
+<li><b>State complexity</b> (time and space) and one follow-up improvement.</li>
+</ol>
+<div class="callout tip"><b>If you are stuck:</b> say what you know, simplify (smaller input, one dimension, sorted input), solve that, then generalise. Silence is the real failure mode. Thinking aloud shows the process they are scoring.</div>
+<h3>Recognise the pattern from the wording</h3>
+<table>
+<tr><th>If the problem says…</th><th>Think…</th></tr>
+<tr><td>longest / shortest contiguous range, with a condition</td><td>sliding window, two pointers</td></tr>
+<tr><td>overlaps, meetings, ranges, schedules</td><td>sort by start, sweep, heap of end times</td></tr>
+<tr><td>grid, connections, dependencies, “reachable”</td><td>graph: BFS / DFS / union-find / topological sort</td></tr>
+<tr><td>cheapest / fewest steps with weights</td><td>Dijkstra (or BFS if unweighted)</td></tr>
+<tr><td>k largest / smallest, merge sorted streams</td><td>heap</td></tr>
+<tr><td>minimise the maximum / smallest value that works</td><td>binary search on the answer</td></tr>
+<tr><td>number of ways / min cost with overlapping subproblems</td><td>dynamic programming</td></tr>
+<tr><td>prefix lookups, autocomplete</td><td>trie</td></tr>
+</table>
+<p>Practise in <b>timed mode</b> (the Timed button on every exercise): the target times are realistic interview budgets. Do not look at the hint or solution until time is up.</p></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You are given a list of positive integers and asked for the shortest contiguous subarray whose sum is at least a target. Which approach is the best fit?</div><ol class="opts"><li><b>A.</b> Try every subarray with two nested loops and keep the best</li><li><b>B.</b> A variable-size sliding window, because all numbers are positive so the sum is monotonic</li><li><b>C.</b> Sort the array first and take the largest elements</li><li><b>D.</b> Dynamic programming over every pair of indexes</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">An interviewer says nothing for 90 seconds while you think. What should you do?</div><ol class="opts"><li><b>A.</b> Keep thinking silently until you have the full solution</li><li><b>B.</b> Say what you have so far (brute force and its cost, what you are trying to improve), so they can follow and nudge you</li><li><b>C.</b> Ask them for the answer</li><li><b>D.</b> Start coding something and fix it later</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A candidate understands the problem and jumps straight to writing the optimal solution. Which routine step did they skip, and why does it matter?</div><ol class="opts"><li><b>A.</b> Stating the brute force and its complexity, which names the bottleneck the optimal solution must beat</li><li><b>B.</b> Writing extra examples, which only matters for easy problems</li><li><b>C.</b> Checking the recursion limit, which only matters in Python</li><li><b>D.</b> Adding type hints, which the interviewer cannot evaluate</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<div class="box"><div class="q">2. The prompt says “minimise the largest load on any server”. Which pattern should you name in the first two minutes?</div><ol class="opts"><li><b>A.</b> Sliding window over the servers</li><li><b>B.</b> A heap of end times</li><li><b>C.</b> Binary search on the answer with a feasible(x) check</li><li><b>D.</b> Trie lookup by prefix</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<p class="nav"><a href="pat-window.html">Sliding window &amp; two pointers →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> A variable-size sliding window, because all numbers are positive so the sum is monotonic</p><div>Positive numbers make the window sum monotonic: growing it increases the sum, shrinking it decreases it, so two pointers give O(n). With negative numbers that guarantee disappears.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Say what you have so far (brute force and its cost, what you are trying to improve), so they can follow and nudge you</p><div>Interviewers score your reasoning. A narrated partial solution earns hints and credit. Silence gives them nothing to evaluate.</div></div>
+<div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>A.</b> Stating the brute force and its complexity, which names the bottleneck the optimal solution must beat</p><div>Saying the brute force and its cost first frames the trade-off and earns credit even if the optimal stalls.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>C.</b> Binary search on the answer with a feasible(x) check</p><div>Minimise-the-maximum signals monotonic feasibility: if x works, larger x works, so binary-search x.</div></div>
+<p class="nav"><a href="pat-window.html">Sliding window &amp; two pointers →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Progression, economies and randomness · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gddesign">Game Design Theory</a> · lesson 4 of 5 · 30 min</p>
+<h1>Progression, economies and randomness</h1>
+<p class="sum">Sinks and faucets, exponential cost curves, why random rewards work, and pity timers.</p>
+<div class="sec">
+<h3>Progression types</h3>
+<ul><li><b>Power progression</b>: you get stronger (levels, gear). Risks trivialising content, so the world must scale with you.</li><li><b>Knowledge/skill progression</b>: you get better (Dark Souls, roguelikes). Power barely changes, the player does.</li><li><b>Content progression</b>: new places, abilities that unlock routes (metroidvanias).</li><li><b>Meta progression</b>: persistent upgrades between runs (Hades mirror, roguelite unlocks).</li></ul>
+<h3>Economies: sources and sinks</h3>
+<p>Any currency has <b>faucets</b> (ways to earn) and <b>sinks</b> (ways to spend). If faucets outpace sinks the currency inflates and loses meaning; if sinks dominate the game feels like a grind. Track flows in a spreadsheet before building: income per minute, price of the next upgrade, and the time between purchases. You want the player to make a <i>meaningful choice</i> every few minutes, not wait.</p>
+<h3>Cost curves</h3>
+<p>Costs usually grow exponentially (<code>cost = base × growth^level</code>), while income grows linearly or slower. That keeps the time between upgrades growing and eventually forces a reset or a new system (prestige). A growth factor of roughly 1.07 to 1.15 per level is typical for idle games. You implement the curve in the drill.</p>
+<h3>Randomness</h3>
+<ul><li><b>Input randomness</b> (what you get dealt, loot, level layout) creates variety and stories. <b>Output randomness</b> (does my attack hit?) can feel unfair.</li><li>Humans are poor at probability: they expect streaks to end. Pure independent rolls produce long droughts that feel broken. Designers use <b>pseudo-random distribution</b> (the chance rises after each failure), <b>bad-luck protection</b> and <b>shuffle bags</b> (draw without replacement, so every item shows up regularly).</li><li><b>Pity timers</b> guarantee a reward after N misses, bounding the worst case. You implement one below.</li><li>Expected value: an event with chance p takes 1/p tries on average, but the median is shorter and the tail is long (with p = 1%, 37% of players have no drop after 100 tries).</li></ul>
+<div class="callout warn"><b>Ethics and law:</b> variable rewards plus spending is the loot-box problem. Several countries regulate or ban paid random boxes and platforms require disclosed odds. Design retention around skill and content, not around exploiting the way brains react to random reward.</div></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Drop rates with a pity timer</p><p>Loot systems use a pity timer so bad luck is capped. <code>rolls</code> are random floats in <code>[0, 1)</code>. A roll drops the item if <code>roll &lt; p</code>. Additionally, after <code>pity - 1</code> misses in a row the next roll is a <b>guaranteed</b> drop. Any drop resets the miss counter. Write out one boolean per roll.</p><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+/// out[i] = whether roll i dropped the item. out.len == rolls.len.
+pub fn simulatePity(rolls: []const f32, p: f32, pity: u32, out: []bool) void {
+    _ = rolls;
+    _ = p;
+    _ = pity;
+    for (out) |*o| o.* = false;
+}
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Exponential upgrade costs</p><p>Idle and incremental games price level <code>n</code> at <code>base * growth ^ n</code>, rounded <b>down</b> to a whole number. Implement <code>upgrade_cost(base, growth, level)</code> and <code>levels_affordable(budget, base, growth)</code>: how many upgrades in a row you can buy starting from level 0 with that budget (buy level 0, then 1, ...).</p><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub fn upgradeCost(base: u64, growth: f64, level: u32) u64 {
+    _ = base;
+    _ = growth;
+    _ = level;
+    return 0;
+}
+
+pub fn levelsAffordable(budget: u64, base: u64, growth: f64) u32 {
+    _ = budget;
+    _ = base;
+    _ = growth;
+    return 0;
+}
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Players have 10 million gold and nothing to buy. This is a…</div><ol class="opts"><li><b>A.</b> Pacing problem: faucets outrun sinks (inflation)</li><li><b>B.</b> Graphics problem</li><li><b>C.</b> Bug in the shop UI</li><li><b>D.</b> Good sign</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A 5% drop chance per kill. About how many kills are needed on average, and why is that still a bad promise to players?</div><ol class="opts"><li><b>A.</b> 5; luck decides</li><li><b>B.</b> 20 on average, but a meaningful fraction of players need 40 or more (bad luck is common), so add pity</li><li><b>C.</b> 100</li><li><b>D.</b> Exactly 20 for everyone</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. The next upgrade price follows cost = base times growth to the level, with growth around 1.1, while income grows roughly linearly. Why that shape?</div><ol class="opts"><li><b>A.</b> So the time between upgrades keeps growing and forces meaningful choices or a reset</li><li><b>B.</b> So every upgrade arrives faster than the last</li><li><b>C.</b> So income and cost stay exactly equal forever</li><li><b>D.</b> So the first upgrade is the hardest to earn</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. Playtesters love finding random loot layouts but hate missing attacks to a hit-chance roll. Which distinction explains the reaction?</div><ol class="opts"><li><b>A.</b> Loot is graphics randomness while hit chance is audio randomness</li><li><b>B.</b> Input randomness (what you are dealt) creates variety; output randomness (whether your action works) feels unfair</li><li><b>C.</b> Players prefer any randomness hidden in menus</li><li><b>D.</b> Loot uses seeds while combat cannot be seeded</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="gd-juice.html">← Game feel and juice</a> · <a href="gd-scope.html">Scope, prototyping and playtesting →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Drop rates with a pity timer</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Keep misses = 0. For each roll: hit = roll < p or misses + 1 >= pity. If hit, misses = 0, else misses += 1.</p><p>With a flat 1% rate, 37% of players still have not seen the item after 100 rolls (0.99^100). A pity timer changes the feel from "unlucky" to "bounded". Many games add soft pity: the rate ramps up after N misses. Disclose the odds: it is increasingly a legal requirement too.</p></div>
+<div class="ans" id="a2"><p><b>2. Exponential upgrade costs</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> Loop: spent = 0, level = 0; while spent + cost(level) <= budget { spent += cost(level); level += 1 }. pow(growth, level) returns a float, so floor it before converting to an integer.</p><p>Cost grows exponentially while income usually grows only linearly or polynomially, so the time between upgrades keeps stretching. That tension is the whole design of an incremental game: a growth factor around 1.07 to 1.15 per level is common (Cookie Clicker buildings use 1.15). Resets ("prestige") trade progress for a multiplier and restart the curve.</p></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>A.</b> Pacing problem: faucets outrun sinks (inflation)</p><div>Add meaningful sinks (cosmetics, upgrades with steep curves, repair costs) or slow the faucets. Check every currency flow.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> 20 on average, but a meaningful fraction of players need 40 or more (bad luck is common), so add pity</p><div>Mean = 1/p = 20. With independent rolls 0.95^40 is about 13% still without it. Pity timers or a shuffle bag bound the bad cases.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>A.</b> So the time between upgrades keeps growing and forces meaningful choices or a reset</p><div>Exponential costs against slower income growth stretch the wait between purchases, which is what keeps choices meaningful.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>B.</b> Input randomness (what you are dealt) creates variety; output randomness (whether your action works) feels unfair</p><div>Variety before the decision delights; randomness that vetoes the decision after it frustrates.</div></div>
+<p class="nav"><a href="gd-juice.html">← Game feel and juice</a> · <a href="gd-scope.html">Scope, prototyping and playtesting →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sliding window &amp; two pointers · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#patterns">Coding Patterns</a> · lesson 2 of 7 · 30 min</p>
+<h1>Sliding window &amp; two pointers</h1>
+<p class="sum">Expand right, shrink left, keep an invariant. O(n) instead of O(n²).</p>
+<div class="sec">
+<p>When the question asks about a <b>contiguous range</b>, avoid recomputing from scratch for every start. Maintain a window <code>[left, right]</code> and a summary of what is inside (a sum, a set, a count dictionary).</p>
+<pre><code>left = 0
+for right, x in enumerate(items):
+    add(x)                     # expand
+    while window_is_invalid():  # or: while window_is_valid() for "shortest"
+        remove(items[left])     # shrink
+        left += 1
+    update_best(right - left + 1)</code></pre>
+<ul><li><b>Fixed size</b> k: slide by adding the new element and removing the one leaving.</li><li><b>Variable size</b>: shrink only when the invariant breaks (longest) or while it holds (shortest).</li><li>Each pointer only moves forward, so the total work is O(n), even with a nested <code>while</code>.</li></ul></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Longest substring without repeats</p><p>Write <code>longest_unique(s)</code> returning the length of the longest substring of <code>s</code> that has no repeated characters. O(n) time.</p><p><b>Starter:</b></p><pre>def longest_unique(s):
+    pass
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Shortest subarray with sum at least target</p><p>Write <code>shortest_subarray(target, nums)</code> returning the length of the shortest contiguous subarray of positive integers whose sum is at least <code>target</code>, or <code>0</code> if there is none. O(n) time.</p><p><b>Starter:</b></p><pre>def shortest_subarray(target, nums):
+    pass
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. You need the longest substring with at most K distinct characters. When do you shrink the window?</div><ol class="opts"><li><b>A.</b> Expand right and shrink only while the window holds more than K distinct characters, recording the best while valid</li><li><b>B.</b> Shrink after every single expansion regardless of validity</li><li><b>C.</b> Reset left to zero whenever the window breaks and rescan from the start</li><li><b>D.</b> Sort the input first and then take the first K characters</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<div class="box"><div class="q">2. A teammate sees a while loop nested inside a for loop in a sliding-window solution and worries it is O(n²). What is the correct response?</div><ol class="opts"><li><b>A.</b> It must be rewritten with sorting to become linear</li><li><b>B.</b> It is only linear for fixed-size windows</li><li><b>C.</b> Each pointer moves forward at most n times, so total work is O(n) despite the nesting</li><li><b>D.</b> Nesting is fine because Python loops are free</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<p class="nav"><a href="pat-intro.html">← How to run a coding round</a> · <a href="pat-intervals.html">Intervals &amp; scheduling →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Longest substring without repeats</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Keep a window [left, i] and a dict of the last index where each character was seen. When you meet a character already inside the window, jump left to one past its previous position. Never move left backwards ("tmmzuxt" catches that).</p><p><b>Reference solution:</b></p><pre>def longest_unique(s):
+    last = {}
+    left = best = 0
+    for i, ch in enumerate(s):
+        if ch in last and last[ch] &gt;= left:
+            left = last[ch] + 1
+        last[ch] = i
+        best = max(best, i - left + 1)
+    return best</pre><p>Variable-size sliding window: expand right every step, shrink left only when the invariant breaks. The classic bug is moving left backwards.</p></div>
+<div class="ans" id="a2"><p><b>2. Shortest subarray with sum at least target</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> Grow the window on the right adding to a running sum. While the sum is at least target, record the length and shrink from the left. This works because every number is positive.</p><p><b>Reference solution:</b></p><pre>def shortest_subarray(target, nums):
+    best = 0
+    left = total = 0
+    for right, x in enumerate(nums):
+        total += x
+        while total &gt;= target:
+            length = right - left + 1
+            best = length if best == 0 else min(best, length)
+            total -= nums[left]
+            left += 1
+    return best</pre><p>The window only works for non-negative numbers. With negatives the sum is no longer monotonic, and you need prefix sums plus a monotonic deque (or a heap).</p></div>
+<div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>A.</b> Expand right and shrink only while the window holds more than K distinct characters, recording the best while valid</p><div>For longest-valid problems shrink only to restore the invariant; each pointer still moves forward once, giving O(n).</div></div>
+<div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>C.</b> Each pointer moves forward at most n times, so total work is O(n) despite the nesting</p><div>Both pointers only advance, so the inner loop performs at most n shrinks across the whole run.</div></div>
+<p class="nav"><a href="pat-intro.html">← How to run a coding round</a> · <a href="pat-intervals.html">Intervals &amp; scheduling →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

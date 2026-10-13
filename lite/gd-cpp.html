@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C++ for games · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdcraft">Techniques &amp; Practice</a> · lesson 7 of 8 · 10 min</p>
+<h1>C++ for games</h1>
+<p class="sum">The modern-C++ subset game programmers actually use, and the habits that keep it safe and fast.</p>
+<div class="sec">
+<h3>Why C++ is still everywhere in games</h3>
+<p>Unreal, most console SDKs, physics libraries (Box2D, Jolt, PhysX), Godot itself and decades of engine code are C++. You will read it even if you write something else. The goal is to write the small, boring subset that gives control without foot-guns.</p>
+<h3>Habits that matter</h3>
+<ul><li><b>Value semantics, contiguous data.</b> Prefer <code>std::vector&lt;Particle&gt;</code> to a <code>vector</code> of pointers. Contiguous memory is what makes loops fast.</li><li><b>RAII</b>: resources (memory, files, GPU buffers) are owned by objects whose destructors release them. Use <code>std::unique_ptr</code> for single ownership; avoid raw <code>new</code>/<code>delete</code> in game code. <code>shared_ptr</code> only when ownership is truly shared (and it is rarely).</li><li><b>No allocation in the frame loop.</b> <code>reserve()</code> up front, reuse buffers, use pools or arenas.</li><li><b>Avoid virtual calls per entity per frame</b> in hot loops: group by type (struct of arrays) or use a <code>std::variant</code> and <code>std::visit</code>. A virtual call is cheap, the cache miss it hides is not.</li><li><b>Use <code>enum class</code></b> and exhaustive <code>switch</code> (with <code>-Wswitch</code>) for state machines.</li><li><b>Prefer <code>std::span</code>, <code>std::string_view</code></b> for non-owning views; they carry a length and avoid copies.</li><li><b>const everything</b> you can. Use <code>[[nodiscard]]</code> on functions whose result must be checked.</li></ul>
+<h3>Foot-guns to know by name</h3>
+<ul><li><b>Iterator invalidation</b>: <code>push_back</code> or <code>erase</code> on a vector invalidates iterators, references and pointers into it. Erasing in a range-for is the classic crash (see the bug hunt in the performance lesson). Use the erase-remove idiom (<code>std::erase_if</code> in C++20) or swap-remove by index.</li><li><b>Dangling references</b>: holding a pointer to an element and then growing the container.</li><li><b>Integer pitfalls</b>: unsigned underflow (<code>size() - 1</code> on an empty vector), signed overflow is undefined, integer division truncates toward zero (the drill on integer scaling).</li><li><b>Uninitialised members</b>: always default-initialise (<code>int hp = 0;</code>).</li><li><b>Float comparison</b>: compare with a tolerance, never <code>==</code>.</li><li><b>Static initialisation order</b> across translation units. Avoid global objects with constructors.</li></ul>
+<h3>Tooling you should turn on</h3>
+<pre><code>g++ -std=c++20 -Wall -Wextra -O1 -g -fsanitize=address,undefined main.cpp -o game</code></pre>
+<ul><li><b>AddressSanitizer</b> finds out-of-bounds and use-after-free; <b>UBSan</b> finds undefined behaviour such as signed overflow. The lab's validator compiles every C++ drill with them on.</li><li>A debugger (gdb, lldb, or the IDE) and a profiler (perf, Tracy). Learn to read a crash backtrace.</li><li>CMake is the lingua franca for building; for a first project a single <code>CMakeLists.txt</code> with SDL3 or raylib via <code>FetchContent</code> is enough.</li></ul>
+<h3>Zig versus C++, honestly</h3>
+<table>
+<tr><th></th><th>C++</th><th>Zig</th></tr>
+<tr><td>Ecosystem</td><td>Enormous: engines, libraries, tools, jobs</td><td>Small and young, but can use any C library directly</td></tr>
+<tr><td>Memory</td><td>RAII, smart pointers, implicit allocation possible</td><td>Explicit allocators and <code>defer</code>, no hidden allocation</td></tr>
+<tr><td>Generics</td><td>Templates (powerful, hard error messages)</td><td><code>comptime</code> (ordinary code, clear errors)</td></tr>
+<tr><td>Build</td><td>CMake, Make, Meson... pick one</td><td>Built in (<code>build.zig</code>), cross-compiles easily</td></tr>
+<tr><td>Stability</td><td>Standardised, decades old</td><td>Pre-1.0, expect breaking changes</td></tr>
+</table>
+<p>Learning both with the same drills is deliberate: you will see that the ideas (fixed step, pools, spatial hash, state machines) are language-independent, and the differences are in who guards you from mistakes.</p></div>
+<div class="sec"><div class="box"><p class="kind">Bug hunt: Spot the C++ lifetime bugs</p><p>This is a bullet manager. Click the <b>3</b> lines that cause undefined behaviour or a leak.</p><pre> 1  struct Bullet { float x, y, vx, vy; };
+ 2  
+ 3  class Bullets {
+ 4      std::vector&lt;Bullet&gt; items_;
+ 5  public:
+ 6      Bullet* spawn(float x, float y) {
+ 7          items_.push_back({x, y, 0, 0});
+ 8          return &amp;items_.back();
+ 9      }
+10      void fire_pair(float x, float y) {
+11          Bullet* a = spawn(x, y);
+12          Bullet* b = spawn(x + 8, y);
+13          a-&gt;vx = 300; b-&gt;vx = -300;
+14      }
+15      Bullet* make_special() {
+16          Bullet* p = new Bullet{0, 0, 0, 0};
+17          items_.push_back(*p);
+18          return &amp;items_.back();
+19      }
+20  };</pre><p>3 buggy lines. Find them, then check.</p><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You loop <code>for (size_t i = v.size() - 1; i &gt;= 0; --i)</code> over a vector. What happens when <code>v</code> is empty?</div><ol class="opts"><li><b>A.</b> The loop is skipped</li><li><b>B.</b> size() - 1 wraps to a huge number and the loop reads out of bounds (and i >= 0 is always true for unsigned)</li><li><b>C.</b> A compiler error</li><li><b>D.</b> It returns early</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Which choice usually makes iterating 100,000 particles faster in C++?</div><ol class="opts"><li><b>A.</b> std::vector&lt;std::unique_ptr&lt;Particle&gt;&gt; with virtual update()</li><li><b>B.</b> A contiguous std::vector&lt;Particle&gt; of plain data updated in one loop</li><li><b>C.</b> std::list&lt;Particle&gt;</li><li><b>D.</b> std::map&lt;int, Particle&gt;</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A loop erases dead enemies from a vector inside a range-for and intermittently crashes. What is the cause and the fix?</div><ol class="opts"><li><b>A.</b> Erasing invalidates the iterators being looped over; mark the dead and remove them after the loop, or use erase-remove or swap-remove by index</li><li><b>B.</b> The vector is too small; reserve more capacity up front</li><li><b>C.</b> Range-for is too slow; use a while loop instead</li><li><b>D.</b> The enemies need virtual destructors</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. A bullet manager needs exclusive ownership of a GPU buffer that must be released exactly once. Which smart pointer fits?</div><ol class="opts"><li><b>A.</b> std::shared_ptr, so every system can co-own the buffer</li><li><b>B.</b> std::unique_ptr with RAII, avoiding raw new and delete in game code</li><li><b>C.</b> A raw owning pointer with manual delete at shutdown</li><li><b>D.</b> A global static object with a constructor</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="gd-zig.html">← Zig for game programming</a> · <a href="gd-practice.html">The practice ladder →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Spot the C++ lifetime bugs</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Two bugs are the same root cause seen at two places (pointers into a growing vector), one is a plain leak.</p><ul><li><b>Line 8:</b> Returning a pointer into a <code>vector</code> that can grow: the next <code>push_back</code> may reallocate and move every element, leaving earlier pointers dangling. Return an index or handle instead.</li><li><b>Line 13:</b> <code>a</code> was obtained before the second <code>spawn</code>, which may reallocate the vector. Writing through <code>a</code> afterwards is a use-after-free. This is the consequence of line 8.</li><li><b>Line 16:</b> <code>new Bullet</code> is copied into the vector and the original is never deleted: a leak on every call. There is no reason to heap-allocate here (<code>items_.push_back({0,0,0,0})</code>).</li></ul></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> size() - 1 wraps to a huge number and the loop reads out of bounds (and i >= 0 is always true for unsigned)</p><div>Unsigned arithmetic wraps. Loop with signed indices, use reverse iterators, or check empty() first.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> A contiguous std::vector&lt;Particle&gt; of plain data updated in one loop</p><div>Contiguous plain data is cache friendly. Node-based containers and pointer-per-object designs mean a cache miss per element.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>A.</b> Erasing invalidates the iterators being looped over; mark the dead and remove them after the loop, or use erase-remove or swap-remove by index</p><div>Iterator invalidation makes in-loop erase undefined behaviour; separating marking from removal keeps iteration valid.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>B.</b> std::unique_ptr with RAII, avoiding raw new and delete in game code</p><div>Single ownership maps to unique_ptr: the destructor releases the resource on every path with no sharing overhead.</div></div>
+<p class="nav"><a href="gd-zig.html">← Zig for game programming</a> · <a href="gd-practice.html">The practice ladder →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

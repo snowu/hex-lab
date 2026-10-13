@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Async patterns: pools, retries, timeouts · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#coding">Coding Fluency</a> · lesson 3 of 3 · 50 min</p>
+<h1>Async patterns: pools, retries, timeouts</h1>
+<p class="sum">Concurrency control and resilience with asyncio.</p>
+<div class="sec">
+<p>Real services spend their lives waiting on other services. Three utilities show up constantly: <b>bounded concurrency</b>, <b>retry with backoff + jitter</b>, and <b>timeouts</b>. Be able to write each from scratch.</p>
+<div class="callout warn"><b>Classic traps:</b> <code>asyncio.gather</code> over 10,000 coroutines starts 10,000 requests at once. Retrying non-idempotent calls can double-charge. Retrying without jitter makes a thundering herd.</div></div>
+<div class="sec"><div class="box"><p class="kind">Predict the output: gather: completion order vs result order</p><p>Three coroutines finish at different times. What does <code>asyncio.gather</code> give back, and in which order do they print?</p><pre>import asyncio
+
+async def work(name, delay):
+    await asyncio.sleep(delay)
+    print('done', name)
+    return name
+
+results = await asyncio.gather(work('a', 0.06), work('b', 0.02), work('c', 0.04))
+print(results)</pre><div class="q">What is printed?</div><ol class="opts"><li><b>A.</b> done a, done b, done c, then [a, b, c]</li><li><b>B.</b> done b, done c, done a, then [a, b, c]</li><li><b>C.</b> done b, done c, done a, then [b, c, a]</li><li><b>D.</b> done a, done b, done c, then [b, c, a]</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): map_limit</p><p>Implement <code>async def map_limit(items, limit, fn)</code>. Call <code>await fn(item, index)</code> for every item with <b>at most <code>limit</code> running at once</b>. Return the results <b>in input order</b>. If any call raises, the exception propagates.</p><p><b>Starter:</b></p><pre>import asyncio
+
+async def map_limit(items, limit, fn):
+    pass
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Retry with exponential backoff</p><p>Implement <code>async def retry(fn, *, retries=3, base_ms=100, sleep=default_sleep, should_retry=lambda e: True)</code>. Call <code>await fn(attempt)</code> (attempt starts at 0). On failure, if retries remain <b>and</b> <code>should_retry(error)</code>, wait <code>base_ms * 2**attempt</code> via the injected <code>await sleep(ms)</code>, then try again. After the last failure, re-raise the last error. (In production you would add jitter; leave it out so the test stays deterministic.)</p><p><b>Starter:</b></p><pre>import asyncio
+
+async def default_sleep(ms):
+    await asyncio.sleep(ms / 1000)
+
+async def retry(fn, *, retries=3, base_ms=100, sleep=default_sleep, should_retry=lambda e: True):
+    pass
+</pre><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Bug hunt: Spot the concurrency bugs</p><p>An assistant wrote this transaction sync for a bank aggregator. It works in the demo. Click the <b>2</b> lines that will cause trouble in production.</p><pre>1  async def sync_all(account_ids):
+2      results = []
+3      async def one(account_id):
+4          res = await fetch_transactions(account_id)
+5          results.extend(res)
+6      await asyncio.gather(*(one(a) for a in account_ids))
+7      for account_id in account_ids:
+8          asyncio.create_task(mark_synced(account_id))
+9      return results</pre><p>2 buggy lines. Find them, then check.</p><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A downstream bank API returns 429 with <code>Retry-After: 30</code>. Your retry helper uses exponential backoff starting at 100ms. What is wrong?</div><ol class="opts"><li><b>A.</b> Nothing, backoff is always right</li><li><b>B.</b> You should respect Retry-After; hammering earlier wastes budget and may get you blocked</li><li><b>C.</b> You should retry immediately once</li><li><b>D.</b> You should switch to a different bank</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. You run asyncio.gather over 10,000 URL fetches and the downstream service falls over. What is the fix?</div><ol class="opts"><li><b>A.</b> Add more retries so failed ones eventually succeed</li><li><b>B.</b> Remove the timeout so slow requests can finish</li><li><b>C.</b> Bound concurrency with a semaphore or worker pool so only N requests are in flight at once</li><li><b>D.</b> Switch to threads because asyncio cannot do I/O</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<div class="box"><div class="q">2. Your retry helper re-sends a "charge card" POST instantly on every failure, with no jitter. What two traps did you hit?</div><ol class="opts"><li><b>A.</b> None; fast retries always improve success rates</li><li><b>B.</b> Retrying a non-idempotent call can double-charge, and retrying without jitter causes a thundering herd</li><li><b>C.</b> Backoff is illegal for payment APIs</li><li><b>D.</b> Timeouts should be removed during retries</li></ol><p class="tolink" id="q7"><a href="#a7">answer 7 ↓</a></p></div>
+<p class="nav"><a href="stateful-classes.html">← Design-a-class problems</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. gather: completion order vs result order</b> <a href="#q1">back ↑</a></p><p><b>B.</b> done b, done c, done a, then [a, b, c]</p><div>The coroutines run concurrently, so they <b>finish</b> in order of their delays: b (20ms), c (40ms), a (60ms). But <code>gather</code> returns results in the order the awaitables were <b>passed in</b>, not the order they completed. If you need completion order, use <code>asyncio.as_completed</code>.</div></div>
+<div class="ans" id="a2"><p><b>2. map_limit</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> asyncio.Semaphore(limit) as an async context manager around each call, then asyncio.gather the wrapped coroutines (gather keeps input order).</p><p><b>Reference solution:</b></p><pre>import asyncio
+
+async def map_limit(items, limit, fn):
+    sem = asyncio.Semaphore(limit)
+
+    async def run(i, item):
+        async with sem:
+            return await fn(item, i)
+
+    return await asyncio.gather(*(run(i, x) for i, x in enumerate(items)))</pre><p>This creates one task per item, which is fine for thousands but not millions: for huge inputs start “limit” worker tasks that pull from an asyncio.Queue instead. asyncio.TaskGroup (3.11+) gives structured cancellation if one job fails.</p></div>
+<div class="ans" id="a3"><p><b>3. Retry with exponential backoff</b> <a href="#q3">back ↑</a></p><p><b>Hint:</b> A loop over attempt numbers. In the except branch: re-raise if this was the last attempt or the error is not retryable; otherwise sleep and continue. A bare “raise” keeps the original traceback.</p><p><b>Reference solution:</b></p><pre>import asyncio
+
+async def default_sleep(ms):
+    await asyncio.sleep(ms / 1000)
+
+async def retry(fn, *, retries=3, base_ms=100, sleep=default_sleep, should_retry=lambda e: True):
+    attempt = 0
+    while True:
+        try:
+            return await fn(attempt)
+        except Exception as e:
+            if attempt &gt;= retries or not should_retry(e):
+                raise
+            await sleep(base_ms * 2 ** attempt)
+            attempt += 1</pre><p>Talking points: full jitter, a retry budget, honouring Retry-After, and only retrying idempotent operations (or those with idempotency keys). Catch Exception, never BaseException: you do not want to swallow cancellation.</p></div>
+<div class="ans" id="a4"><p><b>4. Spot the concurrency bugs</b> <a href="#q4">back ↑</a></p><p><b>Hint:</b> One line starts too much work at once; the other starts work nobody waits for.</p><ul><li><b>Line 6:</b> Unbounded concurrency: <code>asyncio.gather</code> over every account starts every bank call at once. With 5,000 accounts that hits bank rate limits and exhausts sockets. Bound it with an <code>asyncio.Semaphore</code> (the <code>map_limit</code> pattern).</li><li><b>Line 8:</b> <code>asyncio.create_task</code> without keeping or awaiting the task is fire-and-forget. <code>sync_all</code> returns before <code>mark_synced</code> finishes, exceptions are only logged as "Task exception was never retrieved", and the event loop holds only a weak reference, so the task can even be garbage-collected mid-flight. Await it (gather) or use <code>asyncio.TaskGroup</code>.</li></ul></div>
+<div class="ans" id="a5"><p><b>5. Quick check</b> <a href="#q5">back ↑</a></p><p><b>B.</b> You should respect Retry-After; hammering earlier wastes budget and may get you blocked</p><div>The server told you exactly when to come back. Respect it (and cap it), and consider a per-bank circuit breaker so one throttled bank does not consume your worker pool.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 1</b> <a href="#q6">back ↑</a></p><p><b>C.</b> Bound concurrency with a semaphore or worker pool so only N requests are in flight at once</p><div>Unbounded gather starts 10,000 requests at once. Bounded concurrency is the control that protects both your pool and the downstream service.</div></div>
+<div class="ans" id="a7"><p><b>7. Check 2</b> <a href="#q7">back ↑</a></p><p><b>B.</b> Retrying a non-idempotent call can double-charge, and retrying without jitter causes a thundering herd</p><div>The lesson warns retrying non-idempotent calls can double-charge and retrying without jitter makes a thundering herd. Use backoff plus jitter and make the operation safe to repeat.</div></div>
+<p class="nav"><a href="stateful-classes.html">← Design-a-class problems</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

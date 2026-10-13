@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Object pool, flyweight and data locality · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdpatterns">Game Programming Patterns</a> · lesson 5 of 12 · 40 min</p>
+<h1>Object pool, flyweight and data locality</h1>
+<p class="sum">Three optimisation patterns that all come from the same fact: memory access, not arithmetic, is the bottleneck.</p>
+<div class="sec">
+<h3>Why memory layout matters</h3>
+<p>A modern CPU can do a few billion operations a second, but fetching a value from main memory takes the time of hundreds of operations. To hide that, it loads memory in <b>cache lines</b> (typically 64 bytes) and keeps recent ones in fast caches. Code that walks memory <b>in order</b> is fast; code that jumps around (following pointers to scattered objects) pays the full delay on every step. Many game optimisations are about keeping the data the loop needs <b>together</b>.</p>
+<h3>Data locality: array of structs vs struct of arrays</h3>
+<p>Suppose each particle has position, velocity, colour, lifetime and a few flags (64 bytes) and the update loop only needs position and velocity (16 bytes). With an <b>array of structs</b> (AoS) each cache line contains a quarter of one useful particle's data and the rest is dead weight. With a <b>struct of arrays</b> (SoA) the positions are contiguous and the loop reads only what it needs. ECS (see the architecture lessons) is this idea applied to the whole game.</p>
+<pre><code data-check="zig">const std = @import("std");
+
+// AoS: one record per particle. Convenient, but the update drags colour and flags through the cache.
+const ParticleAos = struct { x: f32, y: f32, vx: f32, vy: f32, r: u8, g: u8, b: u8, alive: bool, life: f32 };
+
+// SoA: one array per field. The movement loop touches only x, y, vx, vy.
+const Particles = struct {
+    x: [256]f32 = undefined,
+    y: [256]f32 = undefined,
+    vx: [256]f32 = undefined,
+    vy: [256]f32 = undefined,
+    count: usize = 0,
+
+    fn update(self: *Particles, dt: f32) void {
+        for (0..self.count) |i| {
+            self.x[i] += self.vx[i] * dt;
+            self.y[i] += self.vy[i] * dt;
+        }
+    }
+};
+
+test "the SoA update touches contiguous arrays" {
+    var p = Particles{};
+    p.count = 2;
+    p.x[0] = 0;
+    p.y[0] = 0;
+    p.vx[0] = 10;
+    p.vy[0] = -4;
+    p.x[1] = 5;
+    p.y[1] = 5;
+    p.vx[1] = 0;
+    p.vy[1] = 0;
+    p.update(0.5);
+    try std.testing.expectEqual(@as(f32, 5), p.x[0]);
+    try std.testing.expectEqual(@as(f32, -2), p.y[0]);
+    try std.testing.expectEqual(@as(f32, 5), p.x[1]);
+    _ = ParticleAos;
+}</code></pre>
+<p>Rules of thumb: measure first. SoA wins when loops touch few fields of many objects; AoS wins when you usually touch all the fields of one object (a single character). Hot/cold splitting (keep rarely used data in a separate structure) is a middle path.</p>
+<h3>Object pool</h3>
+<p>Creating and destroying objects constantly (bullets, particles, enemies) costs allocator time, fragments memory and, in garbage-collected languages, causes pauses. A <b>pool</b> allocates all instances up front, hands them out and takes them back. A <b>free list</b> threaded through the unused slots makes both operations O(1) (you build it in the drill). Decisions to make explicitly:</p>
+<ul><li><b>Exhausted:</b> refuse the request (a skipped bullet is nearly always better than a hitch), recycle the oldest, or grow in chunks.</li><li><b>Reset:</b> a recycled object must be fully re-initialised, or it keeps old state ("zombie bullet with the last owner's damage"). Have one <code>reset</code> function and call it on acquire.</li><li><b>Stale references:</b> if something still holds a pointer to a recycled object, it now points at a different bullet. Hand out <b>handles</b> (index plus a generation counter incremented on release) instead of raw pointers; a stale handle is detected because its generation no longer matches.</li></ul>
+<p>In Godot, pools matter mostly for scenes that are expensive to instantiate; for plain data, arrays of structs (SoA) are the more effective way.</p>
+<h3>Flyweight</h3>
+<p>If 10,000 trees each store their own copy of the mesh, the texture and the species stats, memory explodes. A <b>flyweight</b> splits an object into <b>shared, immutable</b> data (the tree type: one copy) and <b>per-instance</b> data (position, age: tiny). Every instance holds a reference or index to the shared part. Tile maps are the everyday example: the map stores a small integer per cell, and the integer indexes a table of tile definitions (texture, solidity, cost). The related <b>type object</b> pattern is the next lesson.</p></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Object pool with an O(1) free list</p><p>An <b>object pool</b> allocates all objects up front and hands them out and takes them back. A naive pool scans for a free slot (O(n)). A <b>free list</b> threads the unused slots together so both operations are O(1): <code>free_head</code> is the first free slot and <code>next_free[i]</code> is the slot after <code>i</code> in the list. <code>init</code> is given and links every slot (0 → 1 → 2 → ... → capacity, where <code>capacity</code> means "end of list").</p>
+<ul><li><code>acquire()</code>: take the head of the free list, mark it in use, return its index. Nothing if the pool is exhausted.</li><li><code>release(index)</code>: put the slot at the <b>front</b> of the free list (so the most recently released slot is reused first). Returns <code>false</code> for an out-of-range index or a slot that is already free (a double release must not corrupt the list).</li><li><code>freeCount()</code> / <code>get(index)</code> as in the starter.</li></ul><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub fn Pool(comptime T: type, comptime capacity: usize) type {
+    return struct {
+        const Self = @This();
+
+        items: [capacity]T = undefined,
+        next_free: [capacity]usize = undefined, // the free list is threaded through the unused slots
+        in_use: [capacity]bool = @splat(false),
+        free_head: usize = 0, // first free slot; capacity means &quot;none&quot;
+        free_count: usize = capacity,
+
+        pub fn init() Self {
+            var s = Self{};
+            for (0..capacity) |i| s.next_free[i] = i + 1;
+            return s;
+        }
+
+        pub fn freeCount(self: *const Self) usize {
+            return self.free_count;
+        }
+
+        pub fn get(self: *Self, index: usize) *T {
+            return &amp;self.items[index];
+        }
+
+        /// the index of a free slot, or null if the pool is exhausted
+        pub fn acquire(self: *Self) ?usize {
+            _ = self;
+            return null;
+        }
+
+        /// false for an out-of-range index or a slot that is already free
+        pub fn release(self: *Self, index: usize) bool {
+            _ = self;
+            _ = index;
+            return false;
+        }
+    };
+}
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A loop updates positions of 50,000 particles that each also store colour, name and AI data. Updating is slow even though the maths is trivial. What is the most effective change?</div><ol class="opts"><li><b>A.</b> Use faster maths functions</li><li><b>B.</b> Store positions and velocities in their own contiguous arrays (struct of arrays) so the loop reads only what it needs</li><li><b>C.</b> Use virtual functions per particle</li><li><b>D.</b> Sort the particles by name</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A pooled bullet is released and reused for a different shooter. An old turret still holds its index and keeps "tracking" the bullet. What prevents this class of bug?</div><ol class="opts"><li><b>A.</b> A bigger pool</li><li><b>B.</b> Handles that carry a generation counter, so a stale handle no longer matches</li><li><b>C.</b> Making the bullet const</li><li><b>D.</b> Disabling the turret</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Bug hunt: Spot the object pool bugs (C++)</p><p>A bullet pool. Click the <b>3</b> lines that cause stale state, leaks or crashes.</p><pre> 1  struct Bullet { float x, y, vx, vy; int damage; bool alive; };
+ 2  
+ 3  Bullet* BulletPool::spawn(float x, float y) {
+ 4      for (auto&amp; b : bullets_) {
+ 5          if (!b.alive) {
+ 6              b.x = x; b.y = y;
+ 7              b.alive = true;
+ 8              return &amp;b;
+ 9          }
+10      }
+11      bullets_.push_back(Bullet{x, y, 0, 0, 1, true});
+12      return &amp;bullets_.back();
+13  }</pre><p>3 buggy lines. Find them, then check.</p><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A recycled bullet keeps the previous owner damage and velocity, so a peashooter sometimes fires a cannonball. What process prevents these zombie objects?</div><ol class="opts"><li><b>A.</b> Allocate every bullet fresh with new so it can never be dirty</li><li><b>B.</b> Have one reset function that fully re-initialises the object and call it on every acquire from the pool</li><li><b>C.</b> Zero only the x and y position and leave the rest for speed</li><li><b>D.</b> Make the pool bigger so recycling happens less often</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. Your forest has 10,000 trees sharing a handful of meshes, textures and stats. How do you store them without exploding memory?</div><ol class="opts"><li><b>A.</b> Split each tree into shared immutable data (the tree type, one copy) plus tiny per-instance data (position, age) referencing it, like a tile map storing small ids into a table</li><li><b>B.</b> Give each tree its own copy of the mesh, texture and stats for simplicity</li><li><b>C.</b> Store all trees as strings in a config file</li><li><b>D.</b> Compress the whole forest into one image</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="pat-state.html">← State, hierarchies and stacks</a> · <a href="pat-type-object.html">Type object, prototype and data-driven design →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Object pool with an O(1) free list</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> acquire: if free_head == capacity return null; i = free_head; free_head = next_free[i]; in_use[i] = true; free_count -= 1. release: reject invalid or already-free slots; in_use[index] = false; next_free[index] = free_head; free_head = index; free_count += 1.</p><p>Pools avoid allocator cost, fragmentation and garbage-collector pauses for things that spawn and die constantly (bullets, particles, enemies). The free list is the same trick malloc implementations use. Design decisions to state out loud: what happens when the pool is empty (drop the request, recycle the oldest, grow in chunks), and how stale handles are detected. Index + generation counters ("handles") catch the use-after-release bug: a bullet that was recycled must not be hit by an old reference.</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Store positions and velocities in their own contiguous arrays (struct of arrays) so the loop reads only what it needs</p><div>The cost is cache misses from moving unneeded bytes. Contiguous hot data fixes it.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Handles that carry a generation counter, so a stale handle no longer matches</p><div>Index + generation: when a slot is recycled its generation changes, and any old handle fails validation instead of silently pointing at the new object.</div></div>
+<div class="ans" id="a4"><p><b>4. Spot the object pool bugs (C++)</b> <a href="#q4">back ↑</a></p><p><b>Hint:</b> One is incomplete reset, two are about the vector growing.</p><ul><li><b>Line 6:</b> A recycled bullet only gets x and y reset: <code>vx</code>, <code>vy</code> and <code>damage</code> keep the previous bullet's values. Re-initialise the whole object (a <code>reset()</code> or assigning a fresh <code>Bullet{}</code>).</li><li><b>Line 11:</b> The pool is supposed to be fixed-size, but when full it quietly grows with <code>push_back</code>, defeating the purpose and (on a vector) reallocating, which invalidates every pointer handed out earlier. Return nothing when exhausted.</li><li><b>Line 12:</b> Returning a pointer to the vector's back element: any later growth moves all elements, leaving earlier pointers dangling. Use stable storage (fixed array) or hand out indices/handles.</li></ul></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>B.</b> Have one reset function that fully re-initialises the object and call it on every acquire from the pool</p><div>Pooled objects must be completely re-initialised on acquire. Partial resets leak the last user into the next one.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>A.</b> Split each tree into shared immutable data (the tree type, one copy) plus tiny per-instance data (position, age) referencing it, like a tile map storing small ids into a table</p><div>The flyweight pattern shares one copy of the heavy definition across many light instances.</div></div>
+<p class="nav"><a href="pat-state.html">← State, hierarchies and stacks</a> · <a href="pat-type-object.html">Type object, prototype and data-driven design →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

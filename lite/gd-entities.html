@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entities, components and scenes · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdloop">Game Loop &amp; Architecture</a> · lesson 3 of 4 · 30 min</p>
+<h1>Entities, components and scenes</h1>
+<p class="sum">Inheritance versus composition, Godot’s node tree, and the data-oriented ECS idea behind sparse sets.</p>
+<div class="sec">
+<h3>The inheritance trap</h3>
+<p>The first instinct is a class hierarchy: <code>Enemy → FlyingEnemy → ShootingFlyingEnemy</code>. It breaks the day you want a walking enemy that shoots, a flying one that does not, and a boss that is both. You end up with diamond inheritance or copy-paste. The standard fix is <b>composition</b>: build things out of small parts that each do one job (Health, Mover, Shooter, Collider).</p>
+<h3>Three ways to compose</h3>
+<ol><li><b>Scene tree (Godot, Unity prefabs)</b>: an object is a tree of nodes. A goblin is a <code>CharacterBody2D</code> with children for the sprite, collision shape, hurtbox and a script. Reuse comes from saving that tree as a scene and instancing it. Communication: <b>call down, signal up</b>. A parent may call methods on its children, but children emit signals and never reach for their parents.</li><li><b>Component objects</b>: an entity is a bag of component objects with behaviour. Easy to read, but each component carries its own update and memory layout is scattered.</li><li><b>ECS (entity-component-system)</b>: entities are just ids, components are plain data, and <i>systems</i> are functions that run over all entities with a given set of components. Behaviour lives in systems, data in packed arrays.</li></ol>
+<h3>Why ECS is fast: data-oriented design</h3>
+<p>CPUs are fast at walking arrays in order and slow at chasing pointers. A movement system that needs <code>Position</code> and <code>Velocity</code> for 50,000 entities should read two tight arrays, not 50,000 scattered objects. The data structure underneath is usually a <b>sparse set</b>: a dense array of the component values (cheap to iterate) plus a sparse array mapping entity id to its dense slot (cheap lookup). Removal uses swap-remove to keep the dense array gap-free. Build one in the drill.</p>
+<div class="callout tip"><b>When is ECS worth it?</b> When you have thousands of similar things (bullets, particles, units, tiles) or need to serialise and rewind the world. For a platformer with fifty entities, Godot's node tree is simpler and fast enough. Pick the tool for the scale you actually have.</div></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Sparse set: the heart of a fast ECS</p><p>Entity-component systems store each component type in a <b>sparse set</b>: <code>O(1)</code> add, remove, lookup, and a densely packed array you can iterate without gaps. Implement one with a fixed capacity (ids are <code>0 .. capacity-1</code>).</p>
+<ul><li><code>sparse[id]</code> is the index of that id in the dense arrays. <code>dense[i]</code> is the id stored at index <code>i</code>, and <code>values[i]</code> its value. Only the first <code>count</code> dense slots are live.</li><li><code>add(id, value)</code>: returns <code>false</code> if the id is out of range or already present, else stores it at the end.</li><li><code>has(id)</code> and <code>get(id)</code> (optional/null when absent). Careful: a stale <code>sparse</code> entry from a removed id must not fool <code>has</code>. Check that <code>sparse[id] &lt; count</code> and <code>dense[sparse[id]] == id</code>.</li><li><code>remove(id)</code>: <b>swap-remove</b>. Move the last live element into the hole so the array stays packed. Returns whether something was removed.</li><li><code>ids()</code> returns the live ids in dense order.</li></ul><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub fn SparseSet(comptime T: type, comptime capacity: usize) type {
+    return struct {
+        const Self = @This();
+
+        sparse: [capacity]u32 = @splat(0), // id -&gt; index into dense
+        dense: [capacity]u32 = @splat(0), // index -&gt; id
+        values: [capacity]T = undefined, // index -&gt; value
+        count: usize = 0,
+
+        pub fn has(self: *const Self, id: u32) bool {
+            _ = self;
+            _ = id;
+            return false;
+        }
+
+        /// false if id is out of range or already present
+        pub fn add(self: *Self, id: u32, value: T) bool {
+            _ = self;
+            _ = id;
+            _ = value;
+            return false;
+        }
+
+        pub fn get(self: *const Self, id: u32) ?T {
+            _ = self;
+            _ = id;
+            return null;
+        }
+
+        /// swap-remove: keep the dense arrays packed
+        pub fn remove(self: *Self, id: u32) bool {
+            _ = self;
+            _ = id;
+            return false;
+        }
+
+        pub fn ids(self: *const Self) []const u32 {
+            return self.dense[0..self.count];
+        }
+    };
+}
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">In a sparse set, why does <code>remove</code> copy the <i>last</i> element into the freed slot instead of shifting everything down?</div><ol class="opts"><li><b>A.</b> Shifting would break the sparse array</li><li><b>B.</b> It keeps removal O(1) and the dense array gap-free, at the cost of not preserving order</li><li><b>C.</b> It preserves insertion order</li><li><b>D.</b> The last element is always the oldest</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">In Godot, a Health node needs to tell the UI that health changed. What is the idiomatic way?</div><ol class="opts"><li><b>A.</b> Health calls get_node("/root/Main/UI/Bar") and sets the value</li><li><b>B.</b> Health emits a signal like health_changed(value) and the UI connects to it</li><li><b>C.</b> The UI polls Health every frame</li><li><b>D.</b> Both are stored in a global singleton</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><h3>Design question: “How would you structure bullets in a bullet-hell with 20,000 on screen?”</h3><ul><li>No node per bullet. Store positions and velocities in flat arrays (struct of arrays) and update them in one tight loop.</li><li>Render them with one batched draw call (a MultiMesh or a single custom draw) instead of 20,000 sprites.</li><li>Use a pool/free-list to recycle slots (see the performance lesson), no allocation in the hot path.</li><li>Collision against the player only: test bullets against a handful of player hitboxes, using a spatial hash if there are many targets.</li><li>Cull off-screen bullets as you iterate and recycle them.</li></ul></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. You have FlyingEnemy and WalkingEnemy, and now need a walking enemy that shoots plus a flying one that does not. The hierarchy is turning into diamonds and copy-paste. What is the idiomatic fix?</div><ol class="opts"><li><b>A.</b> Add a ShootingFlyingEnemy subclass and duplicate the shooting code into the walker</li><li><b>B.</b> Compose enemies from small parts (Mover, Shooter, Health, Collider) instead of extending the hierarchy</li><li><b>C.</b> Put all behaviour in the base Enemy class with flags</li><li><b>D.</b> Freeze the design so no new combinations are needed</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. A child Health node currently calls get_node up into the HUD to set the bar directly, and it breaks whenever the UI is rearranged. What is the idiomatic Godot fix?</div><ol class="opts"><li><b>A.</b> Cache the absolute path in an onready var so the lookup is faster</li><li><b>B.</b> Move the HUD reference into a global singleton</li><li><b>C.</b> Have Health emit a signal such as health_changed and let the UI connect to it</li><li><b>D.</b> Have the UI poll Health every frame instead</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="gd-input-fsm.html">← Input, buffering and state machines</a> · <a href="gd-perf.html">Performance, memory and the frame budget →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Sparse set: the heart of a fast ECS</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> remove: let i = sparse[id], last = count - 1. dense[i] = dense[last], values[i] = values[last], sparse[dense[i]] = i, count -= 1. That also works when i == last.</p><p>Bevy, flecs and EnTT build on this idea (Bevy also has archetype tables). Iterating a dense array is cache friendly, and swap-remove is why entity order is never stable. In Zig this is a comptime-generic function that returns a type, which is how its standard containers (ArrayList, HashMap) are built too.</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> It keeps removal O(1) and the dense array gap-free, at the cost of not preserving order</p><div>Swap-remove is O(1) and leaves no holes to skip while iterating. The price is that iteration order changes, so never rely on it.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Health emits a signal like health_changed(value) and the UI connects to it</p><div>“Call down, signal up”: the Health node should not know the UI exists. A signal keeps both reusable (you can put the same Health on an enemy with no UI).</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Compose enemies from small parts (Mover, Shooter, Health, Collider) instead of extending the hierarchy</p><div>Composition replaces the brittle hierarchy with combinable parts, so new mixes need no new branches.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>C.</b> Have Health emit a signal such as health_changed and let the UI connect to it</p><div>Call down, signal up: children announce events with signals and never reach for their parents, keeping both reusable.</div></div>
+<p class="nav"><a href="gd-input-fsm.html">← Input, buffering and state machines</a> · <a href="gd-perf.html">Performance, memory and the frame budget →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

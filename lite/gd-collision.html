@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Collision detection and response · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdmath">Game Math &amp; Physics</a> · lesson 2 of 4 · 45 min</p>
+<h1>Collision detection and response</h1>
+<p class="sum">AABB and circle tests, push-out, broad and narrow phase, and why fast things tunnel through walls.</p>
+<div class="sec">
+<h3>Two phases</h3>
+<p>Testing every pair is O(n²). So collision is split in two:</p>
+<ol><li><b>Broad phase</b>: cheaply find pairs that <i>might</i> touch, using a grid, spatial hash or tree (see the performance lesson).</li><li><b>Narrow phase</b>: precise tests on those pairs, then <b>response</b>: separate them, bounce, apply damage.</li></ol>
+<h3>Shapes, cheapest first</h3>
+<ul><li><b>Circle vs circle</b>: <code>distance² &lt; (r1 + r2)²</code>. No square root. Characters often use a capsule or circle for smooth sliding.</li><li><b>AABB</b> (axis-aligned bounding box): overlap if the intervals overlap on <i>both</i> axes. Tiles and platformer characters live here.</li><li><b>OBB / convex polygons</b>: the <b>separating axis theorem</b> (SAT). If you can find any axis along which the shapes' projections do not overlap, they do not collide. Test the edge normals.</li></ul>
+<h3>Response: the minimum translation</h3>
+<p>When two boxes overlap, push one out along the axis with the <b>smallest penetration</b>. That is why a character landing on a floor is pushed up rather than sideways. For tile maps the robust trick is to move on one axis, resolve, then move on the other axis. That gives clean wall sliding and no corner snagging.</p>
+<h3>Tunneling</h3>
+<p>Collision tests happen once per step, on positions. If something moves further in one step than the thickness of what it should hit, no step ever sees them overlapping, and it passes straight through. The fixes, cheapest first:</p>
+<ol><li>Limit the maximum speed, or make walls thicker.</li><li><b>Substep</b>: run the physics several times per frame.</li><li><b>Swept (continuous) collision</b>: test the whole path from old to new position and find the time of first impact (you implement 1-D version in the drill). Engines call this CCD.</li><li>Ray/shape casts for bullets: do not simulate a bullet as a moving body at all.</li></ol></div>
+<div class="sec"><div class="box"><p class="kind">Simulation: A bullet and a thin wall</p><p>A bullet flies at a wall that is only a few pixels thick. Each ghost is where the bullet is at the end of a 60 Hz physics step. The check either tests only those positions (discrete) or the full path between them (swept).</p><p><b>Try this in the full app:</b></p><ul><li>At low speed the discrete test hits the wall.</li><li>Raise the speed until the bullet <b>tunnels</b>: the ghosts jump over the wall without ever overlapping it.</li><li>Tick <b>swept test</b> at the same speed: the hit is found exactly, the bullet stops at the wall face.</li><li>Find the speed at which discrete tunnelling starts and compare with (wall width + bullet width) × 60.</li></ul><p class="note">Interactive: needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Drill: AABB overlap and push-out</p><p>Rectangles are <code>{x, y, w, h}</code> with y growing downward (screen coordinates).</p>
+<ul><li><code>overlaps(a, b)</code>: true only if the rectangles share area. Touching edges do <b>not</b> count.</li><li><code>push_out(a, b)</code>: the smallest translation that moves <code>a</code> so it no longer overlaps <code>b</code>, along the axis of <b>least penetration</b>. The sign points away from <code>b</code> (compare the rectangle centres). Returns <code>(0, 0)</code> when they do not overlap. If both axes tie, resolve on x.</li></ul><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub const Rect = struct { x: f32, y: f32, w: f32, h: f32 };
+pub const Vec2 = struct { x: f32, y: f32 };
+
+pub fn overlaps(a: Rect, b: Rect) bool {
+    _ = a;
+    _ = b;
+    return false;
+}
+
+/// How far to move a so it stops overlapping b (zero if it does not).
+pub fn pushOut(a: Rect, b: Rect) Vec2 {
+    _ = a;
+    _ = b;
+    return .{ .x = 0, .y = 0 };
+}
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Swept collision time (no tunneling)</p><p>A box of width <code>size</code> with left edge at <code>pos</code> moves right by <code>dist</code> this frame. A wall's left face is at <code>wall_left</code>.</p>
+<p>Return the fraction <code>t</code> in <code>[0, 1]</code> of this frame's movement at which the box's <b>right edge first touches the wall</b>, or "nothing" if it does not reach the wall this frame, if the wall is already behind or overlapping the box (gap &lt; 0), or if <code>dist &lt;= 0</code>. Touching already (gap == 0) is <code>t = 0</code>.</p>
+<p>Unlike testing only the end position, a fast box cannot skip over a thin wall.</p><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub fn sweepHit(pos: f32, size: f32, dist: f32, wall_left: f32) ?f32 {
+    _ = pos;
+    _ = size;
+    _ = dist;
+    _ = wall_left;
+    return null;
+}
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec">
+<h3>In Godot</h3>
+<ul><li><code>CharacterBody2D</code> + <code>move_and_slide()</code> for player-controlled things: you set <code>velocity</code>, the engine handles sweeps, slopes and sliding.</li><li><code>RigidBody2D</code> for things the physics engine drives (crates, balls). Turn on continuous CD for fast ones.</li><li><code>Area2D</code> for triggers (pickups, damage zones, hitboxes): overlap events, no response.</li><li><b>Collision layers and masks</b>: <i>layer</i> is "what I am", <i>mask</i> is "what I look for". Player bullets should be on a layer enemies' hurtboxes scan, and not hit the player. Set this up before you have thirty object types.</li></ul></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Two boxes overlap by 3 px horizontally and 20 px vertically. Which push-out is correct?</div><ol class="opts"><li><b>A.</b> Push 20 px vertically</li><li><b>B.</b> Push 3 px horizontally, away from the other box</li><li><b>C.</b> Push both 3 and 20</li><li><b>D.</b> Push diagonally by 20</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A projectile moving at 3000 px/s ignores a 4 px wall at 60 Hz. What is the root cause?</div><ol class="opts"><li><b>A.</b> The wall is not on the right collision layer</li><li><b>B.</b> It moves 50 px per step, more than the wall is thick, so no step ever overlaps it (tunneling)</li><li><b>C.</b> Floating point error</li><li><b>D.</b> The wall needs a bigger shape margin</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Two boxes overlap on the x axis but their y intervals do not touch. Do they collide, and why?</div><ol class="opts"><li><b>A.</b> No, an AABB overlap needs the intervals to overlap on both axes</li><li><b>B.</b> Yes, one overlapping axis is enough for an AABB hit</li><li><b>C.</b> Yes, unless both are tiles</li><li><b>D.</b> No, boxes only collide on the y axis</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. A fast bullet tunnels through thin walls at 60 Hz. The team cannot slow the bullet or thicken every wall. Which fix addresses the root cause?</div><ol class="opts"><li><b>A.</b> Increase the wall shape margin until ghosts overlap it</li><li><b>B.</b> Test the whole path from old to new position with a swept test or raycast, or substep the physics</li><li><b>C.</b> Move collision into the render callback so it runs more often</li><li><b>D.</b> Check collision every other frame to halve the cost</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="gd-vectors.html">← Vectors, movement and steering</a> · <a href="gd-smoothing.html">Interpolation, easing and smoothing →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. AABB overlap and push-out</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Penetration on x = min(a.right, b.right) - max(a.left, b.left); same for y. Pick the smaller (x on ties). Push negative if a's centre is left of (above) b's, else positive.</p><p>Resolving along the least-penetration axis is why a character standing on a floor gets pushed up, not sideways. For tile maps the usual trick is to move and resolve one axis at a time (x then y), which also gives clean wall sliding.</p></div>
+<div class="ans" id="a2"><p><b>2. Swept collision time (no tunneling)</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> gap = wall_left - (pos + size). If dist <= 0 or gap < 0 there is no hit. Otherwise t = gap / dist, and there is no hit if t > 1.</p><p>In 2D this becomes ray-vs-expanded-AABB (Minkowski sum), and in engines it is continuous collision detection (Godot: continuous_cd on RigidBody2D, or shape casts for bullets). Cheap alternatives: cap the speed, or substep the physics. Only the left face matters here because the box moves right; a box moving left would use the wall's right face.</p></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Push 3 px horizontally, away from the other box</p><div>Resolve along the axis of least penetration: the smallest move that separates them.</div></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> It moves 50 px per step, more than the wall is thick, so no step ever overlaps it (tunneling)</p><div>3000 / 60 = 50 px per step. Use swept/continuous collision, a raycast for the bullet, or substeps.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>A.</b> No, an AABB overlap needs the intervals to overlap on both axes</p><div>AABB collision requires overlap on every axis; a gap on any one axis means no contact.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>B.</b> Test the whole path from old to new position with a swept test or raycast, or substep the physics</p><div>Tunneling happens because discrete steps jump over the wall; continuous tests find the time of first impact along the path.</div></div>
+<p class="nav"><a href="gd-vectors.html">← Vectors, movement and steering</a> · <a href="gd-smoothing.html">Interpolation, easing and smoothing →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

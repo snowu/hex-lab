@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Idempotency &amp; exactly-once effects · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#reliability">Distributed Systems &amp; Reliability</a> · lesson 1 of 3 · 30 min</p>
+<h1>Idempotency &amp; exactly-once effects</h1>
+<p class="sum">Make retries safe. Implement an idempotency-key store.</p>
+<div class="sec">
+<p>Networks fail <i>after</i> the server did the work. The client cannot tell, so it retries. Without idempotency a retried “pay €100” pays twice. The standard solution: the client sends an <b>Idempotency-Key</b> (UUID) per logical operation; the server stores the result under that key and returns it on repeats.</p>
+<h3>The details that get asked</h3>
+<ul>
+<li><b>Same key, different payload</b> → reject (422/409), it is a client bug.</li>
+<li><b>Concurrent duplicate while the first is in flight</b> → return 409 / wait; never run twice.</li>
+<li><b>Failure semantics:</b> store the outcome only when it is deterministic; allow retry after transient failure.</li>
+<li><b>Scope</b> keys per customer; <b>expire</b> them (e.g. 24h) and say so in the API docs.</li>
+<li>Atomicity: claim the key and perform the effect in one DB transaction (unique constraint on key), or use the outbox.</li>
+</ul></div>
+<div class="sec"><div class="box"><p class="kind">Predict the output: Retrying a charge</p><p>The server applies the charge, but the response is lost on the first attempt. The client retries without an idempotency key.</p><pre>balance = 100
+calls = 0
+
+async def charge(amount):
+    global balance, calls
+    balance -= amount                  # the server applies the charge...
+    calls += 1
+    if calls == 1:
+        raise TimeoutError('timeout')  # ...but the response is lost
+    return balance
+
+async def with_retry(fn):
+    try:
+        return await fn()
+    except TimeoutError:
+        return await fn()
+
+print(await with_retry(lambda: charge(30)))
+print('balance:', balance)</pre><div class="q">What is printed?</div><ol class="opts"><li><b>A.</b> 70 then "balance: 70"</li><li><b>B.</b> 40 then "balance: 40"</li><li><b>C.</b> 70 then "balance: 40"</li><li><b>D.</b> 100 then "balance: 100"</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Idempotent handler wrapper</p><p>Implement <code>make_idempotent(handler)</code> returning an async function <code>call(key, payload)</code> (the handler is <code>async def handler(payload)</code>):</p>
+<ul><li>The first call with a key runs the handler and caches the result.</li><li>A repeat with the same key and an <b>equal payload</b> returns the cached result without calling the handler again.</li><li>Same key but a different payload: raise <code>ValueError('key reused with different payload')</code>.</li><li>Concurrent duplicates (the first still running) must share the same in-flight work, so the handler runs once.</li><li>If the handler raises, do <b>not</b> cache the failure: a later retry with the same key may run again.</li></ul><p><b>Starter:</b></p><pre>import asyncio
+import json
+
+def make_idempotent(handler):
+    async def call(key, payload):
+        pass
+    return call
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Bug hunt: This payment endpoint is idempotent. Is it?</p><p>The team claims this handler is safe to retry because it checks the idempotency key. Click the <b>2</b> lines that break that guarantee under concurrency or crashes.</p><pre>1  async def create_payment(key, payload):
+2      existing = await db.find_by_key(key)
+3      if existing:
+4          return existing.result
+5      result = await bank.initiate(payload)
+6      await db.save(key=key, result=result)
+7      return result</pre><p>2 buggy lines. Find them, then check.</p><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Which operation is naturally idempotent?</div><ol class="opts"><li><b>A.</b> POST /payments</li><li><b>B.</b> PUT /customers/42 with the full document</li><li><b>C.</b> Incrementing a counter</li><li><b>D.</b> Appending a log line</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A client retries "pay 100" with the same Idempotency-Key but a changed body (amount 200). How must the server respond?</div><ol class="opts"><li><b>A.</b> Charge 200; the latest body wins</li><li><b>B.</b> Charge both and refund one later</li><li><b>C.</b> Reject with 422/409, because same key with different payload is a client bug</li><li><b>D.</b> Ignore the key and process it as a new payment</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. Two requests with the same Idempotency-Key arrive at once while the first is still being processed. What is correct?</div><ol class="opts"><li><b>A.</b> Run both and return both results</li><li><b>B.</b> Return 409 or wait on the in-flight request; never run the effect twice</li><li><b>C.</b> Delete the key so the second becomes a fresh request</li><li><b>D.</b> Keep whichever finishes last</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="sagas-breakers.html">Sagas, circuit breakers, timeouts →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Retrying a charge</b> <a href="#q1">back ↑</a></p><p><b>B.</b> 40 then "balance: 40"</p><div>The first call charged 30 (balance 70) but timed out, so the client retried and charged another 30. The customer paid 60 for a 30 purchase. An idempotency key lets the server recognise the retry and return the first result instead of applying it again.</div></div>
+<div class="ans" id="a2"><p><b>2. Idempotent handler wrapper</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> Register the key synchronously BEFORE awaiting anything, so a concurrent caller sees it: store (fingerprint, task) with asyncio.ensure_future(handler(payload)). Fingerprint the payload with json.dumps(payload, sort_keys=True). On failure, pop the key.</p><p><b>Reference solution:</b></p><pre>import asyncio
+import json
+
+def make_idempotent(handler):
+    seen = {}  # key -&gt; (payload fingerprint, task)
+
+    async def call(key, payload):
+        fingerprint = json.dumps(payload, sort_keys=True)
+        hit = seen.get(key)
+        if hit is not None:
+            if hit[0] != fingerprint:
+                raise ValueError('key reused with different payload')
+            return await hit[1]
+        task = asyncio.ensure_future(handler(payload))
+        seen[key] = (fingerprint, task)
+        try:
+            return await task
+        except Exception:
+            seen.pop(key, None)
+            raise
+
+    return call</pre><p>Real implementations persist this in a database: a unique constraint on (customer, key), a status (in_progress / completed), a lock timeout for crashed workers, and a TTL (for example 24h). The in-memory version only works inside one process.</p></div>
+<div class="ans" id="a3"><p><b>3. This payment endpoint is idempotent. Is it?</b> <a href="#q3">back ↑</a></p><p><b>Hint:</b> Ask what happens if two identical requests arrive together, and what happens if the server dies between two lines.</p><ul><li><b>Line 2:</b> Check-then-act is not atomic. Two concurrent requests with the same key both see "no existing record" and both reach the bank. Claim the key first with an atomic insert guarded by a unique constraint.</li><li><b>Line 6:</b> The key is recorded only after the side effect. If the process crashes between the bank call and this write, the retry will initiate the payment again. Record the key as <i>in progress</i> before calling the bank, then complete it afterwards.</li></ul></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> PUT /customers/42 with the full document</p><div>PUT with a full replacement yields the same state however many times it is applied. POST/increment/append need an idempotency key or dedupe.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>C.</b> Reject with 422/409, because same key with different payload is a client bug</p><div>The key binds one logical operation to one payload. Same key with a different body must be rejected, not executed twice.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>B.</b> Return 409 or wait on the in-flight request; never run the effect twice</p><div>Concurrent duplicates must not execute twice. Claim the key atomically (unique constraint in one transaction) and make the second waiter fail fast or wait.</div></div>
+<p class="nav"><a href="sagas-breakers.html">Sagas, circuit breakers, timeouts →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

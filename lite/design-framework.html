@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A framework you can run under pressure · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#design">System Design</a> · lesson 1 of 4 · 5 min</p>
+<h1>A framework you can run under pressure</h1>
+<p class="sum">Requirements → estimates → API → data → architecture → deep dives → failure.</p>
+<div class="sec"><p>Interviewers do not want your memorised architecture. They want to watch you <b>structure an open problem</b>. Step through the framework below, then practise it on the worked design in the next lessons.</p></div>
+<div class="sec"><h3>1. Clarify &amp; scope (3-5 min)</h3><p>Functional requirements (the 3-4 things the system <i>must</i> do) and what is explicitly out of scope. Ask who the users are and what “correct” means. Money? Then correctness beats latency.</p>
+<h3>2. Non-functional &amp; numbers</h3><p>Availability target, latency target (p50/p99), consistency needs, durability, data retention, regulatory limits. Back-of-envelope: requests/sec = users × actions/day ÷ 86,400, peak ≈ 3-10× average. Storage = items × size × retention.</p><pre><code>10M users × 5 actions/day = 50M/day ≈ 580 rps average, ~3k rps peak</code></pre>
+<h3>3. API &amp; data model</h3><p>Sketch 3-5 endpoints (with idempotency on writes), and the core entities with their keys. State your read/write ratio: it drives storage and caching choices.</p>
+<h3>4. High-level design</h3><p>Client → edge/LB → stateless services → data stores, plus async paths (queues, workers). Keep boxes few and each one justified by a requirement.</p>
+<h3>5. Deep dives</h3><p>Pick the 1-2 hardest parts (the interviewer will nudge you). Typical: data partitioning, hot keys, exactly-once effects, fan-out, ranking, consistency between stores.</p>
+<h3>6. Failure, scale, operate</h3><p>What breaks first? Retries, timeouts, backpressure, degradation modes, observability (RED/USE metrics, traces), rollout/rollback, cost. This step is what separates senior from mid.</p></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You are at minute 10 and have only drawn boxes. The interviewer asks “what about a bank that is down?”. Best response?</div><ol class="opts"><li><b>A.</b> That is out of scope</li><li><b>B.</b> Explain per-dependency timeouts, a circuit breaker, a degraded mode (cached/stale data with a clear flag), retries with backoff, and alerting</li><li><b>C.</b> Add more servers</li><li><b>D.</b> Promise 100% availability</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. You have five minutes left in a design round and jumped straight to boxes and a database choice. What did the framework say to do first?</div><ol class="opts"><li><b>A.</b> Pick the database first, since everything else follows from it</li><li><b>B.</b> Clarify the 3-4 must-do functional requirements plus what is out of scope, then set numbers (availability, latency, rps, storage)</li><li><b>C.</b> Draw as many boxes as possible to show breadth</li><li><b>D.</b> Memorise a reference architecture and reproduce it</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div>
+<div class="box"><div class="q">2. Why does the framework ask you to state the read/write ratio before choosing storage and caching?</div><ol class="opts"><li><b>A.</b> Because interviewers like arithmetic</li><li><b>B.</b> Because writes are always more important than reads</li><li><b>C.</b> Because the ratio drives storage and caching choices, such as read replicas or denormalisation for read-heavy loads</li><li><b>D.</b> Because it determines the programming language</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<p class="nav"><a href="building-blocks.html">Building blocks &amp; their trade-offs →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Explain per-dependency timeouts, a circuit breaker, a degraded mode (cached/stale data with a clear flag), retries with backoff, and alerting</p><div>Failure handling is the senior differentiator. Be concrete: timeouts, breakers, degradation, and how users and operators find out.</div></div>
+<div class="ans" id="a2"><p><b>2. Check 1</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Clarify the 3-4 must-do functional requirements plus what is out of scope, then set numbers (availability, latency, rps, storage)</p><div>The framework runs clarify-and-scope before architecture: must-do requirements, out-of-scope, then non-functionals and back-of-envelope numbers.</div></div>
+<div class="ans" id="a3"><p><b>3. Check 2</b> <a href="#q3">back ↑</a></p><p><b>C.</b> Because the ratio drives storage and caching choices, such as read replicas or denormalisation for read-heavy loads</p><div>Read/write ratio is a design input, not trivia: it decides whether reads scale via replicas and caches or writes scale via sharding.</div></div>
+<p class="nav"><a href="building-blocks.html">Building blocks &amp; their trade-offs →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

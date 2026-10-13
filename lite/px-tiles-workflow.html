@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tilesets, sprite sheets and the art pipeline · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdpixel">Pixel Art</a> · lesson 5 of 6 · 50 min</p>
+<h1>Tilesets, sprite sheets and the art pipeline</h1>
+<p class="sum">Tiles that connect, indexed colour and palette swaps, scaling rules, and keeping art in version control.</p>
+<div class="sec">
+<h3>Tilesets</h3>
+<ul><li>Pick a tile size (16×16 or 32×32 are the usual) and a layout grid. All tiles in a game share it.</li><li>Tiles must <b>tile seamlessly</b>: opposite edges match. Preview them in a 3×3 repeat while drawing.</li><li>Avoid a distinctive feature (a bright pebble) that makes repetition obvious. Make 2 to 4 variants of floor tiles and place them randomly.</li><li><b>Autotiling</b>: instead of drawing every combination by hand, a tile is chosen by which of its neighbours are solid. With four neighbours (N, E, S, W) that is a 4-bit number, so 16 tiles. Including diagonals gives the 47-tile “blob” set. Godot 4 does the matching with terrain sets; you draw the tiles. The first drill below computes the bitmask.</li><li>Pad or <b>extrude</b> tiles inside an atlas by 1 pixel if you see seams between tiles when the camera moves (sub-pixel sampling pulls colours from the neighbouring tile).</li></ul>
+<h3>Indexed colour and palette swaps</h3>
+<p>If the art uses a fixed palette, store it as <b>indexed</b> (each pixel is a palette index). Changing the palette changes all the art: enemy recolours, day and night, accessibility variants. Converting an arbitrary image to a palette is a nearest-colour search, the second drill. For smooth results add dithering; for pixel art you draw by hand you rarely need it.</p>
+<h3>Scaling and import</h3>
+<ul><li>Render at the base resolution, scale up by an <b>integer</b> (third drill), centre with black bars if the window does not fit.</li><li>Godot: default texture filter <b>Nearest</b>; stretch mode canvas_items with integer scaling; snap 2D transforms to pixel; set import options to no mipmaps for pixel art.</li><li>Keep a single source of truth for sizes: tile size, base resolution and pixel scale in one constants file, not scattered.</li></ul>
+<h3>Pipeline and version control</h3>
+<ul><li>Keep <b>source files</b> (.aseprite, .pixelorama, or a layered format) in the repo next to the exported PNGs, or you lose layers and palettes forever.</li><li>PNG files are binary, so Git cannot merge them. Treat each sprite as a file with a single editor at a time, and use small, named commits (“slime: add hurt frame”).</li><li>GitHub shows image diffs in pull requests (2-up, swipe, onion skin), so art changes can be reviewed visually. Pair that with a naming convention and the artist can open PRs for art without touching code.</li><li>Automate export: a script that turns source files into the sheets and JSON the game loads, so nobody exports by hand.</li><li>Document the palette and sizes in the repo's README so any new artist can match the style.</li></ul>
+<div class="callout tip">The last lesson below sketches a reusable pixel editor that lives <i>inside</i> a game repo, finds the sprites, lets you edit them, and (optionally) proposes the change as a pull request.</div></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Autotile bitmask</p><p>Tile maps pick the right edge or corner sprite from which neighbours are solid. Return a 4-bit number: <b>N = 1, E = 2, S = 4, W = 8</b>, each bit set when that neighbour is <code>'#'</code>. Cells <b>outside</b> the map count as solid, so the map border joins up. The result selects one of 16 tiles.</p><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub fn bitmask(grid: []const []const u8, row: usize, col: usize) u8 {
+    _ = grid;
+    _ = row;
+    _ = col;
+    return 0;
+}
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Snap an image to a palette</p><p>Implement <code>nearest_index(rgb, palette)</code>: the index of the palette colour closest to <code>rgb</code> by squared Euclidean distance in RGB. The <b>first</b> one wins a tie. Then <code>quantize(pixels, palette, out)</code> maps a list of pixels to a list of palette indices (this is how a PNG becomes an indexed image).</p><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub const Rgb = [3]u8;
+
+pub fn nearestIndex(c: Rgb, palette: []const Rgb) usize {
+    _ = c;
+    _ = palette;
+    return 0;
+}
+
+/// out[i] = palette index for pixels[i]. out.len == pixels.len.
+pub fn quantize(pixels: []const Rgb, palette: []const Rgb, out: []usize) void {
+    _ = pixels;
+    _ = palette;
+    for (out) |*o| o.* = 0;
+}
+</pre><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Drill: Pixel-perfect integer scaling</p><p>A pixel-art game renders at a low base resolution (say 320x180) and is scaled to the window. Non-integer scaling makes some pixels wider than others. Return the largest integer <code>scale</code> that fits (at least 1) and the offsets that centre the picture, using <b>floor</b> division (so a negative odd offset rounds down, towards minus infinity).</p><p><b>Starter (Zig):</b></p><pre>const std = @import(&quot;std&quot;);
+
+pub const Fit = struct { scale: i32, off_x: i32, off_y: i32 };
+
+pub fn integerScale(win_w: i32, win_h: i32, base_w: i32, base_h: i32) Fit {
+    _ = win_w;
+    _ = win_h;
+    _ = base_w;
+    _ = base_h;
+    return .{ .scale = 0, .off_x = 0, .off_y = 0 };
+}
+</pre><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p><p class="note">Drills compile on a computer: open the full app for every language and the tests.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Thin lines appear between tiles when the camera scrolls slowly. What do you try first?</div><ol class="opts"><li><b>A.</b> Use bigger tiles</li><li><b>B.</b> Add 1-pixel extrusion/padding in the atlas and snap the camera to whole pixels</li><li><b>C.</b> Turn on filtering</li><li><b>D.</b> Reduce the palette</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Why keep the .aseprite (source) files in the repository and not just the exported PNGs?</div><ol class="opts"><li><b>A.</b> They load faster</li><li><b>B.</b> The source keeps layers, palettes and animation data, so art can be edited later and exports regenerated</li><li><b>C.</b> PNG cannot store pixels</li><li><b>D.</b> GitHub requires it</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You have 4-bit autotile masks (N=1, E=2, S=4, W=8). What mask does a horizontal corridor piece (solid on W and E only) have?</div><ol class="opts"><li><b>A.</b> 3</li><li><b>B.</b> 10</li><li><b>C.</b> 5</li><li><b>D.</b> 12</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A floor tile has one bright pebble and the finished room shows an obvious repeating grid of pebbles. What helps most?</div><ol class="opts"><li><b>A.</b> Draw 2 to 4 plain variants and place them randomly so the repetition breaks up</li><li><b>B.</b> Make the tile bigger</li><li><b>C.</b> Turn on texture filtering</li><li><b>D.</b> Add more saturation</li></ol><p class="tolink" id="q7"><a href="#a7">answer 7 ↓</a></p></div>
+<div class="box"><div class="q">2. You need day, night, and poisoned variants of the same enemy without redrawing it. Which workflow makes that trivial?</div><ol class="opts"><li><b>A.</b> Export three PNGs by hand</li><li><b>B.</b> Redraw the silhouette each time</li><li><b>C.</b> Store art as indexed colour against a fixed palette so swapping the palette recolours everything</li><li><b>D.</b> Scale by non-integer factors</li></ol><p class="tolink" id="q8"><a href="#a8">answer 8 ↓</a></p></div>
+<p class="nav"><a href="px-anim.html">← Animation</a> · <a href="px-practice.html">A practice routine and a reusable editor →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Autotile bitmask</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> A helper solid(row, col) that returns true when the coordinates are outside the map or the character is #. Use signed integers for the neighbour coordinates: row - 1 on an unsigned 0 wraps around.</p><p>This is the 16-tile (4-bit) scheme. Adding the diagonals gives the 47-tile "blob" set, which needs corner checks so inner corners look right. Godot 4 terrain tiles do the matching for you, but you still have to draw the tiles. Draw the 16 first, then expand. (The unsigned wrap-around in the hint is a real bug source in C++ and Zig; Zig catches it in Debug builds with a panic.)</p></div>
+<div class="ans" id="a2"><p><b>2. Snap an image to a palette</b> <a href="#q2">back ↑</a></p><p><b>Hint:</b> Squared distance in a wider type (i32): 255 * 255 * 3 does not fit in u8 arithmetic. Keep the best distance so far and only replace it when the new one is strictly smaller, which gives you the tie rule.</p><p>RGB distance is crude: human vision weighs green more and is not linear, so tools use perceptual spaces such as Oklab. Plain nearest-colour also bands; add dithering (see the dither simulation) to keep gradients. Working with an indexed palette is also what gives you palette swaps (enemy recolours) for free, and what Aseprite and most retro hardware used.</p></div>
+<div class="ans" id="a3"><p><b>3. Pixel-perfect integer scaling</b> <a href="#q3">back ↑</a></p><p><b>Hint:</b> scale = max(1, min(win_w / base_w, win_h / base_h)). offset = floor((win - base * scale) / 2). Zig has @divFloor. C++ integer division truncates toward zero, so a negative odd numerator rounds the wrong way: write a small floor-division helper.</p><p>In Godot: Project Settings > Display > Window > Stretch: mode canvas_items (or viewport), aspect keep, scale mode integer. Set the default texture filter to Nearest and snap 2D transforms to pixel so sprites do not shimmer. Camera smoothing and sub-pixel movement are the usual cause of "swimming" pixels.</p></div>
+<div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Add 1-pixel extrusion/padding in the atlas and snap the camera to whole pixels</p><div>Sub-pixel positions sample the edge of the neighbouring atlas tile. Pad or extrude the tile edges and keep positions on whole pixels.</div></div>
+<div class="ans" id="a5"><p><b>5. Quick check</b> <a href="#q5">back ↑</a></p><p><b>B.</b> The source keeps layers, palettes and animation data, so art can be edited later and exports regenerated</p><div>A flattened PNG has lost the information you need to change it safely.</div></div>
+<div class="ans" id="a6"><p><b>6. Quick check</b> <a href="#q6">back ↑</a></p><p><b>B.</b> 10</p><div>E (2) + W (8) = 10. A vertical corridor (N and S) is 1 + 4 = 5.</div></div>
+<div class="ans" id="a7"><p><b>7. Check 1</b> <a href="#q7">back ↑</a></p><p><b>A.</b> Draw 2 to 4 plain variants and place them randomly so the repetition breaks up</p><div>A distinctive feature betrays the grid; variants plus random placement hide the repeat.</div></div>
+<div class="ans" id="a8"><p><b>8. Check 2</b> <a href="#q8">back ↑</a></p><p><b>C.</b> Store art as indexed colour against a fixed palette so swapping the palette recolours everything</p><div>Indexed pixels are palette references, so one art set yields many recolours from palette swaps.</div></div>
+<p class="nav"><a href="px-anim.html">← Animation</a> · <a href="px-practice.html">A practice routine and a reusable editor →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

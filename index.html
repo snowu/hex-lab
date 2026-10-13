@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hex Lab</title>
+<script>/* E-readers (Kindle, Kobo) and browsers that cannot run the app (it needs ES2021) get the static lite/ copy instead. ES5 on purpose so old engines can run it. ?full skips the check. */
+(function () { if (/[?&]full(?:[=&]|$)/.test(location.search)) return; var ok = !/Kindle|Kobo|PocketBook|Tolino/.test(navigator.userAgent); if (ok) { try { new Function('var a = {}; a.b ??= 1; return a?.b ?? class { #c = 1; }'); ok = 'IntersectionObserver' in window; } catch (e) { ok = false; } } if (!ok) location.replace('lite/index.html'); })();</script>
 <meta name="description" content="Hex Lab: interactive prep for senior engineering interviews in the AI era, plus a full game-dev learning section.">
 <meta name="theme-color" content="#040705">
 <link rel="manifest" href="manifest.webmanifest">
@@ -50,8 +52,8 @@
     </div>
   </div>
 </header>
-<main id="app" tabindex="-1"></main>
-<footer class="foot"><span>Progress is stored only in your browser. Content is original, with links to free third-party material. Neonomics-specific notes come from public sources, so verify them against <a href="https://docs.neonomics.io" target="_blank" rel="noopener">their docs</a>.</span><button id="wipe" class="linkbtn" title="Delete all progress stored in this browser">[ reset all progress ]</button></footer>
+<main id="app" tabindex="-1"><noscript><p>Hex Lab needs JavaScript. The <a href="lite/index.html">lite version</a> works without it.</p></noscript></main>
+<footer class="foot"><span>Progress is stored only in your browser. Content is original, with links to free third-party material. Neonomics-specific notes come from public sources, so verify them against <a href="https://docs.neonomics.io" target="_blank" rel="noopener">their docs</a>.</span><a href="lite/index.html" class="linkbtn" title="Plain read-only copy for Kindle and other e-readers">[ lite / e-reader ]</a><button id="wipe" class="linkbtn" title="Delete all progress stored in this browser">[ reset all progress ]</button></footer>
 
 <div id="cmdk" class="cmdk" hidden>
   <div class="cmdk-bg" data-close></div>

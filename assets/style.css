@@ -103,6 +103,7 @@ main.in>*:nth-child(2){animation-delay:.04s}main.in>*:nth-child(3){animation-del
 .foot span::before{content:"// ";color:var(--accent)}
 .linkbtn{background:none;border:1px solid transparent;color:var(--faint);font-family:var(--mono);font-size:.72rem;cursor:pointer;padding:3px 6px;white-space:nowrap}
 .linkbtn:hover{color:var(--bad);border-color:var(--bad)}
+a.linkbtn{text-decoration:none}a.linkbtn:hover{color:var(--accent);border-color:var(--accent)}
 
 /* ---------- buttons & chips ---------- */
 button{font:inherit;color:inherit}

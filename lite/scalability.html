@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scalability fundamentals · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#cloud">Scale, Kafka, AWS &amp; Terraform</a> · lesson 1 of 4 · 25 min</p>
+<h1>Scalability fundamentals</h1>
+<p class="sum">Find the bottleneck, scale statelessly, shed load, and do the maths.</p>
+<div class="sec">
+<h3>The scaling playbook (in the order you should reach for it)</h3>
+<ol>
+<li><b>Measure first.</b> Profile, find the real bottleneck (CPU, DB, network, a lock, one hot partition). Scaling the wrong tier wastes money.</li>
+<li><b>Make services stateless</b> (state in DB/cache/queue) so you can add instances behind a load balancer.</li>
+<li><b>Cache</b> reads, <b>batch</b> writes, add <b>indexes</b>, fix N+1 queries.</li>
+<li><b>Go async:</b> move slow or bursty work behind a queue; absorb spikes instead of provisioning for them.</li>
+<li><b>Scale data:</b> read replicas → partition/shard → purpose-built stores (search, time series, KV).</li>
+<li><b>Protect yourself:</b> rate limits, backpressure, load shedding, timeouts, bulkheads.</li>
+</ol>
+<h3>Useful laws</h3>
+<ul>
+<li><b>Little’s Law:</b> <code>concurrency = arrival rate × latency</code>. 200 req/s at 0.5 s average needs ~100 requests in flight. If latency doubles, so does the concurrency you need, which is how a slow dependency exhausts your pool.</li>
+<li><b>Amdahl’s Law:</b> the serial fraction caps speed-up. If 10% is serial, the maximum speed-up is 10× however many nodes you add.</li>
+<li><b>Tail latency:</b> with fan-out to N backends, the chance at least one is slow rises fast. Watch p99, use hedged requests and timeouts.</li>
+<li><b>Utilisation vs queueing:</b> latency explodes as utilisation nears 100%. Keep headroom (about 60-70% target) and autoscale on a leading signal.</li>
+</ul>
+<div class="callout"><b>Say this in interviews:</b> “What is the bottleneck, how will we know, what is the cheapest change that moves it, and what breaks next?”</div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Your API averages 400 ms latency at 500 req/s. A dependency slows it to 800 ms. Roughly how many concurrent requests are now in flight, assuming no load shedding?</div><ol class="opts"><li><b>A.</b> 200</li><li><b>B.</b> 400</li><li><b>C.</b> 500</li><li><b>D.</b> 1,000</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">CPU on your service is 30%, yet p99 latency is terrible and the database shows 95% CPU. What do you scale?</div><ol class="opts"><li><b>A.</b> More app instances</li><li><b>B.</b> The database tier or its access pattern (indexes, caching, replicas, query fixes)</li><li><b>C.</b> Nothing</li><li><b>D.</b> The load balancer</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Which is the best way to survive a 10× traffic spike that lasts 3 minutes (e.g. a marketing push)?</div><ol class="opts"><li><b>A.</b> Permanently provision for 10×</li><li><b>B.</b> Queue non-urgent work, cache, rate-limit/shed low-priority traffic, and autoscale with pre-warmed capacity</li><li><b>C.</b> Hope</li><li><b>D.</b> Restart servers</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Autoscaling calculation</p><p>A Kafka consumer group must drain its backlog. Implement <code>desired_replicas(lag, rate_per_consumer, drain_seconds, partitions, min_replicas=1)</code>: the number of consumers needed to clear <code>lag</code> messages in <code>drain_seconds</code> if each processes <code>rate_per_consumer</code> messages per second, rounded <b>up</b>, never below <code>min_replicas</code>, and never above <code>partitions</code> (extra consumers would sit idle).</p><p><b>Starter:</b></p><pre>def desired_replicas(lag, rate_per_consumer, drain_seconds, partitions, min_replicas=1):
+    pass
+</pre><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A batch job is 10% serial. The team plans to buy 100× more nodes to get 100× faster. What should you tell them?</div><ol class="opts"><li><b>A.</b> More nodes always give linear speed-up, so approve it</li><li><b>B.</b> The serial fraction caps the gain: Amdahl’s law limits this job to about 10× no matter how many nodes you add</li><li><b>C.</b> Serial code runs faster on more nodes automatically</li><li><b>D.</b> Latency no longer matters once you have enough nodes</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<div class="box"><div class="q">2. Your service fans out to 20 backends. Averages look fine but p99 is terrible and the pool keeps exhausting. What is the right diagnosis and fix?</div><ol class="opts"><li><b>A.</b> Tail latency: with wide fan-out some backend is usually slow, so add timeouts with hedged requests and keep utilisation near 60-70% with headroom</li><li><b>B.</b> Buy a bigger load balancer and keep utilisation at 100%</li><li><b>C.</b> Average latency is the only metric that matters, so ignore p99</li><li><b>D.</b> Remove all timeouts so slow backends eventually answer</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
+<p class="nav"><a href="kafka.html">Kafka: partitions, groups, delivery guarantees →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> 400</p><div>Little’s law: 500 × 0.8 = 400 (it was 200). Without limits or timeouts you will run out of threads, connections or memory. This is why timeouts and bulkheads matter.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> The database tier or its access pattern (indexes, caching, replicas, query fixes)</p><div>Adding app instances would increase DB pressure further. Always scale or fix the actual bottleneck.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Queue non-urgent work, cache, rate-limit/shed low-priority traffic, and autoscale with pre-warmed capacity</p><div>Provisioning for peak is expensive. Combine buffering, degradation and elasticity, and load-test the plan beforehand.</div></div>
+<div class="ans" id="a4"><p><b>4. Autoscaling calculation</b> <a href="#q4">back ↑</a></p><p><b>Hint:</b> need = math.ceil(lag / (rate * drain)). Then clamp: max with the minimum first, min with the partition count last.</p><p><b>Reference solution:</b></p><pre>import math
+
+def desired_replicas(lag, rate_per_consumer, drain_seconds, partitions, min_replicas=1):
+    needed = math.ceil(lag / (rate_per_consumer * drain_seconds))
+    return min(partitions, max(min_replicas, needed))</pre><p>The cap by partitions is the key insight: in Kafka, parallelism within a group is bounded by the partition count, so plan partitions for peak parallelism up front (increasing them later breaks key ordering).</p></div>
+<div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>B.</b> The serial fraction caps the gain: Amdahl’s law limits this job to about 10× no matter how many nodes you add</p><div>Amdahl’s law: the serial fraction bounds maximum speed-up. Attack the serial part before scaling out.</div></div>
+<div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>A.</b> Tail latency: with wide fan-out some backend is usually slow, so add timeouts with hedged requests and keep utilisation near 60-70% with headroom</p><div>Tail latency dominates fan-out calls and queueing explodes near full utilisation. Timeouts, hedging, and headroom absorb it.</div></div>
+<p class="nav"><a href="kafka.html">Kafka: partitions, groups, delivery guarantees →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Worked design: webhook delivery platform · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#design">System Design</a> · lesson 4 of 4 · 5 min</p>
+<h1>Worked design: webhook delivery platform</h1>
+<p class="sum">At-least-once delivery, retries, signing, ordering, and customer pain.</p>
+<div class="sec"><p>Prompt: <i>“Design a system that notifies customers’ HTTP endpoints when events happen (e.g. a payment status changes).”</i> It is a favourite because it is small but full of real trade-offs, and it is exactly what a payments / open-banking platform ships.</p></div>
+<div class="sec"><h3>1. Requirements</h3><ul><li>Customers register endpoint URLs and event types.</li><li>Deliver each event <b>at least once</b>; retry on failure for ~24-72h.</li><li>Customers can verify authenticity; can replay events.</li><li>Not needed: exactly-once (impossible over HTTP; push dedupe to the consumer with event ids).</li></ul>
+<h3>2. Core flow</h3><pre><code>Domain service --(same DB txn)--> outbox table
+outbox relay --> queue (partition by endpoint)
+delivery workers: POST signed payload, timeout 5-10s
+  2xx -> mark delivered    else -> schedule retry (backoff + jitter)
+exhausted -> dead-letter + alert + dashboard "replay"</code></pre><p>The <b>transactional outbox</b> ensures an event exists if and only if the business change committed.</p>
+<h3>3. Security</h3><p>Sign the body with an HMAC and a timestamp: <code>sig = HMAC_SHA256(secret, timestamp + "." + body)</code>. Receivers reject old timestamps (replay protection) and compare in constant time. Support secret rotation (two active secrets). Block SSRF: resolve and refuse private IP ranges for customer URLs.</p>
+<h3>4. Ordering &amp; duplicates</h3><p>Global ordering is expensive; offer <b>per-entity ordering</b> by partitioning on entity id, and include a monotonically increasing version so consumers can ignore stale events. Always include a unique <code>event_id</code>, because duplicates will happen.</p>
+<h3>5. Noisy neighbours &amp; failure</h3><p>One slow customer endpoint must not block others: per-endpoint queues/concurrency limits, short timeouts, and a circuit breaker that pauses a failing endpoint (and emails the customer). Autodisable after N days of failures. Metrics: delivery latency p99, success rate by endpoint, retry depth, DLQ size.</p></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Why use the transactional outbox instead of “commit to DB, then publish to the queue” in the same function?</div><ol class="opts"><li><b>A.</b> It is faster</li><li><b>B.</b> Because a crash between the commit and the publish loses the event (or publishing first can announce something that never committed)</li><li><b>C.</b> Queues cannot be used with databases</li><li><b>D.</b> It gives exactly-once delivery</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A consumer receives the same webhook event_id twice. What must it do, and why is this expected?</div><ol class="opts"><li><b>A.</b> Alert on a bug; webhooks guarantee exactly-once</li><li><b>B.</b> Dedupe on event_id and process once, because retries make at-least-once the only honest guarantee</li><li><b>C.</b> Refund the customer for the duplicate</li><li><b>D.</b> Switch delivery to exactly-once by adding a second queue</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div>
+<div class="box"><div class="q">2. One customer endpoint gets slow and delivery workers pile up on it, delaying everyone else. What is the fix?</div><ol class="opts"><li><b>A.</b> Remove timeouts so the slow endpoint can finish</li><li><b>B.</b> Give all endpoints one shared queue for fairness</li><li><b>C.</b> Stop signing payloads to speed up delivery</li><li><b>D.</b> Isolate per-endpoint queues and concurrency limits with short timeouts and a circuit breaker that pauses the failing endpoint</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<p class="nav"><a href="consistent-hashing.html">← Deep dive: consistent hashing</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Because a crash between the commit and the publish loses the event (or publishing first can announce something that never committed)</p><div>You cannot atomically write to two systems. The outbox makes the DB the source of truth; a relay publishes at-least-once, and consumers dedupe.</div></div>
+<div class="ans" id="a2"><p><b>2. Check 1</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Dedupe on event_id and process once, because retries make at-least-once the only honest guarantee</p><div>Exactly-once over HTTP is impossible, so the design promises at-least-once with unique event_ids and pushes dedupe to the consumer.</div></div>
+<div class="ans" id="a3"><p><b>3. Check 2</b> <a href="#q3">back ↑</a></p><p><b>D.</b> Isolate per-endpoint queues and concurrency limits with short timeouts and a circuit breaker that pauses the failing endpoint</p><div>Noisy neighbours need isolation: per-endpoint queues and limits, short timeouts, a breaker that pauses a failing endpoint, and autodisable after days of failure.</div></div>
+<p class="nav"><a href="consistent-hashing.html">← Deep dive: consistent hashing</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

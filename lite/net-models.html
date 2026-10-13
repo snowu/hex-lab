@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The network and your game · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdnet">Multiplayer &amp; Networking</a> · lesson 1 of 4 · 15 min</p>
+<h1>The network and your game</h1>
+<p class="sum">Latency, jitter and loss; client-server versus peer-to-peer; what to send and how small you can make it.</p>
+<div class="sec">
+<h3>What the network really is</h3>
+<p>A multiplayer game is a distributed system where the parts must agree about a fast-changing world, over a connection that is <b>slow, unreliable and out of order</b>. Four numbers describe a link:</p>
+<table><tr><th>Quantity</th><th>Meaning</th><th>Typical</th></tr>
+<tr><td><b>Latency</b> (ping, RTT)</td><td>Time for a message to go there and back</td><td>10 to 30 ms same city, 80 to 150 ms across a continent, 200+ ms across oceans or on mobile</td></tr>
+<tr><td><b>Jitter</b></td><td>Variation of latency from packet to packet</td><td>Wi-Fi and mobile often ±20 to 50 ms</td></tr>
+<tr><td><b>Packet loss</b></td><td>Fraction of packets that never arrive</td><td>0 to 2% normally, bursts much higher</td></tr>
+<tr><td><b>Bandwidth</b></td><td>Bytes per second the link carries</td><td>Plenty on average, but limited and metered on mobile; your budget is usually tens of KB/s per player</td></tr></table>
+<p>Light in fibre moves ~200,000 km/s, so 10,000 km costs 50 ms one way before any router adds a thing: <b>you cannot code your way below the physics</b>. Everything in this track is about <i>hiding</i> latency, tolerating loss and keeping everyone's picture consistent.</p>
+<h3>TCP, UDP and what games use</h3>
+<ul><li><b>TCP</b> gives a reliable, ordered byte stream. If one packet is lost, everything behind it waits for the retransmission (<b>head-of-line blocking</b>): a lost position update from half a second ago delays the fresh ones. Fine for chat, login, downloads, turn-based games.</li><li><b>UDP</b> sends independent datagrams: no ordering, no delivery guarantee, no delay from old packets. Real-time games use UDP and build only the reliability they need on top: <i>unreliable</i> channel for positions (the next update replaces a lost one), <i>reliable ordered</i> for events like "player died" and chat. Libraries: ENet (used by Godot's high-level multiplayer), Steam Networking Sockets, Valve's GameNetworkingSockets, Yojimbo, QUIC.</li><li><b>In a browser</b> you get WebSockets (TCP) or WebRTC data channels (UDP-like, unordered/unreliable mode) and WebTransport. A web game on WebSockets suffers head-of-line blocking: keep messages small and design for it.</li></ul>
+<h3>Topologies</h3>
+<table><tr><th>Model</th><th>How</th><th>Pros</th><th>Cons</th></tr>
+<tr><td><b>Dedicated server</b> (client-server, authoritative)</td><td>Clients send inputs; one program decides what is true</td><td>Cheat resistant, consistent, scales to many players</td><td>You run servers; every player pays latency to the server</td></tr>
+<tr><td><b>Listen server</b></td><td>One player's game is also the server</td><td>No server cost</td><td>That player has zero latency (an advantage), host leaving ends the match, host can cheat</td></tr>
+<tr><td><b>Peer-to-peer</b> (lockstep or rollback)</td><td>Every player simulates, exchanging inputs</td><td>Minimal bandwidth, no server for the game</td><td>Needs determinism, NAT traversal, cheating is hard to prevent, scales poorly beyond a few players</td></tr>
+<tr><td><b>Relay</b></td><td>Traffic goes via a relay server</td><td>Works through any NAT, hides IPs</td><td>Adds a hop</td></tr></table>
+<h3>Ticks and rates</h3>
+<p>A server simulates in fixed <b>ticks</b> (20, 30, 60, 128 per second). It sends <b>snapshots</b> of the world at a possibly lower rate (10 to 30 Hz is typical). Clients send inputs at their frame rate or the tick rate. Higher rates cost bandwidth and CPU for diminishing returns: choose them from the genre (a turn-based card game needs almost nothing; a competitive shooter needs 60+).</p>
+<h3>State or inputs?</h3>
+<ul><li><b>Send state</b> (positions, health): simple, robust, bandwidth grows with the number of things.</li><li><b>Send inputs</b> and let everyone simulate: tiny messages, but requires <b>determinism</b> (lockstep lesson).</li><li>Most real-time games combine them: clients send inputs, the server sends state.</li></ul>
+<h3>Making it small</h3>
+<p>Bandwidth is the budget you can plan. Example: 16 players × 20 snapshots/s × 16 entities per snapshot × 12 bytes ≈ 61 KB/s outgoing from the server per client if you send everything to everyone. Tricks, in order of payoff:</p>
+<ol><li><b>Send only what changed</b> (<b>delta compression</b>): against the last snapshot the client acknowledged.</li><li><b>Interest management</b>: only entities near or visible to this player, and at lower rates for far ones.</li><li><b>Quantisation</b>: positions do not need 32-bit floats. If the map is 200 units wide and 1 cm accuracy is enough, a 16-bit integer suffices (below).</li><li><b>Bit packing</b>: a boolean costs 1 bit, not a byte; an enum of 5 values costs 3 bits.</li><li><b>Avoid sending derived data</b> (the client can compute it) and avoid strings (send ids).</li><li><b>Compression</b> (LZ4, zstd) helps larger, less regular messages.</li></ol>
+<pre><code data-check="zig">const std = @import("std");
+
+/// Map a float in [lo, hi] onto 0..65535 and back. The error is at most half a step: (hi - lo) / 65535 / 2.
+fn quantize(v: f32, lo: f32, hi: f32) u16 {
+    const clamped = std.math.clamp(v, lo, hi);
+    const t = (clamped - lo) / (hi - lo);
+    return @intFromFloat(@round(t * 65535.0));
+}
+
+fn dequantize(q: u16, lo: f32, hi: f32) f32 {
+    return lo + (@as(f32, @floatFromInt(q)) / 65535.0) * (hi - lo);
+}
+
+/// Write a quantised position into 4 bytes (little-endian), the way a snapshot packet would.
+fn writePos(buf: *[4]u8, x: f32, y: f32) void {
+    std.mem.writeInt(u16, buf[0..2], quantize(x, -100, 100), .little);
+    std.mem.writeInt(u16, buf[2..4], quantize(y, -100, 100), .little);
+}
+
+fn readPos(buf: *const [4]u8) [2]f32 {
+    return .{
+        dequantize(std.mem.readInt(u16, buf[0..2], .little), -100, 100),
+        dequantize(std.mem.readInt(u16, buf[2..4], .little), -100, 100),
+    };
+}
+
+test "a position fits in 4 bytes with millimetre-level error on a 200-unit map" {
+    var buf: [4]u8 = undefined;
+    writePos(&amp;buf, 12.3456, -78.9012);
+    const p = readPos(&amp;buf);
+    const max_err: f32 = 200.0 / 65535.0 / 2.0 + 1e-4;
+    try std.testing.expect(@abs(p[0] - 12.3456) &lt;= max_err);
+    try std.testing.expect(@abs(p[1] - -78.9012) &lt;= max_err);
+    try std.testing.expectEqual(@as(usize, 4), buf.len); // versus 8 bytes for two f32
+}
+
+test "values outside the range are clamped, never wrapped" {
+    try std.testing.expectEqual(@as(u16, 65535), quantize(500, -100, 100));
+    try std.testing.expectEqual(@as(u16, 0), quantize(-500, -100, 100));
+}</code></pre>
+<h3>Getting started in Godot</h3>
+<p>Godot 4's high-level multiplayer API sits on ENet (also WebSocket and WebRTC peers). You choose one peer to be the <b>server</b> (id 1), others connect as clients. <code>@rpc</code> functions are remote procedure calls (specify who may call, who runs, and whether it is reliable). The <code>MultiplayerSpawner</code> and <code>MultiplayerSynchronizer</code> nodes replicate scenes and properties for you. They are a good start for turn-based and casual games; for fast-paced games you will want your own snapshot and prediction logic on top (next lessons).</p>
+<h3>Test with a bad network</h3>
+<p>Your LAN is a lie. Test with simulated <b>latency, jitter and loss</b>: Linux <code>tc netem</code>, <code>clumsy</code> on Windows, Network Link Conditioner on macOS, browser dev tools throttling, or a built-in toggle in your own game (the simulation in the next lesson has these sliders). If it only works at 0 ms it does not work.</p></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Why do real-time games prefer UDP-style delivery for position updates?</div><ol class="opts"><li><b>A.</b> UDP is encrypted</li><li><b>B.</b> A lost old position is useless anyway; TCP would hold back fresh updates until the lost one is retransmitted (head-of-line blocking)</li><li><b>C.</b> UDP uses less memory</li><li><b>D.</b> UDP guarantees order</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A 12-player game sends each client the position of all 12 players at 30 Hz at 20 bytes each. About how much is that per client (server → one client)?</div><ol class="opts"><li><b>A.</b> About 7 KB/s (12 × 20 × 30)</li><li><b>B.</b> About 70 KB/s</li><li><b>C.</b> About 700 bytes/s</li><li><b>D.</b> About 7 MB/s</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Which topology is the most resistant to cheating for a competitive shooter?</div><ol class="opts"><li><b>A.</b> Listen server hosted by a player</li><li><b>B.</b> Dedicated authoritative server run by you</li><li><b>C.</b> Peer-to-peer with trust between clients</li><li><b>D.</b> Each client simulates its own hits</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Two players are 10,000 km apart on fibre and see at least ~50 ms one-way delay before any router adds more. What follows?</div><ol class="opts"><li><b>A.</b> Use TCP to remove the delay</li><li><b>B.</b> You cannot code below the physics of light in fibre: the techniques must hide latency, not eliminate it</li><li><b>C.</b> Increase the tick rate to remove it</li><li><b>D.</b> Send larger packets</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. A server sends every entity to every player at full rate, and bandwidth explodes as entities grow. What is the highest-payoff cut?</div><ol class="opts"><li><b>A.</b> Compress the chat text</li><li><b>B.</b> Raise the snapshot rate</li><li><b>C.</b> Add more entities</li><li><b>D.</b> Interest management: send only nearby or visible entities, at lower rates for far ones, plus deltas</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="net-prediction.html">Prediction, interpolation and lag compensation →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> A lost old position is useless anyway; TCP would hold back fresh updates until the lost one is retransmitted (head-of-line blocking)</p><div>The next snapshot supersedes the lost one, so retransmitting it wastes time and delays newer data.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>A.</b> About 7 KB/s (12 × 20 × 30)</p><div>12 × 20 bytes = 240 bytes per snapshot, × 30 = 7,200 bytes/s. Delta compression, interest management and quantisation can cut that several times.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Dedicated authoritative server run by you</p><div>If a program you control decides what is true, a hacked client can only send inputs, not facts.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>B.</b> You cannot code below the physics of light in fibre: the techniques must hide latency, not eliminate it</p><div>Distance sets a floor on latency, so networking is about hiding delay and tolerating loss.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>D.</b> Interest management: send only nearby or visible entities, at lower rates for far ones, plus deltas</p><div>Not sending irrelevant state beats shrinking it; deltas and quantisation cut what remains.</div></div>
+<p class="nav"><a href="net-prediction.html">Prediction, interpolation and lag compensation →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

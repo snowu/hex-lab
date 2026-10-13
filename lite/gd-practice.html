@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The practice ladder · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdcraft">Techniques &amp; Practice</a> · lesson 8 of 8 · 5 min</p>
+<h1>The practice ladder</h1>
+<p class="sum">A sequence of small, finishable projects that each add one skill, and how to practise deliberately.</p>
+<div class="sec">
+<p>The way to get good is to finish many small games. Each rung below is a weekend or less and adds one new idea. Do them in your engine of choice (Godot) <i>and</i> at least the first few from scratch in Zig or C++ with raylib or SDL so you feel the loop you normally never see.</p>
+<ol>
+<li><b>Pong</b>: the game loop, input, AABB vs circle, scoring, a simple AI paddle. Add: ball speeds up per hit.</li>
+<li><b>Breakout</b>: many entities, swept collision (no tunneling), levels from data.</li>
+<li><b>Flappy-style one-button game</b>: gravity, a fixed step, procedural obstacles with a seeded RNG, restart in under a second.</li>
+<li><b>Snake</b>: grid movement, input buffering, game states (menu, play, game over), save a high score (versioned file).</li>
+<li><b>Platformer room</b>: tile collision per axis, coyote time, jump buffering, variable jump height, camera.</li>
+<li><b>Top-down shooter</b>: spawn pools, spatial hash, steering enemies, juice (shake, hit stop, particles).</li>
+<li><b>Tower defence</b>: pathfinding on a grid, waves from data, an economy with sinks and faucets.</li>
+<li><b>Roguelike room generator</b>: cellular automata or BSP rooms, connectivity check, seeds shown on screen.</li>
+<li><b>A deckbuilder or puzzle game</b>: state machines, undo (command pattern), data-driven content.</li>
+<li><b>Your own idea</b>, scoped to one week, with a cut list and a vertical slice.</li>
+</ol>
+<h3>Deliberate practice</h3>
+<ul><li>Set a <b>timebox</b> (a weekend, a jam) and ship, even if rough. Put it on itch.io.</li><li>After each project write three lines: what was slow, what you would change, what you learned.</li><li><b>Clone, then change one rule.</b> Copying a known game removes design risk so you can focus on implementation, then the changed rule is your design exercise.</li><li>Read other people's source (open-source games, engine examples). Reading is half the craft.</li><li>Alternate: one project for <i>code</i> skills (from scratch), one for <i>design/art</i> skills (in the engine), one for <i>finishing</i> (a jam).</li><li>Pair every project with a pixel art task: draw its sprites yourself, even badly. See the pixel art track and the editor.</li></ul></div>
+<div class="sec"><h3>Checklist: “is it a finished game?”</h3><ul><li>Starts from a title screen and can be quit.</li><li>Has a win or lose condition and a restart that takes under 2 seconds.</li><li>Pause works. Volume and (if relevant) screen shake settings exist.</li><li>No crash for 30 minutes of random play (try mashing every button).</li><li>Exports and runs on a machine that does not have the editor installed.</li><li>One page: controls, credits, license for any assets.</li></ul></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. You just cloned Pong to practise implementation. What is the recommended next design step?</div><ol class="opts"><li><b>A.</b> Start an original epic with all the ideas at once</li><li><b>B.</b> Change one rule of the clone, so design risk stays low while the changed rule is the exercise</li><li><b>C.</b> Rewrite the clone in three more engines first</li><li><b>D.</b> Add online multiplayer before finishing</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div>
+<div class="box"><div class="q">2. A friend claims their game is finished because the core loop is fun. Which checklist item most clearly shows it is not yet shippable?</div><ol class="opts"><li><b>A.</b> It has no pause, no restart under two seconds, and was never run as an export on a machine without the editor</li><li><b>B.</b> It has placeholder art in one level</li><li><b>C.</b> It was built in under a weekend</li><li><b>D.</b> It only has three enemy types</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div>
+<p class="nav"><a href="gd-cpp.html">← C++ for games</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Check 1</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Change one rule of the clone, so design risk stays low while the changed rule is the exercise</p><div>Clone-then-change-one-rule removes design risk from the known game and isolates the new design decision.</div></div>
+<div class="ans" id="a2"><p><b>2. Check 2</b> <a href="#q2">back ↑</a></p><p><b>A.</b> It has no pause, no restart under two seconds, and was never run as an export on a machine without the editor</p><div>Finished means shippable: title screen, win or lose with fast restart, pause with settings, crash-free play, and a tested exported build.</div></div>
+<p class="nav"><a href="gd-cpp.html">← C++ for games</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Component, subclass sandbox and service locator · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#gdpatterns">Game Programming Patterns</a> · lesson 8 of 12 · 10 min</p>
+<h1>Component, subclass sandbox and service locator</h1>
+<p class="sum">Compose entities from parts, give subclasses a safe toolbox, and reach shared services without global state.</p>
+<div class="sec">
+<h3>Component: composition over inheritance</h3>
+<p>The earlier entities lesson introduced the idea; here is the pattern in detail. Instead of one huge <code>GameObject</code> class that handles input, physics, rendering and AI (a "god object"), split it into <b>components</b>, each owning one concern: <code>Health</code>, <code>Mover</code>, <code>SpriteRenderer</code>, <code>PlayerInput</code>. An entity is a container of components. Reuse comes from <i>combining</i>: a crate is <code>Sprite + Collider + Health</code>; an enemy adds <code>AIBrain</code>; a trap is <code>Collider + DamageOnTouch</code>, with no inheritance tree.</p>
+<p>The design question is <b>how components talk</b>:</p>
+<ul><li><b>Direct reference</b>: <code>AIBrain</code> asks its entity for the <code>Mover</code> component and calls it. Simple; creates coupling between those two component types.</li><li><b>Messages/signals</b>: <code>Health</code> emits <code>died</code>, others react (observer lesson). Loosest coupling, hardest to follow.</li><li><b>Shared data</b>: components read and write a shared state object (a blackboard). Good when many systems need the same facts (position, target).</li></ul>
+<p>A common mistake is a component that needs half the other components to function: that is one component pretending to be several.</p>
+<h3>Subclass sandbox</h3>
+<p>Sometimes inheritance <i>is</i> the right tool, if used carefully. In the <b>subclass sandbox</b> pattern a base class provides a protected toolbox of operations (<code>play_sound()</code>, <code>spawn_particles()</code>, <code>move_toward()</code>), and subclasses implement one <b>virtual method</b> (<code>activate()</code>) using only those operations. Superpowers are written as subclasses without ever touching the audio or particle systems directly.</p>
+<pre><code># GDScript: Godot's own Node virtuals (_ready, _process) are this pattern
+class_name Power extends Node
+func activate(hero): pass                     # subclasses override
+func _play(sound): Audio.play(sound)          # the toolbox
+func _burst(pos): Particles.burst(pos)
+
+class_name Fireball extends Power
+func activate(hero):
+    _play("whoosh"); _burst(hero.position)</code></pre>
+<p>Benefits: the coupling between 100 powers and the engine is concentrated in the base class, so refactoring the engine changes one file. Costs: the base class tends to grow into a kitchen sink, and deep hierarchies are fragile ("fragile base class"). Keep the hierarchy one level deep, and prefer data (type objects) when subclasses differ only in numbers.</p>
+<h3>Service locator, dependency injection and autoloads</h3>
+<p>Code needs shared services (audio, save system, input, random). How does it get them?</p>
+<ol><li><b>Global singleton</b>: <code>Audio.play()</code> from anywhere. Easy, and a trap (next lesson).</li><li><b>Service locator</b>: a small registry that holds the current implementations: <code>Services.audio().play(...)</code>. Callers depend on the <i>interface</i>, not a concrete class, and you can swap implementations: a <b>null service</b> that does nothing (tests, headless servers), a <b>logging decorator</b> that wraps the real one for debugging.</li><li><b>Dependency injection</b>: pass what you need into the constructor or <code>setup()</code>. Explicit and easy to test; some plumbing.</li></ol>
+<pre><code data-check="zig">const std = @import("std");
+
+/// The interface callers depend on: a pointer to some implementation plus a function.
+const Audio = struct {
+    ctx: *anyopaque,
+    playFn: *const fn (ctx: *anyopaque, id: u32) void,
+
+    fn play(self: Audio, id: u32) void {
+        self.playFn(self.ctx, id);
+    }
+};
+
+/// A real implementation would talk to the sound card; this one counts calls.
+const CountingAudio = struct {
+    plays: u32 = 0,
+
+    fn playImpl(ctx: *anyopaque, id: u32) void {
+        _ = id;
+        const self: *CountingAudio = @ptrCast(@alignCast(ctx));
+        self.plays += 1;
+    }
+
+    fn audio(self: *CountingAudio) Audio {
+        return .{ .ctx = self, .playFn = playImpl };
+    }
+};
+
+/// The null service: does nothing, so callers never check for "no audio".
+fn nullPlay(ctx: *anyopaque, id: u32) void {
+    _ = ctx;
+    _ = id;
+}
+
+var null_ctx: u8 = 0; // lives for the whole program, so the null service never holds a dangling pointer
+
+const Locator = struct {
+    audio: Audio,
+
+    fn provideNull() Locator {
+        return .{ .audio = .{ .ctx = &amp;null_ctx, .playFn = nullPlay } };
+    }
+};
+
+test "callers use the interface, tests plug in a counter" {
+    var counting = CountingAudio{};
+    const services = Locator{ .audio = counting.audio() };
+    services.audio.play(1);
+    services.audio.play(2);
+    try std.testing.expectEqual(@as(u32, 2), counting.plays);
+    const silent = Locator.provideNull();
+    silent.audio.play(3); // no crash, no sound
+}</code></pre>
+<p>Locators hide dependencies (you cannot see from a function's signature that it needs audio) and must be set up before use. Prefer injection for core logic and a locator for cross-cutting services. In Godot an <b>autoload</b> is a global singleton node: fine for a few thin services (audio bus, settings), a liability for game state.</p></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A <code>Health</code> component needs to tell the UI and the sound system when it reaches zero, without either being referenced by Health. What mechanism fits?</div><ol class="opts"><li><b>A.</b> Health calls UI.update() and Sound.play() directly</li><li><b>B.</b> Health emits a <code>died</code> signal/event and the others subscribe</li><li><b>C.</b> Health becomes a singleton</li><li><b>D.</b> UI polls Health every frame and Sound polls too</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">What is the practical benefit of a <i>null service</i> in a service locator?</div><ol class="opts"><li><b>A.</b> It is faster than a real service</li><li><b>B.</b> Callers never need to check whether the service exists, and tests or headless builds run with silent, harmless implementations</li><li><b>C.</b> It saves memory</li><li><b>D.</b> It replaces dependency injection</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You have 60 enemy types that differ in stats and a few that have unique attack code. Which structure is best?</div><ol class="opts"><li><b>A.</b> 60 subclasses</li><li><b>B.</b> A type object for the shared stats, and a small number of attack behaviours (components, scripts or a subclass sandbox) chosen by the type</li><li><b>C.</b> One enormous switch in Enemy</li><li><b>D.</b> Copy the Enemy scene 60 times</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. A proposed Speedster component only works when Health, Mover, Renderer, Input and Sound components are all present. What does that tell you?</div><ol class="opts"><li><b>A.</b> It is a well-decoupled component because it uses many others</li><li><b>B.</b> It is one component pretending to be several and should be merged or split differently, since a component needing half the entity signals a missing concept</li><li><b>C.</b> It needs even more dependencies to be safe</li><li><b>D.</b> It should be converted to a singleton</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. Core combat logic takes its dependencies as constructor or setup parameters, while the audio and settings use a small registry with swappable implementations. Why this split?</div><ol class="opts"><li><b>A.</b> It happened by accident and should be unified into globals</li><li><b>B.</b> Registries are faster than parameters</li><li><b>C.</b> Parameters prevent the game from compiling</li><li><b>D.</b> Injection makes core logic explicit and testable, while a locator suits cross-cutting services; locators hide dependencies and need setup before use, so a thin Godot autoload is fine only for services, never game state</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="pat-dirty.html">← Dirty flag and caching</a> · <a href="pat-spatial.html">Spatial partitioning →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Health emits a <code>died</code> signal/event and the others subscribe</p><div>The component announces what happened and does not know who listens, so it stays reusable (the same Health on a crate with no UI).</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Callers never need to check whether the service exists, and tests or headless builds run with silent, harmless implementations</p><div>A null object removes "if audio is not None" branches everywhere and makes automated tests possible without a sound device.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> A type object for the shared stats, and a small number of attack behaviours (components, scripts or a subclass sandbox) chosen by the type</p><div>Data for what is data, code only for what really differs: that keeps the number of classes to the number of behaviours, not the number of stat sheets.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>B.</b> It is one component pretending to be several and should be merged or split differently, since a component needing half the entity signals a missing concept</p><div>Components should own one concern. A part that drags in half the entity is a hidden god object.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>D.</b> Injection makes core logic explicit and testable, while a locator suits cross-cutting services; locators hide dependencies and need setup before use, so a thin Godot autoload is fine only for services, never game state</p><div>Passing dependencies shows what code needs; a locator with an interface and a null service keeps cross-cutting needs swappable.</div></div>
+<p class="nav"><a href="pat-dirty.html">← Dirty flag and caching</a> · <a href="pat-spatial.html">Spatial partitioning →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>
