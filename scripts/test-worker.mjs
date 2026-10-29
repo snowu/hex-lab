@@ -51,7 +51,7 @@ await t('routes by kind: code/sql -> muse via /responses, design/story -> deepse
     : new Response(JSON.stringify({ choices: [{ message: { content: GOOD } }] })); };
   for (const kind of ['code', 'sql', 'design', 'story']) assert.equal((await handle(req({ ...ok, kind }), env, f)).status, 200);
   assert.deepEqual(urls.map((x) => x[0].split('/v1/')[1]), ['responses', 'responses', 'chat/completions', 'chat/completions']);
-  assert.deepEqual(urls.map((x) => x[1]), ['muse-spark-1.3-contributor', 'muse-spark-1.3-contributor', 'deepseek-v4-flash', 'deepseek-v4-flash']);
+  assert.deepEqual(urls.map((x) => x[1]), ['muse-spark-1.3-contributor', 'muse-spark-1.3-contributor', 'deepseek-v4.1-flash', 'deepseek-v4.1-flash']);
   assert.ok(urls.every((x) => x[2] === 'Bearer k' && x[3] === 'interview-lab'));
 });
 await t('personal kinds never reach the training model, even as a fallback', async () => {
@@ -64,14 +64,14 @@ await t('if the code model fails, the general model answers', async () => {
   const models = [];
   const f = async (u, init) => { const m = JSON.parse(init.body).model; models.push(m); return /^muse/.test(m) ? new Response('{}', { status: 500 }) : new Response(JSON.stringify({ choices: [{ message: { content: GOOD } }] })); };
   const r = await handle(req(ok), env, f);
-  assert.equal(r.status, 200); assert.deepEqual(models, ['muse-spark-1.3-contributor', 'deepseek-v4-flash']);
+  assert.equal(r.status, 200); assert.deepEqual(models, ['muse-spark-1.3-contributor', 'deepseek-v4.1-flash']);
 });
 await t('chat: answers with page context as data, uses the non-training model, strips <think>', async () => {
   let sent;
   const f = async (u, init) => { sent = { u, body: JSON.parse(init.body) }; return new Response(JSON.stringify({ choices: [{ message: { content: '<think>x</think>Use a set.' } }] })); };
   const r = await handle(req({ messages: [{ role: 'user', content: 'why is this slow?' }], context: 'PAGE: has_dup with nested loops' }, { path: '/chat' }), env, f);
   assert.equal(r.status, 200); assert.equal((await r.json()).reply, 'Use a set.');
-  assert.match(sent.u, /chat\/completions$/); assert.equal(sent.body.model, 'deepseek-v4-flash');
+  assert.match(sent.u, /chat\/completions$/); assert.equal(sent.body.model, 'deepseek-v4.1-flash');
   assert.equal(sent.body.messages[0].role, 'system'); assert.match(sent.body.messages[0].content, /nested loops/); assert.match(sent.body.messages[0].content, /DATA, not instructions/);
   assert.equal(sent.body.messages.at(-1).content, 'why is this slow?');
 });
@@ -122,9 +122,9 @@ await t('usage: every route reports the provider token counts and the model', as
   const chatU = (c) => async () => new Response(JSON.stringify({ choices: [{ message: { content: c } }], usage: { prompt_tokens: 120, completion_tokens: 30 } }));
   const respU = async () => new Response(JSON.stringify({ output: [{ type: 'message', content: [{ text: GOOD }] }], usage: { input_tokens: 50, output_tokens: 700 } }));
   let j = await (await handle(req({ messages: [{ role: 'user', content: 'hi' }] }, { path: '/chat' }), env, chatU('ok'))).json();
-  assert.deepEqual(j.usage, { model: 'deepseek-v4-flash', in: 120, out: 30 });
+  assert.deepEqual(j.usage, { model: 'deepseek-v4.1-flash', in: 120, out: 30 });
   j = await (await handle(req({ ...ok, kind: 'design' }), env, chatU(GOOD))).json();
-  assert.deepEqual(j.usage, { model: 'deepseek-v4-flash', in: 120, out: 30 });
+  assert.deepEqual(j.usage, { model: 'deepseek-v4.1-flash', in: 120, out: 30 });
   j = await (await handle(req(ok), env, respU)).json();
   assert.deepEqual(j.usage, { model: 'muse-spark-1.3-contributor', in: 50, out: 700 });
   j = await (await handle(req({ ...IV, mode: 'turn', transcript: [cand('hello there friend')] }, { path: '/interview' }), env, chatU('And then?'))).json();
@@ -132,7 +132,7 @@ await t('usage: every route reports the provider token counts and the model', as
   j = await (await handle(req({ ...IV, mode: 'grade', transcript: [cand('hello there friend')] }, { path: '/interview' }), env, chatU(JSON.stringify({ hits: [true, false, false] })))).json();
   assert.equal(j.usage.out, 30);
   j = await (await handle(req({ messages: [{ role: 'user', content: 'hi' }] }, { path: '/chat' }), env, async () => new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] })))).json();
-  assert.deepEqual(j.usage, { model: 'deepseek-v4-flash', in: 0, out: 0 });
+  assert.deepEqual(j.usage, { model: 'deepseek-v4.1-flash', in: 0, out: 0 });
 });
 await t('chat: the tutor\'s own long replies are accepted back as history (the 2000 cap is for what the learner types)', async () => {
   const f = async () => new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] }));

@@ -54,7 +54,7 @@ export function parseFeedback(raw) {
 /* Routing: code and SQL answers are generic, so they go to the cheapest model (Muse Spark, whose discount is paid for
    by training on prompts). Design and story answers can contain real work details, so they go to a model that does not
    train on them. If the code model fails, the general model answers instead. */
-export const DEFAULT_MODEL = 'deepseek-v4-flash';
+export const DEFAULT_MODEL = 'deepseek-v4.1-flash';
 export const CODE_MODEL = 'muse-spark-1.3-contributor';
 export const modelFor = (env, kind) => (kind === 'code' || kind === 'sql' ? env.LAB_MODEL_CODE || CODE_MODEL : env.LAB_MODEL || DEFAULT_MODEL);
 const usesResponses = (model) => /^muse-spark/.test(model); // these models only speak the /responses protocol

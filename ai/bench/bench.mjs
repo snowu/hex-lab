@@ -18,7 +18,7 @@ const args = process.argv.slice(2);
 const flag = (n, d) => (args.find((a) => a.startsWith(`--${n}=`)) || '').split('=')[1] ?? d;
 const RUNS = Number(flag('runs', 1));
 const OUT = flag('out', '');
-const DEFAULTS = ['deepseek-v4-flash', 'glm-5.3-flash', 'qwen3.8-flash', 'mimo-v2.6-flash', 'kimi-k2.6', 'hy3', 'muse-spark-1.3-contributor'];
+const DEFAULTS = ['deepseek-v4.1-flash', 'glm-5.3-flash', 'qwen3.8-flash', 'mimo-v2.6-flash', 'kimi-k2.6', 'hy3', 'muse-spark-1.3-contributor'];
 const models = args.filter((a) => !a.startsWith('--')); if (!models.length) models.push(...DEFAULTS);
 
 export const SYSTEM = `You are a strict senior interviewer reviewing a candidate's answer. Be specific and honest; never flatter. If the answer is correct, say so briefly and name one real improvement (or none). Never invent bugs.

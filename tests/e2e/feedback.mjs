@@ -2,7 +2,7 @@
 // sends the right payload, renders replies as text (never HTML), surfaces errors.
 import { newPage } from './helpers.mjs';
 const FAKE = 'https://fake-feedback.example';
-const U = { model: 'deepseek-v4-flash', in: 1000, out: 500 };
+const U = { model: 'deepseek-v4.1-flash', in: 1000, out: 500 };
 export default async function ({ url, browser, ok, section }) {
   section('unconfigured: no buttons');
   let page = await newPage(browser);
@@ -151,7 +151,7 @@ export default async function ({ url, browser, ok, section }) {
   ok(used.today.byFeature.chat >= 3 && used.today.byFeature.interview >= 3 && used.today.byFeature.review >= 1, 'broken down by chat, interviews and reviews ' + JSON.stringify(used.today.byFeature));
   ok(await page.evaluate(() => !Object.keys(SyncCore.snapshot(localStorage)).some((k) => k.startsWith('silu:'))), 'the counter is not part of synced progress');
   await page.go(url, '#/plan', 700);
-  ok((await page.locator('#aiusage').innerText()).includes('deepseek-v4-flash') && (await page.locator('#aiusage .utile').first().innerText()).includes(String(used.today.calls)), 'the Plan page shows today, this month and a per-model table');
+  ok((await page.locator('#aiusage').innerText()).includes('deepseek-v4.1-flash') && (await page.locator('#aiusage .utile').first().innerText()).includes(String(used.today.calls)), 'the Plan page shows today, this month and a per-model table');
   ok((await page.locator('#aiusage .utable').innerText()).includes('% of $30'), 'with the share of the plan cap');
   await page.locator('#chatBtn').click();
   ok((await page.locator('#chatUse').innerText()).includes('today:'), 'the chat footer shows today\'s usage');
