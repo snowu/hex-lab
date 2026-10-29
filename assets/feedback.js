@@ -10,7 +10,7 @@
   /* ---------- usage counter (stored on this device only; "silu:" is not part of synced progress) ---------- */
   const UKEY = 'silu:usage';
   /* USD per 1M tokens [input, output] and the Go plan's monthly dollar cap per model (opencode.ai/docs/go). Estimates, not a bill. */
-  const PRICE = { 'deepseek-v4-flash': { off: [0.15, 0.6], peak: [0.3, 1.2], cap: 30 }, 'muse-spark-1.3-contributor': { off: [0.1, 0.2], cap: 60 }, 'hy3': { off: [0.14, 0.58], cap: 60 } };
+  const PRICE = { 'deepseek-v4.1-flash': { off: [0.15, 0.6], peak: [0.3, 1.2], cap: 30 }, 'muse-spark-1.3-contributor': { off: [0.1, 0.2], cap: 60 }, 'hy3': { off: [0.14, 0.58], cap: 60 } };
   const peakNow = (d) => { const h = d.getUTCHours(), wd = d.getUTCDay(); return wd >= 1 && wd <= 5 && ((h >= 1 && h < 4) || (h >= 6 && h < 10)); };
   const costOf = (model, tin, tout, when) => { const p = PRICE[model]; if (!p) return 0; const r = (peakNow(when) && p.peak) || p.off; return (tin * r[0] + tout * r[1]) / 1e6; };
   const dayKey = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
