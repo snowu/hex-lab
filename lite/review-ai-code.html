@@ -8,7 +8,7 @@
 </head>
 <body>
 <p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
-<p class="crumb"><a href="index.html#ai">AI-Era Engineering</a> · lesson 4 of 4 · 30 min</p>
+<p class="crumb"><a href="index.html#ai">AI-Era Engineering</a> · lesson 5 of 5 · 35 min</p>
 <h1>Reviewing AI-written code</h1>
 <p class="sum">Recurring failure patterns and a checklist.</p>
 <div class="sec">
@@ -21,6 +21,15 @@
 <li><b>Concurrency:</b> check-then-act races, missing awaits, fire-and-forget tasks, unbounded <code>asyncio.gather</code>, mutable default arguments.</li>
 <li><b>Over-engineering:</b> abstractions nobody asked for. Delete them.</li>
 <li><b>Tests that assert the implementation</b> rather than the behaviour, or mock away the thing under test.</li>
+</ul>
+<h3>Working with coding agents</h3>
+<p>Agents that edit files, run tests and open pull requests change the bottleneck from writing code to <b>specifying and reviewing</b> it. What separates a productive team from a fast-but-fragile one:</p>
+<ul>
+<li><b>Spec first.</b> A short written goal, constraints and acceptance tests before the agent starts. Vague tasks produce plausible, wrong diffs.</li>
+<li><b>Small diffs.</b> Ask for one change per PR. A 2,000-line agent diff is not reviewable, so it will not really be reviewed.</li>
+<li><b>Tests as the contract.</b> Write or approve the tests yourself; let the agent make them pass. Watch for agents weakening or deleting tests to get to green.</li>
+<li><b>Same bar as humans.</b> CI, code review and ownership rules apply unchanged. “The AI wrote it” is never an answer in an incident review.</li>
+<li><b>Guard the blast radius.</b> Agents get sandboxes and scoped credentials, never production secrets or direct deploy rights.</li>
 </ul></div>
 <div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Review this: <code>total = sum(i.price * i.qty for i in items)  # prices are floats like 19.99</code>. What is the most serious issue for a payments system?</div><ol class="opts"><li><b>A.</b> sum() is slow on large lists</li><li><b>B.</b> Floating-point arithmetic on currency (0.1 + 0.2 ≠ 0.3); use integer minor units (cents) or a decimal type</li><li><b>C.</b> Missing type hints</li><li><b>D.</b> Variable naming</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
 <div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Review: <code>@app.get("/accounts/{account_id}") async def get_account(account_id: str, user=Depends(auth)): return await db.accounts.find(account_id)</code>. What is missing?</div><ol class="opts"><li><b>A.</b> Pagination</li><li><b>B.</b> An authorisation check that the authenticated user owns or may access account :id (IDOR / BOLA)</li><li><b>C.</b> A try/except around the call</li><li><b>D.</b> Caching headers</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
@@ -42,7 +51,7 @@
 <h2>Check your understanding</h2>
 <div class="box"><div class="q">1. Generated code calls db.query_async_batched(), which you cannot find in the library docs for your installed version. What is the right move?</div><ol class="opts"><li><b>A.</b> Trust it: fluent generated code rarely invents APIs, so ship it</li><li><b>B.</b> Treat it as a possible hallucinated API and verify against the installed version’s docs and CHANGELOG before keeping it</li><li><b>C.</b> Add a retry loop so the missing method eventually appears</li><li><b>D.</b> Suppress the linter warning and move on</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
 <div class="box"><div class="q">2. The assistant writes tests that mock the pricing module and assert an internal helper was called once. Why should you reject these tests?</div><ol class="opts"><li><b>A.</b> Mocks are never allowed in any test</li><li><b>B.</b> The tests run too fast to be meaningful</li><li><b>C.</b> The tests assert the implementation instead of behaviour and mock away the thing under test; rewrite them to assert observable outcomes</li><li><b>D.</b> The tests use too few abstractions</li></ol><p class="tolink" id="q7"><a href="#a7">answer 7 ↓</a></p></div>
-<p class="nav"><a href="agents-security.html">← Agents, tools &amp; prompt-injection security</a></p>
+<p class="nav"><a href="llm-production.html">← LLM features in production</a></p>
 <h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Floating-point arithmetic on currency (0.1 + 0.2 ≠ 0.3); use integer minor units (cents) or a decimal type</p><div>Represent money as integer minor units (or <code>decimal.Decimal</code>) and round explicitly with a defined rule.</div></div>
 <div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> An authorisation check that the authenticated user owns or may access account :id (IDOR / BOLA)</p><div>Authentication ≠ authorisation. Without an ownership check any logged-in user can read any account by changing the id. A top-10 API vulnerability (BOLA).</div></div>
 <div class="ans" id="a3"><p><b>3. Review this AI-written endpoint</b> <a href="#q3">back ↑</a></p><p><b>Hint:</b> One line builds a query from user input. The other writes something secret to the logs.</p><ul><li><b>Line 4:</b> An f-string builds the SQL, so it is injectable. It also queries by whatever id the caller supplies, with no check that the logged-in user owns that account, which is broken object-level authorisation (BOLA/IDOR). Use parameterised queries and filter by the caller's accounts.</li><li><b>Line 5:</b> Logs the Authorization header, so bearer tokens end up in log storage. Never log credentials or tokens, and keep PII out of application logs.</li></ul></div>
@@ -59,7 +68,7 @@ def apply_discount(price_cents, percent):
     return int(result.quantize(Decimal(1), rounding=ROUND_HALF_UP))</pre><p>round(52.5) is 52 in Python (round-half-to-even), which is a classic money bug. Use Decimal with an explicit rounding mode, or integer arithmetic, and agree the rule with finance.</p></div>
 <div class="ans" id="a6"><p><b>6. Check 1</b> <a href="#q6">back ↑</a></p><p><b>B.</b> Treat it as a possible hallucinated API and verify against the installed version’s docs and CHANGELOG before keeping it</p><div>Hallucinated or version-wrong APIs are a classic generation failure. Verify every unfamiliar call against the version you actually run.</div></div>
 <div class="ans" id="a7"><p><b>7. Check 2</b> <a href="#q7">back ↑</a></p><p><b>C.</b> The tests assert the implementation instead of behaviour and mock away the thing under test; rewrite them to assert observable outcomes</p><div>Good tests pin behaviour, not internals. Mocking away the unit under test only proves the mock was called.</div></div>
-<p class="nav"><a href="agents-security.html">← Agents, tools &amp; prompt-injection security</a></p>
+<p class="nav"><a href="llm-production.html">← LLM features in production</a></p>
 <p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
 </body>
 </html>

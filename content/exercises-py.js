@@ -607,6 +607,136 @@ def make_idempotent(handler):
     notes: 'Real implementations persist this in a database: a unique constraint on (customer, key), a status (in_progress / completed), a lock timeout for crashed workers, and a TTL (for example 24h). The in-memory version only works inside one process.',
   },
 
+  fencing: {
+    title: 'Leases with fencing tokens',
+    prompt: `<p>A worker that holds a lock can pause (GC, a slow disk, a network partition) for longer than its lease. The lease expires, another worker takes over, and then the first one wakes up and writes anyway. Fencing tokens stop that write.</p>
+<p>Implement two classes:</p>
+<ul>
+<li><code>LockService(now=time.monotonic)</code> with <code>acquire(owner, ttl)</code>. If the lock is free or its lease has expired, grant it and return a new fencing token: an integer that is <b>strictly larger</b> than every token issued before (start at 1). If the same owner still holds an unexpired lease, extend it to <code>now() + ttl</code> and return the <b>same</b> token. If someone else holds an unexpired lease, return <code>None</code>. A lease expires when <code>now() &gt;= expiry</code>.</li>
+<li><code>FencedStore()</code> with <code>write(key, value, token)</code> and <code>read(key)</code> (returns <code>None</code> if missing). The store remembers the highest token it has accepted. A write with a smaller token raises <code>StaleTokenError</code> (already defined) and changes nothing. Equal or larger tokens are accepted.</li>
+</ul>`,
+    starter: String.raw`import time
+
+class StaleTokenError(Exception):
+    pass
+
+class LockService:
+    def __init__(self, now=time.monotonic):
+        pass
+
+    def acquire(self, owner, ttl):
+        pass
+
+class FencedStore:
+    def __init__(self):
+        pass
+
+    def write(self, key, value, token):
+        pass
+
+    def read(self, key):
+        pass
+`,
+    tests: String.raw`class Clock:
+    def __init__(self):
+        self.t = 0.0
+    def __call__(self):
+        return self.t
+
+@test('first acquire gets token 1, a second owner is refused')
+def _():
+    c = Clock()
+    locks = LockService(now=c)
+    eq(locks.acquire('a', 10), 1)
+    eq(locks.acquire('b', 10), None)
+
+@test('renewing keeps the same token')
+def _():
+    c = Clock()
+    locks = LockService(now=c)
+    eq(locks.acquire('a', 10), 1)
+    c.t = 5
+    eq(locks.acquire('a', 10), 1)
+    c.t = 12
+    eq(locks.acquire('b', 10), None)
+
+@test('an expired lease goes to the next owner with a larger token')
+def _():
+    c = Clock()
+    locks = LockService(now=c)
+    eq(locks.acquire('a', 10), 1)
+    c.t = 10
+    eq(locks.acquire('b', 10), 2)
+
+@test('the paused worker cannot overwrite the new owner')
+def _():
+    c = Clock()
+    locks, store = LockService(now=c), FencedStore()
+    ta = locks.acquire('a', 10)
+    c.t = 30
+    tb = locks.acquire('b', 10)
+    store.write('balance', 70, tb)
+    with raises(StaleTokenError):
+        store.write('balance', 100, ta)
+    eq(store.read('balance'), 70)
+
+@test('equal and larger tokens are accepted')
+def _():
+    store = FencedStore()
+    store.write('k', 'x', 3)
+    store.write('k', 'y', 3)
+    store.write('j', 'z', 4)
+    eq(store.read('k'), 'y')
+    eq(store.read('j'), 'z')
+    eq(store.read('missing'), None)
+
+@test('an expired owner re-acquiring gets a new token')
+def _():
+    c = Clock()
+    locks = LockService(now=c)
+    eq(locks.acquire('a', 1), 1)
+    c.t = 2
+    eq(locks.acquire('a', 1), 2)
+`,
+    hint: 'LockService keeps (owner, token, expiry) and a counter. Grant when there is no holder or now() >= expiry; renew only when the holder is the same owner and the lease is still valid. FencedStore keeps one max_token and checks it before writing.',
+    solution: String.raw`import time
+
+class StaleTokenError(Exception):
+    pass
+
+class LockService:
+    def __init__(self, now=time.monotonic):
+        self.now = now
+        self.counter = 0
+        self.holder = None  # (owner, token, expiry)
+
+    def acquire(self, owner, ttl):
+        t = self.now()
+        if self.holder is not None and t < self.holder[2]:
+            if self.holder[0] != owner:
+                return None
+            self.holder = (owner, self.holder[1], t + ttl)
+            return self.holder[1]
+        self.counter += 1
+        self.holder = (owner, self.counter, t + ttl)
+        return self.counter
+
+class FencedStore:
+    def __init__(self):
+        self.max_token = 0
+        self.data = {}
+
+    def write(self, key, value, token):
+        if token < self.max_token:
+            raise StaleTokenError(f'token {token} < {self.max_token}')
+        self.max_token = token
+        self.data[key] = value
+
+    def read(self, key):
+        return self.data.get(key)`,
+    notes: 'The lock alone is not enough: a lease only says who <i>should</i> act, and a paused process cannot know its lease expired. The protected resource has to check the token. In practice the token is the lock’s revision (etcd’s mod_revision, a ZooKeeper zxid, or a row version in Postgres) and the check is a conditional write: <code>UPDATE ... WHERE fence &lt;= :token</code>.',
+  },
+
   breaker: {
     title: 'Circuit breaker',
     prompt: `<p>Implement <code>class CircuitBreaker</code> with <code>__init__(failure_threshold=3, cooldown=1.0, now=time.monotonic)</code> and <code>async def call(fn)</code> (<code>fn</code> is an async function with no arguments).</p>

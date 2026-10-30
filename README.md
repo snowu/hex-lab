@@ -5,8 +5,8 @@ plus a full game-dev section (theory, pixel art, Zig and C++ drills).
 Pure static site (no build step), hosted on GitHub Pages.
 
 ## What's inside
-- **10 tracks, 44 lessons**: Senior Playbook, Coding Fluency, **Coding Patterns**, System Design, **Databases & SQL**, **Full-Stack (browser, edge, auth, API, sync)**, Distributed Systems & Reliability, AI-Era Engineering, Neonomics & Open Banking, Scale/Kafka/AWS/Terraform
-- **53 coding exercises**: 44 Python (12 are timed pattern drills, 8 are full-stack: cache-control, CORS, JWT, signed cursors, single-flight, stale-while-revalidate, compare-and-swap saves, sync decisions) and 9 SQL with a CodeMirror editor. Python runs in your browser via [Pyodide](https://pyodide.org) (CPython compiled to WebAssembly, loaded from a CDN on first use, about 10 MB, then cached) in a Web Worker with a timeout, with hints and reference solutions
+- **10 tracks, 48 lessons**: Senior Playbook, Coding Fluency, **Coding Patterns**, System Design, **Databases & SQL**, **Full-Stack (browser, edge, auth, API, sync)**, Distributed Systems & Reliability, AI-Era Engineering, Neonomics & Open Banking, Scale/Kafka/AWS/Terraform
+- **54 coding exercises**: 45 Python (12 are timed pattern drills, 8 are full-stack: cache-control, CORS, JWT, signed cursors, single-flight, stale-while-revalidate, compare-and-swap saves, sync decisions) and 9 SQL with a CodeMirror editor. Python runs in your browser via [Pyodide](https://pyodide.org) (CPython compiled to WebAssembly, loaded from a CDN on first use, about 10 MB, then cached) in a Web Worker with a timeout, with hints and reference solutions
 - **Interactive lessons**: quizzes, step-through walkthroughs, reveal-and-self-check blocks
 - **SQL exercises run in the browser** on SQLite inside the same Python runtime: queries are checked against a reference on a visible and a hidden dataset (so hard-coding fails), and index exercises are verified through the real query plan
 - **6 live simulations**: Kafka partitions/consumer groups, circuit breaker, consistent-hash ring, token bucket, a transaction-isolation simulator (lost update, write skew, phantoms under Read committed / Repeatable read / Serializable), and a bank-outage simulator with production-like numbers (log-normal latencies, p50/p95/p99, a healthy baseline, then a scripted incident; shared pool vs timeout / bulkhead / breaker)
@@ -20,7 +20,7 @@ Pure static site (no build step), hosted on GitHub Pages.
 - **Backup**: export and import all progress as JSON
 - **Optional cloud sync** (Supabase email-code sign-in, compare-and-swap, explicit conflict choice): see below
 - **Reset all progress** from the footer
-- **78 flashcards** with Leitner spaced repetition
+- **120 flashcards** with Leitner spaced repetition
 - **End-of-lesson retrieval checks**: every lesson ends with two recall questions answered from memory; completing them schedules spaced reviews (2, 5, 14, 30, 60 days) that surface in the daily plan and the lesson header
 - **Skills map**: per-track mastery from learning, practice and recall, weakest first, each with the next action that moves it (the plan page shows the single readiness bar)
 - **Mock interview**: random question, timer, rubric
@@ -59,7 +59,7 @@ Code exercises live in `content/exercises-py.js` (lessons reference them with `{
 Neonomics details come from their public docs and general PSD2 knowledge, not insider information. Verify against <https://docs.neonomics.io>.
 
 ## Browser tests
-`tests/` holds a Playwright suite (smoke over every route, all 53 reference solutions through the real editor and runtime, interactive features, full-stack simulators, and the whole cloud-sync flow against a fake Supabase SDK, so no real project is touched).
+`tests/` holds a Playwright suite (smoke over every route, all 54 reference solutions through the real editor and runtime, interactive features, full-stack simulators, and the whole cloud-sync flow against a fake Supabase SDK, so no real project is touched).
 
 ```sh
 cd tests && npm ci && npx playwright install chromium

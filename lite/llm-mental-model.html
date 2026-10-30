@@ -8,7 +8,7 @@
 </head>
 <body>
 <p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
-<p class="crumb"><a href="index.html#ai">AI-Era Engineering</a> · lesson 1 of 4 · 5 min</p>
+<p class="crumb"><a href="index.html#ai">AI-Era Engineering</a> · lesson 1 of 5 · 6 min</p>
 <h1>LLMs: the mental model you need</h1>
 <p class="sum">Tokens, context, sampling, cost/latency, and where they fail.</p>
 <div class="sec">
@@ -21,7 +21,16 @@
 <li><b>Prompt caching.</b> Stable prefixes (system prompt, docs) can be cached to cut cost and latency. Put the stable content first.</li>
 </ul>
 <h3>Engineering levers when quality is poor</h3>
-<p>In order of cost: clearer instructions and examples → better context/retrieval → structured output + validation → tools → smaller task decomposition → a stronger model → fine-tuning (rarely first).</p></div>
+<p>In order of cost: clearer instructions and examples → better context/retrieval → structured output + validation → tools → smaller task decomposition → a stronger model → fine-tuning (rarely first).</p>
+<h3>Context engineering</h3>
+<p>For most real features the prompt wording matters less than <b>what is in the context window</b>: which documents, which tool results, how much history, in what order. Treat the context as a budget you design:</p>
+<ul>
+<li><b>Relevant over complete.</b> The right three paragraphs beat the whole manual. Irrelevant text costs money and measurably lowers answer quality.</li>
+<li><b>Stable first, volatile last.</b> System instructions and reference docs at the top (cacheable), the user’s question and fresh tool results at the end.</li>
+<li><b>Compact long histories.</b> Summarise old turns or keep only decisions and open questions instead of re-sending every message.</li>
+<li><b>Keep tool output small.</b> Return the 5 matching rows with the fields that matter, not a 2 MB JSON dump.</li>
+<li><b>Mark the boundaries.</b> Label retrieved and user-supplied content clearly as data, so instructions inside it are easier to ignore (this reduces prompt injection, it does not prevent it).</li>
+</ul></div>
 <div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Your support bot invents refund policy details. Cheapest effective fix to try first?</div><ol class="opts"><li><b>A.</b> Fine-tune a new model</li><li><b>B.</b> Retrieve the actual policy text and instruct the model to answer only from it, citing the source (and say “I don’t know” otherwise)</li><li><b>C.</b> Raise the temperature</li><li><b>D.</b> Make the prompt longer with “do not hallucinate”</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
 <div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A feature sends the full 50-page contract to the model on every chat turn. Costs explode. Which change helps most?</div><ol class="opts"><li><b>A.</b> Use a bigger context window</li><li><b>B.</b> Retrieve only relevant passages, and cache the stable prefix if the whole document is genuinely needed</li><li><b>C.</b> Lower the temperature</li><li><b>D.</b> Ask the user to type less</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
 <h2>Check your understanding</h2>

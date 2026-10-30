@@ -26,7 +26,18 @@
 <li><b>Treat output as a junior PR.</b> Read every line, run it, test the boundaries.</li>
 <li><b>Narrate verification:</b> “It handles the happy path. Let me check empty input, duplicates, and concurrent calls.”</li>
 <li><b>Own the result.</b> You must be able to explain every line.</li>
-</ol></div>
+</ol>
+<h3>AI-assisted take-homes</h3>
+<p>Many companies now allow, or assume, AI on take-home tasks. That raises the bar on everything around the code:</p>
+<ul>
+<li><b>Disclose how you used it</b> in the README: what you generated, what you rewrote, what you verified. Hidden use that surfaces in the follow-up call ends the process.</li>
+<li><b>Show the process</b> with small, meaningful commits instead of one “initial commit” of 3,000 lines.</li>
+<li><b>Write the decisions down:</b> the trade-offs, what you left out on purpose, what you would do with more time. This is the part AI cannot do for you and the part reviewers read most closely.</li>
+<li><b>Tests that matter:</b> edge cases and failure paths, not a wall of generated happy-path tests.</li>
+<li><b>Expect a live extension:</b> “add pagination to your solution, now, while we watch”. If you cannot change your own code without the assistant, it shows.</li>
+</ul>
+<h3>Agentic tools in a live round</h3>
+<p>If the round allows a coding agent that edits files and runs commands, the evaluation moves further toward <b>direction and review</b>: how precisely you describe the task, whether you give it the tests first, whether you read the diff before accepting it, and how fast you notice when it has gone the wrong way. Keep the agent on small steps you can verify, and say what you are checking as you go.</p></div>
 <div class="sec"><div class="box"><p class="kind">Challenge (Python): Spot and fix the AI bug</p><p>An assistant produced this “split a list into pages” helper. It passes the happy path but is wrong on edge cases. Fix it so all tests pass. <code>chunk([1, 2, 3, 4, 5], 2)</code> should be <code>[[1, 2], [3, 4], [5]]</code>.</p><p><b>Starter:</b></p><pre>def chunk(items, size):
     out = []
     for i in range(0, len(items) - size, size):

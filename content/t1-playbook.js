@@ -172,7 +172,18 @@ Strong: "Checkout p99 was 4.2s and we were losing ~3% of carts. I profiled it, f
 <li><b>Treat output as a junior PR.</b> Read every line, run it, test the boundaries.</li>
 <li><b>Narrate verification:</b> “It handles the happy path. Let me check empty input, duplicates, and concurrent calls.”</li>
 <li><b>Own the result.</b> You must be able to explain every line.</li>
-</ol>` },
+</ol>
+<h3>AI-assisted take-homes</h3>
+<p>Many companies now allow, or assume, AI on take-home tasks. That raises the bar on everything around the code:</p>
+<ul>
+<li><b>Disclose how you used it</b> in the README: what you generated, what you rewrote, what you verified. Hidden use that surfaces in the follow-up call ends the process.</li>
+<li><b>Show the process</b> with small, meaningful commits instead of one “initial commit” of 3,000 lines.</li>
+<li><b>Write the decisions down:</b> the trade-offs, what you left out on purpose, what you would do with more time. This is the part AI cannot do for you and the part reviewers read most closely.</li>
+<li><b>Tests that matter:</b> edge cases and failure paths, not a wall of generated happy-path tests.</li>
+<li><b>Expect a live extension:</b> “add pagination to your solution, now, while we watch”. If you cannot change your own code without the assistant, it shows.</li>
+</ul>
+<h3>Agentic tools in a live round</h3>
+<p>If the round allows a coding agent that edits files and runs commands, the evaluation moves further toward <b>direction and review</b>: how precisely you describe the task, whether you give it the tests first, whether you read the diff before accepting it, and how fast you notice when it has gone the wrong way. Keep the agent on small steps you can verify, and say what you are checking as you go.</p>` },
         { type: 'code', ref: 'chunk' },
         { type: 'quiz', q: 'In an AI-allowed round the assistant generates a working solution in 20 seconds. What should you do next?',
           options: ['Submit immediately to save time', 'Walk through it, state edge cases, run targeted tests, and explain the complexity', 'Rewrite it by hand to prove you can', 'Ask the assistant to explain it to the interviewer'],

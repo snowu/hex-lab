@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLM features in production · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#ai">AI-Era Engineering</a> · lesson 4 of 5 · 7 min</p>
+<h1>LLM features in production</h1>
+<p class="sum">Model lifecycle, fallbacks, latency, cost, privacy and observability.</p>
+<div class="sec">
+<p>A demo needs one prompt and one API key. A production LLM feature is a dependency on a fast-changing external service, and it needs the same engineering as any other critical dependency, plus a few things that are specific to models.</p>
+<h3>Models have a lifecycle</h3>
+<p>Providers deprecate, rename and retire models on their own schedule, sometimes with little notice on smaller gateways. A real failure mode: the configured model id disappears, every call returns “model unavailable”, and the health check still says “connected” because it never called the model.</p>
+<ul>
+<li><b>Pin exact model versions</b> in configuration, not in code scattered across files, so a change is one line and one deploy.</li>
+<li><b>Health checks exercise the model</b> with a tiny request, or at least check that the id is still in the provider’s model list.</li>
+<li><b>Fallback model</b> for the same task, evaluated in advance, that the service switches to when the primary errors.</li>
+<li><b>Surface the real error</b> in logs and metrics (“provider 400: model unavailable”), even when users see a friendly message.</li>
+<li><b>Track deprecation notices</b> like dependency updates: an owner, a calendar date, an eval run before the switch.</li>
+</ul>
+<h3>Latency</h3>
+<ul>
+<li><b>Stream</b> tokens to the user. Time to first token matters more for perceived speed than total time.</li>
+<li><b>Generate less.</b> Output tokens are slow; ask for short, structured output.</li>
+<li><b>Set timeouts</b> sized to the expected output length, and retry only on errors that are safe to retry (429, 5xx), with backoff.</li>
+<li>Run independent calls in parallel, and move non-interactive work (summaries, classification) to background jobs.</li>
+</ul>
+<h3>Cost</h3>
+<ul>
+<li><b>Route by difficulty:</b> a small, cheap model for classification and extraction; a large one only where evals show it is needed.</li>
+<li><b>Prompt caching</b> for stable prefixes, and plain response caching for repeated questions.</li>
+<li><b>Budgets and limits:</b> per-user rate limits, max tokens per call, a daily spend alert. One loop bug can burn a month’s budget overnight.</li>
+<li>Log token counts per feature so you know which feature costs what.</li>
+</ul>
+<h3>Quality over time</h3>
+<p>Keep a versioned <b>eval set</b> per feature and run it on every prompt change and every model change, in CI where possible. Sample production traffic for human review. Track format failures (invalid JSON, refusals, empty replies) as a metric; they rise quietly when a model changes underneath you.</p>
+<h3>Privacy and data handling</h3>
+<ul>
+<li>Know each provider’s terms: is the data retained, and is it <b>used for training</b>? Some cheaper offerings are discounted because they train on prompts.</li>
+<li>Route by sensitivity: generic content (public code exercises) can go to a cheaper model; customer or personal data only to providers with the right terms and region.</li>
+<li>Redact secrets and personal data before sending, and do not log full prompts containing them.</li>
+</ul>
+<h3>Observability</h3>
+<p>For every call record: feature, model id and version, prompt template version, token counts, latency, cost, outcome (ok, error type, format failure). This turns “the AI is worse this week” into a graph you can act on.</p></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Your feedback feature sends learners’ code to a cheap model whose provider trains on prompts. Learners can also paste design answers describing their real employer’s systems. What do you do?</div><ol class="opts"><li><b>A.</b> Send everything to the cheap model to save money</li><li><b>B.</b> Route by sensitivity: generic code to the cheap model, free-text answers that may contain real work details to a provider that does not train on prompts</li><li><b>C.</b> Stop offering feedback</li><li><b>D.</b> Ask the model to forget the data after answering</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A chat feature feels slow: answers take 12 seconds to appear. Which change improves perceived latency the most?</div><ol class="opts"><li><b>A.</b> Switch to a larger model</li><li><b>B.</b> Stream tokens as they are generated and ask for shorter answers</li><li><b>C.</b> Increase the timeout</li><li><b>D.</b> Add a loading spinner with a progress percentage</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Your app’s health check reports “connected”, yet every chat request fails because the provider retired the model you call. What should the health check have done?</div><ol class="opts"><li><b>A.</b> Checked that the API key is configured</li><li><b>B.</b> Made a tiny real call to the configured model (or checked the provider’s model list), so a retired or renamed model shows as unhealthy</li><li><b>C.</b> Pinged the provider’s homepage</li><li><b>D.</b> Nothing: health checks cannot detect provider problems</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<div class="box"><div class="q">2. You want to switch your feature to a cheaper model. What must happen before the switch?</div><ol class="opts"><li><b>A.</b> Nothing: models with similar names behave the same</li><li><b>B.</b> Run your eval set on the new model and compare quality, format failures, latency and cost against the current one</li><li><b>C.</b> Ask the new model whether it is as good</li><li><b>D.</b> Switch in production and watch for complaints</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<p class="nav"><a href="agents-security.html">← Agents, tools &amp; prompt-injection security</a> · <a href="review-ai-code.html">Reviewing AI-written code →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Route by sensitivity: generic code to the cheap model, free-text answers that may contain real work details to a provider that does not train on prompts</p><div>Data handling terms are a routing input like cost and quality. A model cannot “forget”; only the provider’s terms decide what happens to the prompt.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Stream tokens as they are generated and ask for shorter answers</p><div>Streaming shows the first words in under a second, and fewer output tokens cut the total time. A larger model is usually slower.</div></div>
+<div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Made a tiny real call to the configured model (or checked the provider’s model list), so a retired or renamed model shows as unhealthy</p><div>A health check that only reads configuration proves nothing about the dependency. Exercise the actual model cheaply, or at least verify it is still listed.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Run your eval set on the new model and compare quality, format failures, latency and cost against the current one</p><div>Model swaps change behaviour in ways prompts do not reveal. An eval set turns “seems fine” into a measured comparison you can repeat on every future swap.</div></div>
+<p class="nav"><a href="agents-security.html">← Agents, tools &amp; prompt-injection security</a> · <a href="review-ai-code.html">Reviewing AI-written code →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>

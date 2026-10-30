@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overload, backpressure and safe rollouts · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#reliability">Distributed Systems &amp; Reliability</a> · lesson 5 of 5 · 8 min</p>
+<h1>Overload, backpressure and safe rollouts</h1>
+<p class="sum">Shed load before it sheds you, bound every queue, and ship changes gradually.</p>
+<div class="sec">
+<p>Most outages at scale are not a component dying. They are a component <b>overloaded</b>: it slows down, callers retry, it slows down further, and a small surge becomes a total outage. Senior designs plan for the surge.</p>
+<h3>Why overload collapses</h3>
+<ul>
+<li><b>Queues hide overload until it is too late.</b> An unbounded queue turns “too much traffic” into “every request is 40 seconds old”, and requests whose callers have already given up still get processed.</li>
+<li><b>Retries multiply load.</b> Three layers that each retry three times turn one failing request into 27 calls at the bottom.</li>
+<li><b>Latency eats capacity.</b> By Little’s law, requests in flight = arrival rate × latency. If latency goes from 100ms to 2s, you need 20× the connections and threads for the same traffic.</li>
+</ul>
+<h3>The toolbox</h3>
+<table><tr><th>Tool</th><th>What it does</th></tr>
+<tr><td>Bounded queues and concurrency limits</td><td>Cap work in flight; anything over the cap is rejected immediately</td></tr>
+<tr><td>Load shedding</td><td>Return 429/503 fast when over capacity. Shed the cheapest work first: background refreshes before user-facing reads, reads before payments</td></tr>
+<tr><td>Backpressure</td><td>Tell the producer to slow down instead of buffering: a consumer pulls at its own pace (Kafka), a bounded channel blocks the writer, a 429 with <code>Retry-After</code></td></tr>
+<tr><td>Deadline propagation</td><td>Pass the remaining time budget downstream; drop work whose deadline has already passed</td></tr>
+<tr><td>Retry budgets</td><td>Retry at most ~10% extra traffic per client, retry only at one layer, always with backoff and jitter</td></tr>
+<tr><td>Graceful degradation</td><td>Serve cached or partial results with a flag, turn off expensive features (recommendations, search suggestions) first</td></tr>
+<tr><td>Adaptive concurrency</td><td>Lower the concurrency limit automatically when latency rises (as TCP congestion control does)</td></tr></table>
+<h3>Safe rollouts</h3>
+<p>Many incidents come from changes, so the cheapest reliability work is making changes small and reversible:</p>
+<ul>
+<li><b>Canary:</b> send 1% → 10% → 50% → 100% of traffic to the new version, comparing error rate and latency against the old one at each step, and roll back automatically if it is worse.</li>
+<li><b>Blue/green:</b> run the new version alongside the old one and switch traffic at once; rollback is switching back. Simple, but every user moves at the same moment.</li>
+<li><b>Feature flags:</b> deploy the code dark, then turn the behaviour on per tenant or per percentage. This separates deploying from releasing, and a kill switch is faster than any redeploy.</li>
+<li><b>Expand/contract migrations:</b> add the new column or table, write to both, backfill, switch reads, then remove the old one, so every step can be rolled back on its own.</li>
+<li><b>Bake time and change freezes</b> around peak periods (month-end for payments).</li>
+</ul>
+<div class="callout"><b>In a design round:</b> “Each bank adapter has a concurrency limit and a bounded queue. Over the limit we shed background refreshes first and return 503 with Retry-After to API clients, while user-present requests keep a reserved slice of capacity. New adapter versions go out behind a per-bank flag and a 1% canary.”</div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">A downstream service is struggling. Your service, its caller, and the API gateway in front each retry failed calls 3 times. What happens during the incident?</div><ol class="opts"><li><b>A.</b> Each layer protects the next, so the downstream recovers faster</li><li><b>B.</b> Load on the downstream can grow up to 27× (3 × 3 × 3) exactly when it is weakest; retry at one layer only, with a retry budget, backoff and jitter</li><li><b>C.</b> Retries are harmless because the requests are idempotent</li><li><b>D.</b> Only the gateway’s retries count</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Your payment API is over capacity. What should it shed first?</div><ol class="opts"><li><b>A.</b> Payment initiations, because they are the slowest</li><li><b>B.</b> Background account refreshes and other deferrable work, keeping capacity for user-present payments and status checks</li><li><b>C.</b> Requests from the largest customers, because they generate the most load</li><li><b>D.</b> Requests at random, so it is fair</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><h3>Self-check: your service at 3× traffic</h3><ol>
+<li>Where is the first bounded resource (DB connections, threads, a bank’s rate limit)? What happens when it fills?</li>
+<li>Is any queue unbounded? What is the oldest request it could hold?</li>
+<li>How many layers retry? What is the worst-case multiplier?</li>
+<li>What do you shed first, and what does the client see?</li>
+<li>Which feature would you turn off first, and is there a flag for it today?</li>
+</ol></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. At 2× normal traffic your service’s latency climbs until every request times out, so goodput drops to zero. What is the core fix?</div><ol class="opts"><li><b>A.</b> Increase every timeout so requests can finish</li><li><b>B.</b> Admission control: bound concurrency and queue length and reject excess work fast (429/503), ideally lowest priority first</li><li><b>C.</b> Retry failed requests more aggressively</li><li><b>D.</b> Add an unbounded queue in front of the service</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<div class="box"><div class="q">2. What is the main reason to release a risky change as a canary at 1% instead of to everyone at once?</div><ol class="opts"><li><b>A.</b> It makes the deploy faster</li><li><b>B.</b> It limits the blast radius: bad versions hurt 1% of traffic, and automated checks against the baseline can stop the rollout</li><li><b>C.</b> Canary releases avoid the need for tests</li><li><b>D.</b> It is required by Kubernetes</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<p class="nav"><a href="coordination.html">← Coordination: leaders, leases, quorums and clocks</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Load on the downstream can grow up to 27× (3 × 3 × 3) exactly when it is weakest; retry at one layer only, with a retry budget, backoff and jitter</p><div>Retries multiply across layers. Idempotency makes them safe for correctness, not for load. Retry in one place and cap the retry rate.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Background account refreshes and other deferrable work, keeping capacity for user-present payments and status checks</p><div>Shed by priority: deferrable and background work first, protect the money-moving and user-present paths. Shedding randomly treats a cron job like a customer at checkout.</div></div>
+<div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Admission control: bound concurrency and queue length and reject excess work fast (429/503), ideally lowest priority first</p><div>Without a bound, every request waits behind every other one and all of them time out. Rejecting some quickly keeps the rest fast; that is load shedding.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>B.</b> It limits the blast radius: bad versions hurt 1% of traffic, and automated checks against the baseline can stop the rollout</p><div>Progressive delivery turns a bad deploy from an outage into a small, measured experiment that rolls back on its own.</div></div>
+<p class="nav"><a href="coordination.html">← Coordination: leaders, leases, quorums and clocks</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>
