@@ -110,6 +110,73 @@ func _ready():
       ],
     },
     {
+      id: 'gfx-animation', title: 'Animation systems in code', minutes: 30,
+      summary: 'Clips, frame data, animation state machines, blending, root motion and events.',
+      checks: [
+        { q: 'Your attack deals damage on the frame the button is pressed, but the sword visibly connects six frames later. Players say hits feel wrong. What is the fix?',
+          options: ['Speed the animation up so it matches the damage', 'Apply damage from the attack’s active frames (frame data or an animation event on the contact frame), not on the button press', 'Add screen shake on the button press to hide the gap', 'Delay the button press by six frames'],
+          answer: 1, explain: 'Gameplay timing for an action belongs in its frame data: startup, active, recovery. The hitbox exists only during the active frames, which match what the player sees.' },
+        { q: 'Gameplay code sets the player state to RUN, and the animation code separately picks “run” when speed is above 0.1. Sometimes the player runs in place. What is the structural fix?',
+          options: ['Lower the threshold to 0.01', 'Make the gameplay state the single source of truth: the animation layer maps states to clips (using speed only for blending inside a state) and never guesses gameplay from physics values', 'Play both animations at once', 'Check the speed twice per frame'],
+          answer: 1, explain: 'Two systems deciding the same thing from different inputs will disagree at the edges. Gameplay decides; animation follows and only uses parameters such as speed to blend within the chosen state.' },
+      ],
+      sections: [
+        { type: 'text', html: `
+<p>Drawing frames is art. Deciding <i>which</i> frame shows, when it changes, and what gameplay happens on which frame is programming, and it decides how responsive a game feels.</p>
+<h3>Clips are data</h3>
+<p>A clip is a list of frames (sprite rects or poses) with a duration per frame, a loop mode (loop, once, ping-pong) and optional <b>events</b> on specific frames. Keep it as data exported from your tool (Aseprite tags and frame durations export to JSON), not hard-coded indexes. Advance clips by elapsed time, not by counting rendered frames, or animation speed depends on the frame rate.</p>
+<pre><code>clip "slash": frames [4, 5, 6, 7, 8], durations ms [50, 50, 33, 33, 80], loop: false
+  events: frame 6 → "hit_start", frame 8 → "hit_end", frame 5 → "whoosh_sfx"</code></pre>
+<h3>Who drives whom</h3>
+<p>The <b>gameplay state machine is authoritative</b> (see <a href="#/lesson/gd-input-fsm">input and state machines</a>). The animation layer maps each gameplay state to a clip or blend and reports back through events: “the hit frame happened”, “the clip finished”, “a foot touched the ground” (for footstep sounds and dust). Gameplay never reads “which frame is showing” to make decisions, and animation never guesses the gameplay state from velocity.</p>
+<h3>Frame data for actions</h3>
+<p>Action games describe every attack as three phases, in frames of the fixed simulation step:</p>
+<table><tr><th>Phase</th><th>What happens</th><th>Design knob</th></tr>
+<tr><td>Startup</td><td>Wind-up; the attack is committed but cannot hit yet</td><td>Longer startup = easier to react to, feels heavier</td></tr>
+<tr><td>Active</td><td>The hitbox exists</td><td>How long the attack threatens space</td></tr>
+<tr><td>Recovery</td><td>Follow-through; the attacker is vulnerable</td><td>The punishment window for whiffing</td></tr></table>
+<p><b>Cancel windows</b> say when another action may interrupt this one (for example a dodge from frame 12 onwards). Combined with an input buffer, they decide whether controls feel tight or sluggish. Because hitboxes come from frame data on the fixed step, the result is deterministic, which replays and rollback netcode need (see <a href="#/lesson/net-lockstep">lockstep and rollback</a>).</p>
+<h3>Transitions</h3>
+<ul>
+<li>A <b>transition table</b>: from state, to state, condition, whether it waits for the clip to end (exit time) or cuts immediately.</li>
+<li><b>Priorities and “any state” transitions</b>: hit-stun and death interrupt everything; a jump may interrupt running but not an attack’s active frames.</li>
+<li>Short <b>transition clips</b> (run → stop skid, land) do the job blending does in 3D, and are the main tool for sprite animation, which cannot blend between frames.</li>
+</ul>
+<h3>Blending (skeletal animation)</h3>
+<p>With skeletons (3D, or 2D tools such as Spine), poses can be mixed:</p>
+<ul>
+<li><b>Crossfade</b> over 0.1-0.25 s between clips instead of popping.</li>
+<li><b>Blend spaces / blend trees</b>: pick and mix clips by a parameter. Idle → walk → run by speed; eight-way strafing by direction.</li>
+<li><b>Layers and masks</b>: the upper body plays “shoot” while the legs keep running.</li>
+<li><b>Additive</b> clips on top of anything: breathing, recoil, flinch.</li>
+</ul>
+<h3>Root motion versus code-driven movement</h3>
+<p><b>Code-driven</b>: physics moves the character and animation matches it. Responsive, and the default for platformers and most action games. Match the playback rate to the actual speed, or the feet visibly slide. <b>Root motion</b>: the animation’s root bone moves the character, so a lunge covers exactly the distance the animator drew. Great for melee, climbing and cinematic moves, worse for responsiveness. Many games mix them per state.</p>
+<h3>Procedural touches</h3>
+<p>Small runtime adjustments sell a lot: <b>IK</b> to plant feet on slopes and point heads at targets, <b>springs</b> for hair, tails and cloth-like secondary motion (see <a href="#/lesson/gd-smoothing">smoothing</a>), and tweens for squash and stretch.</p>
+<h3>Which clock?</h3>
+<p>Anything that affects gameplay (hitboxes, invulnerability frames, events that spawn projectiles) advances on the <b>fixed simulation step</b>. Purely visual animation can advance on the render frame and interpolate. Mixing them up is how a game behaves differently at 30 and 144 FPS.</p>
+<h3>In engines</h3>
+<p>Godot: <code>AnimationPlayer</code> keys any property and has method-call tracks for events; <code>AnimationTree</code> adds state machines and blend spaces; <code>AnimatedSprite2D</code> covers simple sprite clips. Unity’s Animator and Unreal’s Animation Blueprints implement the same ideas: state machines, blend spaces, layers and notifies (events).</p>` },
+        { type: 'quiz', q: 'A character walks slowly, but its legs cycle at full running speed and the feet slide over the ground. What is the usual fix?',
+          options: ['Raise the frame rate', 'Scale the playback rate by the actual speed, or blend between walk and run clips by speed, so the stride matches the distance moved', 'Switch to root motion everywhere', 'Add more frames to the run cycle'],
+          answer: 1, explain: 'Foot sliding is a mismatch between distance moved and distance the stride covers. Match them with playback rate or a speed-driven blend.' },
+        { type: 'quiz', q: 'Players can cancel a heavy attack into a dodge on any frame, so the heavy attack has no risk. What do you change?',
+          options: ['Make the dodge slower', 'Add a cancel window to the attack’s frame data so the dodge is allowed only from a chosen frame onwards, keeping startup and part of recovery committed', 'Remove the dodge', 'Lower the heavy attack’s damage'],
+          answer: 1, explain: 'Commitment is designed in frame data. A cancel window keeps the attack’s risk while still letting skilled players chain moves.' },
+        { type: 'quiz', q: 'Your game uses rollback netcode. Where should an attack’s hitbox activation come from?',
+          options: ['The renderer’s animation player, whatever frame it is showing', 'Frame data stepped by the fixed, deterministic simulation, so every client and every resimulation agrees', 'A timer on each client’s wall clock', 'The server only; clients never know'],
+          answer: 1, explain: 'Rollback re-runs the simulation many times per frame. Gameplay timing must be a pure function of simulation steps, not of rendering.' },
+        { type: 'reveal', title: 'Exercise: write the frame data for one attack', html: `<ol>
+<li>Pick a move from a game you know (or your own). At 60 steps per second, write startup, active and recovery in frames.</li>
+<li>Mark the cancel window and what it may cancel into.</li>
+<li>List the events and their frames: sound, hitbox on and off, effects, camera.</li>
+<li>Write the transition rules into and out of the attack, including which states can interrupt it.</li>
+<li>Change one number (startup +4 frames) and write down how the move would feel different. That is the design conversation frame data makes possible.</li>
+</ol>` },
+      ],
+    },
+    {
       id: 'gfx-shaders', title: 'Shaders, effects and 2D lighting', minutes: 40,
       summary: 'What a shader is, the handful of tricks behind most 2D effects, and how to light a flat world.',
       checks: [

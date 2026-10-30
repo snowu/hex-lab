@@ -32,6 +32,7 @@ TRACKS.push({
           options: ['Particles use too much memory', 'The effect advances the shared random stream, shifting every later number used by generation', 'Seeds expire', 'The GPU interferes'], answer: 1, explain: 'Use separate RNG instances per system so cosmetic randomness cannot disturb gameplay randomness.' },
         { pid: 'q-proc-2', type: 'quiz', q: 'Which step is essential after cellular-automata generation before shipping the level?',
           options: ['Increase the number of smoothing steps', 'Check connectivity (flood fill) between start, exit and key areas, and repair or reject', 'Convert to a PNG', 'Nothing'], answer: 1, explain: 'The rule makes caves, not guarantees. Validate reachability and difficulty.' },
+        { pid: 'go-deeper', type: 'text', html: `<div class="callout tip"><b>Go deeper:</b><ul><li><a href="#/lesson/gd-noise">Noise, terrain and Wave Function Collapse</a>: coherent noise, octaves, domain warping and Wave Function Collapse.</li></ul></div>` },
       ],
     },
     {
@@ -169,6 +170,7 @@ test "adding octaves adds detail but keeps the range" {
           options: ['It is cheaper to compute', 'Small values give almost no shake and large values ramp up quickly, so a series of small hits does not rattle the screen but a big one does', 'It avoids division by zero', 'It makes the shake slower'], answer: 1, explain: 'The nonlinearity gives a wide dynamic range from one number.' },
         { pid: 'q-cam-2', type: 'quiz', q: 'Your pixel art sprites flicker when the camera follows the player slowly. A likely fix?',
           options: ['Increase texture size', 'Round the camera and sprite positions to whole pixels at render time and use nearest-neighbour filtering', 'Add anti-aliasing', 'Use a bigger window'], answer: 1, explain: 'Sub-pixel positions sample different texels each frame. Snap to the pixel grid.' },
+        { pid: 'go-deeper', type: 'text', html: `<div class="callout tip"><b>Go deeper:</b><ul><li><a href="#/lesson/gfx-transforms">Transforms, matrices and hierarchies</a>: the camera as a view transform, and zoom and rotation done with matrices.</li><li><a href="#/lesson/gd-smoothing">Interpolation, easing and smoothing</a>: the easing and damping maths behind smooth follow.</li></ul></div>` },
       ],
     },
     {
@@ -196,6 +198,7 @@ test "adding octaves adds detail but keeps the range" {
           options: ['Write more often', 'Write to a temporary file and atomically rename it over the old save (keeping a backup)', 'Compress the save', 'Encrypt the save'], answer: 1, explain: 'Write-then-rename means the old file is never half-overwritten.' },
         { pid: 'q-save-2', type: 'quiz', q: 'Why reference items in saves by a string id such as <code>"iron_sword"</code> instead of their index in the item list?',
           options: ['Strings are faster', 'Reordering or inserting items in the data would silently change what every saved index means', 'It saves space', 'Indices cannot be saved'], answer: 1, explain: 'Stable ids survive content changes. Indices turn a harmless data edit into corrupted saves.' },
+        { pid: 'go-deeper', type: 'text', html: `<div class="callout tip"><b>Go deeper:</b><ul><li><a href="#/lesson/pat-type-object">Type object, prototype and data-driven design</a>: type objects and data-driven design: monsters and items defined in data.</li><li><a href="#/lesson/prod-release">Shipping and operating a game</a>: save versioning and migrations once real players have saves.</li></ul></div>` },
       ],
     },
     {

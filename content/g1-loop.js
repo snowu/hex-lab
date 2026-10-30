@@ -68,6 +68,7 @@ func _process(delta):
                  { line: 10, why: '<code>get_node</code> with an absolute path every frame walks the scene tree each time. Cache it once (<code>@onready</code>) or better, have the UI listen to a signal when health changes.' }],
           ok: [8, 11], hint: 'One mistake is about which callback this is in, one is about time, one is about doing the same lookup 60 times a second.' },
         { type: 'reveal', title: 'Think it through: how would you make a game run the same on every machine?', html: `<ul><li>Separate <b>simulation</b> (fixed step, deterministic) from <b>rendering</b> (as fast as possible, interpolated).</li><li>Never use frame count as time. Use <code>dt</code> or the fixed step.</li><li>Cap catch-up steps (spiral of death) and decide what to drop: time, not state.</li><li>Seed all gameplay randomness, keep it out of rendering (see the procgen lesson).</li><li>Floating point is deterministic on one machine and compiler but can differ across platforms. For lockstep multiplayer use fixed-point or integers.</li></ul>` },
+        { pid: 'go-deeper', type: 'text', html: `<div class="callout tip"><b>Go deeper:</b><ul><li><a href="#/lesson/pat-thinking">Thinking in patterns: sequencing</a>: the game loop, update method and double buffer as patterns, and why the order of updates matters.</li><li><a href="#/lesson/phy-integration">Integration and stability</a>: why explicit Euler drifts and what semi-implicit Euler and Verlet fix.</li><li><a href="#/lesson/prod-frames">Frame pacing, threads and job systems</a>: frame pacing: why an even frame time matters more than average FPS.</li></ul></div>` },
       ],
     },
     {
@@ -112,6 +113,7 @@ func _physics_process(delta):
           answer: 2, explain: 'Keep the state set small and put the variation in data (timings, damage) or a parent state. A boolean sprinkled through every state is exactly the pile-of-flags problem again, only one level up.' },
         { pid: 'q-fsm-2', type: 'quiz', q: 'The player presses jump 60 ms before touching the ground and nothing happens. Which technique fixes it?',
           options: ['Coyote time', 'Jump buffering', 'Corner correction', 'A higher jump'], answer: 1, explain: 'Buffering stores the press and fires it on landing. Coyote time is the mirror image: jumping shortly <i>after</i> leaving the ground.' },
+        { pid: 'go-deeper', type: 'text', html: `<div class="callout tip"><b>Go deeper:</b><ul><li><a href="#/lesson/pat-state">State, hierarchies and stacks</a>: hierarchical states and pushdown stacks for menus, stuns and cutscenes.</li><li><a href="#/lesson/pat-command">Command: actions as data</a>: input as command objects: rebinding, replays and undo.</li><li><a href="#/lesson/gfx-animation">Animation systems in code</a>: how the animation state machine follows the gameplay one, and frame data for attacks.</li></ul></div>` },
       ],
     },
     {
@@ -140,6 +142,7 @@ func _physics_process(delta):
         { pid: 'q-ecs-2', type: 'quiz', q: 'In Godot, a Health node needs to tell the UI that health changed. What is the idiomatic way?',
           options: ['Health calls get_node("/root/Main/UI/Bar") and sets the value', 'Health emits a signal like health_changed(value) and the UI connects to it', 'The UI polls Health every frame', 'Both are stored in a global singleton'], answer: 1, explain: '“Call down, signal up”: the Health node should not know the UI exists. A signal keeps both reusable (you can put the same Health on an enemy with no UI).' },
         { type: 'reveal', title: 'Design question: “How would you structure bullets in a bullet-hell with 20,000 on screen?”', html: `<ul><li>No node per bullet. Store positions and velocities in flat arrays (struct of arrays) and update them in one tight loop.</li><li>Render them with one batched draw call (a MultiMesh or a single custom draw) instead of 20,000 sprites.</li><li>Use a pool/free-list to recycle slots (see the performance lesson), no allocation in the hot path.</li><li>Collision against the player only: test bullets against a handful of player hitboxes, using a spatial hash if there are many targets.</li><li>Cull off-screen bullets as you iterate and recycle them.</li></ul>` },
+        { pid: 'go-deeper', type: 'text', html: `<div class="callout tip"><b>Go deeper:</b><ul><li><a href="#/lesson/pat-component">Component, subclass sandbox and service locator</a>: components, the subclass sandbox and the service locator, with their trade-offs.</li><li><a href="#/lesson/pat-pool">Object pool, flyweight and data locality</a>: object pools and data locality: why packed arrays are fast.</li></ul></div>` },
       ],
     },
     {
@@ -209,6 +212,7 @@ public:
           options: ['The average frame time', 'The worst-case frames (99th percentile or spikes), usually caused by allocation, GC, loading or a periodic task', 'The GPU temperature', 'The resolution'], answer: 1, explain: 'Averages hide hitches. Capture a frame-time graph and investigate the spikes: collection pauses, asset loads on the main thread, or one system doing a big batch every N frames (spread it out).' },
         { pid: 'q-perf-2', type: 'quiz', q: 'Which change most reduces cost for 3,000 enemies each looking for nearby allies?',
           options: ['Check only every other enemy', 'Bucket enemies into a grid/spatial hash and query neighbouring cells', 'Sort the enemy list each frame', 'Use floats instead of doubles'], answer: 1, explain: 'Spatial partitioning turns the all-pairs O(n²) into roughly O(n × neighbours). It is the biggest single win for crowds.' },
+        { pid: 'go-deeper', type: 'text', html: `<div class="callout tip"><b>Go deeper:</b><ul><li><a href="#/lesson/prod-debug">Debugging and profiling games</a>: profilers, debug overlays and how to find what actually costs time.</li><li><a href="#/lesson/prod-frames">Frame pacing, threads and job systems</a>: stutter, frame pacing and spreading work across threads.</li><li><a href="#/lesson/pat-pool">Object pool, flyweight and data locality</a>: pools and data locality to stop per-frame allocation.</li></ul></div>` },
       ],
     },
   ],

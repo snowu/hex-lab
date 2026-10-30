@@ -8,7 +8,7 @@
 </head>
 <body>
 <p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
-<p class="crumb"><a href="index.html#gdprod">Production &amp; Tooling</a> · lesson 2 of 4 · 10 min</p>
+<p class="crumb"><a href="index.html#gdprod">Production &amp; Tooling</a> · lesson 3 of 5 · 10 min</p>
 <h1>Testing a game</h1>
 <p class="sum">What is worth automating in a game, how to keep logic testable, golden replays, bots and fuzzing.</p>
 <div class="sec">
@@ -89,13 +89,13 @@ test "golden value: if you change game rules on purpose, regenerate this number 
 <h2>Check your understanding</h2>
 <div class="box"><div class="q">1. You must guarantee that trading items between players never creates or destroys total wealth. Which technique fits best?</div><ol class="opts"><li><b>A.</b> Property and invariant tests: generate many random trades and assert conservation always holds</li><li><b>B.</b> A screenshot test</li><li><b>C.</b> A smoke test of level loading</li><li><b>D.</b> A manual playtest only</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
 <div class="box"><div class="q">2. A UI screenshot test passes on your GPU but fails on others over tiny pixel differences. How do you keep its value?</div><ol class="opts"><li><b>A.</b> Delete all visual tests</li><li><b>B.</b> Test every frame</li><li><b>C.</b> Compare with a tolerance on one reference machine instead of demanding pixel-exact matches everywhere</li><li><b>D.</b> Require all players to use your GPU</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
-<p class="nav"><a href="prod-debug.html">← Debugging and profiling games</a> · <a href="prod-repo.html">Repositories, assets and pipelines →</a></p>
+<p class="nav"><a href="prod-frames.html">← Frame pacing, threads and job systems</a> · <a href="prod-repo.html">Repositories, assets and pipelines →</a></p>
 <h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Investigate: the checksum changed, so behaviour changed. Find the first frame where state differs, then decide whether it is a bug or an intended change (and only then regenerate the golden value)</p><div>A golden test exists to flag unintended changes. Refreshing it blindly defeats the purpose.</div></div>
 <div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Pure logic that takes state, input and a time step and returns new state, with the engine layer only presenting it</p><div>No engine, no wall-clock, no globals in the logic: that is also what determinism needs.</div></div>
 <div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Fuzzing the save parser with random and mutated files</p><div>Fuzzing explores malformed inputs far beyond what a human would think to try.</div></div>
 <div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>A.</b> Property and invariant tests: generate many random trades and assert conservation always holds</p><div>Invariants over generated cases find the edge case nobody thought to write by hand.</div></div>
 <div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>C.</b> Compare with a tolerance on one reference machine instead of demanding pixel-exact matches everywhere</p><div>Screenshot tests are brittle across hardware, so tolerance plus a single reference keeps the signal without the noise.</div></div>
-<p class="nav"><a href="prod-debug.html">← Debugging and profiling games</a> · <a href="prod-repo.html">Repositories, assets and pipelines →</a></p>
+<p class="nav"><a href="prod-frames.html">← Frame pacing, threads and job systems</a> · <a href="prod-repo.html">Repositories, assets and pipelines →</a></p>
 <p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
 </body>
 </html>

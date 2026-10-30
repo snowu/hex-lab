@@ -40,6 +40,7 @@ TRACKS.push({
           options: ['dot(f, normalize(d)) > cos(45°)', 'dot(f, d) < 0', 'cross(f, d) == 0', 'length(d) < 90'], answer: 0, explain: 'Half of 90° is 45°. A unit-vector dot product equals the cosine of the angle between them, so compare with cos(45°) (about 0.707). Add a distance check for range.' },
         { pid: 'q-vec-2', type: 'quiz', q: 'A ball with velocity <code>v</code> hits a wall with unit normal <code>n</code> and should bounce perfectly. Which formula?',
           options: ['v - n', 'v - 2 * n * dot(v, n)', 'n * dot(v, n)', '-v'], answer: 1, explain: 'Reflection: subtract twice the component of v along the normal. <code>-v</code> only works for a head-on hit. Subtracting just once (<code>v - n * dot(v, n)</code>) is the “slide along the wall” projection instead.' },
+        { pid: 'go-deeper', type: 'text', html: `<div class="callout tip"><b>Go deeper:</b><ul><li><a href="#/lesson/ai-perception">Perception and steering</a>: steering in depth: arrive, avoidance, flocking, plus vision cones and hearing.</li><li><a href="#/lesson/gfx-transforms">Transforms, matrices and hierarchies</a>: matrices, transform order and parent-child hierarchies.</li></ul></div>` },
       ],
     },
     {
@@ -77,6 +78,7 @@ TRACKS.push({
           options: ['Push 20 px vertically', 'Push 3 px horizontally, away from the other box', 'Push both 3 and 20', 'Push diagonally by 20'], answer: 1, explain: 'Resolve along the axis of least penetration: the smallest move that separates them.' },
         { pid: 'q-col-2', type: 'quiz', q: 'A projectile moving at 3000 px/s ignores a 4 px wall at 60 Hz. What is the root cause?',
           options: ['The wall is not on the right collision layer', 'It moves 50 px per step, more than the wall is thick, so no step ever overlaps it (tunneling)', 'Floating point error', 'The wall needs a bigger shape margin'], answer: 1, explain: '3000 / 60 = 50 px per step. Use swept/continuous collision, a raycast for the bullet, or substeps.' },
+        { pid: 'go-deeper', type: 'text', html: `<div class="callout tip"><b>Go deeper:</b><ul><li><a href="#/lesson/pat-spatial">Spatial partitioning</a>: spatial partitioning: grids, quadtrees and BVHs so you test only nearby pairs.</li><li><a href="#/lesson/phy-queries">Raycasts, shape casts and spatial queries</a>: raycasts, shape casts and swept tests against tunnelling.</li><li><a href="#/lesson/phy-impulses">Collision response with impulses</a>: impulse-based response with mass, restitution and friction.</li></ul></div>` },
       ],
     },
     {
@@ -112,6 +114,7 @@ TRACKS.push({
           options: ['Ease-in', 'Ease-out', 'Linear', 'Bounce'], answer: 1, explain: 'Ease-out starts fast (immediate feedback) and decelerates into the final value.' },
         { pid: 'q-ease-2', type: 'quiz', q: 'Why is <code>pos = lerp(pos, target, 0.1)</code> in <code>_process</code> a bug?',
           options: ['lerp is slow', 'The speed of convergence depends on the frame rate', 'It never reaches the target', 'It only works in 3D'], answer: 1, explain: 'Every frame closes 10%, so more frames per second means closing more per second. Use 1 - exp(-k * delta).' },
+        { pid: 'go-deeper', type: 'text', html: `<div class="callout tip"><b>Go deeper:</b><ul><li><a href="#/lesson/phy-integration">Integration and stability</a>: integrators and stability, the physics side of smoothing.</li><li><a href="#/lesson/gd-camera">Cameras, screen shake and parallax</a>: smoothing applied to cameras: follow, look-ahead and shake.</li></ul></div>` },
       ],
     },
     {
@@ -141,6 +144,7 @@ TRACKS.push({
           options: ['Nothing, it is just faster', 'The heuristic can overestimate, so A* may return a path that is not the shortest', 'It will never terminate', 'It turns into BFS'], answer: 1, explain: 'An inadmissible heuristic trades optimality for speed (“weighted A*”). That is sometimes a good deal in games, but know that you are making it.' },
         { pid: 'q-path-2', type: 'quiz', q: '500 zombies all chase the player across the same map. What is the best approach?',
           options: ['500 A* searches every frame', 'One BFS/flow field from the player each time the player moves tile, and each zombie follows its tile\'s direction', 'Teleport them', 'Give each zombie its own navmesh'], answer: 1, explain: 'A flow field is computed once for the goal and shared. Per-unit cost is a single array lookup.' },
+        { pid: 'go-deeper', type: 'text', html: `<div class="callout tip"><b>Go deeper:</b><ul><li><a href="#/lesson/ai-pathing">Pathfinding in depth</a>: A* heuristics and tie-breaking, navmeshes, flow fields and hierarchical pathfinding.</li><li><a href="#/lesson/ai-bt">From state machines to behaviour trees</a>: deciding what an agent does once it can get anywhere.</li></ul></div>` },
       ],
     },
   ],

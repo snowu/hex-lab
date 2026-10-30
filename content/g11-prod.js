@@ -55,6 +55,82 @@ TRACKS.push({
       ],
     },
     {
+      id: 'prod-frames', title: 'Frame pacing, threads and job systems', minutes: 30,
+      summary: 'Why average FPS lies, where stutter comes from, and how engines use every core.',
+      checks: [
+        { q: 'Two builds both average 60 FPS. One feels smooth, the other stutters. Which measurement shows the difference?',
+          options: ['The average FPS over a longer run', 'The frame-time distribution: a frame-time graph and percentiles such as the 99th percentile or “1% lows”, which show the spikes', 'The peak FPS', 'The GPU temperature'],
+          answer: 1, explain: 'A single 100 ms frame among fifty 16 ms frames barely moves the average but is a visible hitch. Measure frame times and their worst percentiles.' },
+        { q: 'A job system splits particle updates across 8 worker threads, and each job pushes its results into one shared vector guarded by a mutex. It is slower than one thread. Why?',
+          options: ['Particles cannot be updated in parallel', 'The jobs spend their time waiting on the shared lock; give each job its own pre-sized output slice so they never contend', 'Eight threads is too few', 'The vector is too small'],
+          answer: 1, explain: 'Parallel work only scales when jobs do not share mutable state. Partition the data, write to separate slices, and combine at a known sync point.' },
+      ],
+      sections: [
+        { type: 'text', html: `
+<p><a href="#/lesson/gd-perf">The frame budget</a> says the work must fit in 16.7 ms. This lesson is about the two things that budget hides: frames that are <b>uneven</b>, and work that could run on <b>other cores</b>.</p>
+<h3>Measure frame time, not FPS</h3>
+<ul>
+<li>Think in milliseconds: 16.7 ms at 60 Hz, 8.3 ms at 120 Hz, 6.9 ms at 144 Hz.</li>
+<li>Averages hide spikes. A frame-time graph and the worst percentiles (99th percentile, “1% lows”) show what players feel.</li>
+<li>Test on the target hardware, in a long session, with the debug overlay on (see <a href="#/lesson/prod-debug">debugging and profiling</a>).</li>
+</ul>
+<h3>Where stutter comes from</h3>
+<table><tr><th>Cause</th><th>Tell-tale</th><th>Fix</th></tr>
+<tr><td>Garbage collection</td><td>Periodic spikes that grow with play time</td><td>Stop allocating per frame: pools, reused buffers (see <a href="#/lesson/pat-pool">object pools</a>)</td></tr>
+<tr><td>Shader compilation</td><td>A hitch the first time an effect or enemy appears</td><td>Pre-warm shaders and pipeline caches during loading</td></tr>
+<tr><td>Synchronous loading</td><td>Hitches at doors and room edges</td><td>Load in the background, ahead of need</td></tr>
+<tr><td>Bursty systems</td><td>Spikes when many things happen at once (pathfinding, big explosions)</td><td>Spread work over frames (time-sliced queues), cap work per frame</td></tr>
+<tr><td>Disk and logging</td><td>Spikes on save or with debug logging</td><td>Write on a background thread</td></tr></table>
+<h3>Pacing: frames and the display</h3>
+<ul>
+<li>The display refreshes at a fixed rate. With <b>vsync</b>, a finished frame waits for the next refresh: no tearing, but more input latency, and a frame that misses the deadline is shown twice.</li>
+<li><b>Uneven cadence judders.</b> 50 FPS on a 60 Hz display means some frames stay on screen for one refresh and some for two, so motion advances unevenly. A steady 30 often looks better than a wobbly 50. Frame caps should divide the refresh rate, or use variable refresh rate (VRR) displays, which show each frame when it is ready.</li>
+<li><b>Double vs triple buffering</b>: triple buffering keeps the GPU busy when a frame misses, at the cost of up to one more frame of latency.</li>
+<li><b>Fixed simulation step plus render interpolation</b> (see <a href="#/lesson/gd-loop">the game loop</a>) keeps motion smooth even when render frame times vary.</li>
+</ul>
+<h3>Why threads</h3>
+<p>Single-core speed has barely grown for years; the number of cores has. A game that runs everything on one thread leaves most of the machine idle. Two common models:</p>
+<ul>
+<li><b>Main thread + render thread</b>: the main thread simulates frame N+1 while the render thread submits frame N. Simple and effective, and it adds a frame of latency.</li>
+<li><b>Job system</b>: work is cut into small jobs run by a pool of worker threads, about one per core. Jobs declare dependencies, forming a task graph each frame; idle workers steal jobs from busy ones. Big engines run almost everything this way.</li>
+</ul>
+<h3>What parallelises well</h3>
+<p>Independent work over many items: animation poses, particles, culling, physics broadphase and separate physics islands, pathfinding requests, audio mixing, asset decompression. Data stored as packed component arrays (see <a href="#/lesson/gd-entities">entities and components</a>) splits naturally into ranges, one per job. Gameplay scripts whose order matters, and anything touching the engine’s scene graph, usually stay on the main thread.</p>
+<h3>Rules that keep it correct</h3>
+<ol>
+<li><b>No shared mutable state inside jobs.</b> Each job reads shared input and writes its own output slice. Combine results at a known sync point.</li>
+<li><b>Avoid locks in hot paths.</b> Contended locks serialise threads; atomics on one shared counter cause cache-line ping-pong, and so do two threads writing neighbouring data (false sharing).</li>
+<li><b>Keep results independent of thread count</b> when you need determinism (replays, lockstep): fixed partitioning and ordered reductions, because floating-point sums give different results in a different order.</li>
+<li><b>Finish engine work on the main thread.</b> In Godot, the active scene tree is not thread-safe: compute on a <code>WorkerThreadPool</code> task or a <code>Thread</code>, then hand results back with <code>call_deferred</code>. Load resources with <code>ResourceLoader.load_threaded_request</code>.</li>
+</ol>
+<pre><code>// C++ sketch: one job per range, each writes only its own slice
+void update_particles(std::span&lt;Particle&gt; ps, float dt, JobPool&amp; pool) {
+    const size_t chunk = 4096;
+    for (size_t start = 0; start &lt; ps.size(); start += chunk) {
+        auto slice = ps.subspan(start, std::min(chunk, ps.size() - start));
+        pool.submit([slice, dt] { for (auto&amp; p : slice) p.integrate(dt); });
+    }
+    pool.wait_all();   // the sync point: after this, the main thread may read every particle
+}</code></pre>` },
+        { type: 'quiz', q: 'The game hitches for about 200 ms the first time each new enemy type appears, then never again for that type. What is the most likely cause and fix?',
+          options: ['The enemy’s AI is too complex; simplify it', 'First-use work such as shader compilation or a synchronous asset load; pre-warm shaders and preload the enemy during the loading screen', 'The garbage collector; call it every frame', 'The display refresh rate; turn vsync off'],
+          answer: 1, explain: 'A one-time hitch per new thing points at first-use costs. Move them to load time: preload assets and pre-compile the shaders and pipelines they need.' },
+        { type: 'quiz', q: 'In Godot, a worker thread generates a dungeon room and adds the enemy nodes straight into the scene tree. The game crashes at random. What is the fix?',
+          options: ['Add a sleep before adding the nodes', 'Build the data (or nodes not yet in the tree) on the worker, then add them to the active scene tree from the main thread with call_deferred', 'Run more worker threads', 'Disable physics while generating'],
+          answer: 1, explain: 'The active scene tree is not thread-safe. Do the heavy computation off the main thread and hand the result to the main thread to attach.' },
+        { type: 'quiz', q: 'Your game renders a steady 50 FPS on a 60 Hz display, yet motion looks juddery. Why?',
+          options: ['50 FPS is too slow for the human eye', 'The frame rate does not divide the refresh rate, so frames stay on screen for uneven times; cap at 30, reach 60, or use variable refresh rate', 'The GPU is overheating', 'Delta time is wrong'],
+          answer: 1, explain: 'Smoothness needs an even cadence. Frames shown for 1, 1, 2, 1, 2 refreshes make motion stutter even at a high average.' },
+        { type: 'reveal', title: 'Self-check: profile your own game', html: `<ol>
+<li>Record frame times for five minutes of real play. What are the average and the worst 1%?</li>
+<li>Find the three biggest spikes. For each: what happened in the game at that moment?</li>
+<li>Which of the stutter causes in the table explains each one?</li>
+<li>Name one system that could run on a worker thread. What does it read, what does it write, and where is the sync point?</li>
+<li>Does your game behave identically at a 30 and a 144 FPS cap? If not, which logic runs on the render clock?</li>
+</ol>` },
+      ],
+    },
+    {
       id: 'prod-testing', title: 'Testing a game', minutes: 35,
       summary: 'What is worth automating in a game, how to keep logic testable, golden replays, bots and fuzzing.',
       checks: [

@@ -240,6 +240,7 @@ export default async function ({url, browser, ok, section}) {
   const dimensions = await page.evaluate(() => ({width: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth}));
   ok(dimensions.scroll <= dimensions.width + 1, 'learning paths and filters fit a mobile viewport');
   await page.locator('[data-learning-path="native-basics"]').click();
+  await page.locator('[data-path-step]').first().waitFor();
   ok(await page.locator('[data-path-step]').count() === 7, 'ordered curriculum remains usable on mobile');
   ok(page.errors.length === 0, 'no browser errors from curriculum or extension lifecycle: ' + JSON.stringify(page.errors));
   await page.close();

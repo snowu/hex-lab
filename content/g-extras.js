@@ -200,7 +200,27 @@
     card('Noise', 'Value noise construction?', 'A hashed random value at each integer lattice point, smoothly interpolated (smoothstep) between them.'),
     card('Noise', 'fBm octaves?', 'Sum noise at doubling frequency (lacunarity 2) and shrinking amplitude (persistence ~0.5), divided by the total amplitude.'),
     card('Noise', 'Domain warping?', 'Offset the sampling position by another noise: noise(p + k*noise2(p)) for flowing organic shapes.'),
-    card('Noise', 'Wave Function Collapse steps?', 'Start every cell in superposition, collapse the lowest-entropy cell, propagate adjacency constraints, repeat; backtrack on contradiction.')
+    card('Noise', 'Wave Function Collapse steps?', 'Start every cell in superposition, collapse the lowest-entropy cell, propagate adjacency constraints, repeat; backtrack on contradiction.'),
+    card('Noise', 'White noise vs coherent noise?', 'White noise: every sample independent, like static. Coherent noise: a smooth function of position and seed, so nearby points have similar values.'),
+    card('Noise', 'Why smoothstep in value noise?', 'Linear blending between lattice values leaves visible creases at the grid lines; t*t*(3-2t) has zero slope at the ends, so the seams disappear.'),
+    card('Noise', 'Why is noise good for infinite worlds?', 'It is a pure function of position and seed: any chunk can be generated on demand, neighbouring chunks line up, and nothing needs storing.'),
+    card('Noise', 'Weakness of Wave Function Collapse?', 'It enforces local tile rules but knows nothing about global structure such as reachability or pacing. Validate the result (flood fill) or use it to decorate a layout.'),
+    card('Noise', 'Noise frequency vs amplitude?', 'Frequency sets the size of features (higher = smaller blobs); amplitude sets how much an octave contributes to the height.'),
+    card('Production', 'Why does average FPS hide stutter?', 'A few long frames barely move the average but are visible hitches. Measure the frame-time graph and worst percentiles (1% lows).'),
+    card('Production', 'Common causes of one-off hitches?', 'Shader compilation and asset loads on first use, garbage collection, bursty systems (pathfinding, explosions) and synchronous disk writes.'),
+    card('Production', 'Why does 50 FPS judder on a 60 Hz display?', 'Frames stay on screen for uneven numbers of refreshes. Cap to a divisor of the refresh rate, hit the full rate, or use variable refresh.'),
+    card('Production', 'Job system in one sentence?', 'Work is split into small jobs with dependencies, run by a pool of worker threads (about one per core) that steal work from each other.'),
+    card('Production', 'Golden rule for parallel jobs?', 'No shared mutable state: each job reads shared input and writes its own output slice, and results are combined at a known sync point.'),
+    card('Production', 'Godot and threads?', 'The active scene tree is not thread-safe. Compute on a WorkerThreadPool task or Thread, then attach results on the main thread with call_deferred.'),
+    card('Graphics', 'Startup, active, recovery?', 'Frame data for an action: wind-up before it can hit, the frames the hitbox exists, and the vulnerable follow-through.'),
+    card('Graphics', 'What is a cancel window?', 'The frames of an action during which another action may interrupt it. It sets how committed a move is.'),
+    card('Graphics', 'Who drives animation?', 'The gameplay state machine. Animation maps states to clips and reports back through events (hit frame, clip finished, footstep).'),
+    card('Graphics', 'Root motion vs code-driven movement?', 'Root motion: the animation moves the character (exact distances, less responsive). Code-driven: physics moves it and animation matches the speed.'),
+    card('Graphics', 'What causes foot sliding and the fix?', 'The stride does not match the distance moved. Scale playback rate by speed or blend walk and run by speed.'),
+    card('Graphics', 'Blend tree?', 'Mixes clips by a parameter: idle, walk and run by speed, or strafe directions by angle. Needs skeletal animation; sprites use transition clips instead.'),
+    card('Game Loop', 'Which clock should gameplay animation events use?', 'The fixed simulation step, so hitboxes and invulnerability frames behave the same at any frame rate and in replays.'),
+    card('Math', 'When do you need swept collision tests?', 'When objects move further than their own size in one step: discrete tests miss the overlap (tunnelling).'),
+    card('Math', 'Grid vs quadtree for broadphase?', 'A uniform grid is simple and fast when objects are similar in size and evenly spread; a quadtree adapts to clustered or very varied sizes.')
   );
 
   const res = (cat, title, url, note) => ({ domain: D, cat, title, url, note });
