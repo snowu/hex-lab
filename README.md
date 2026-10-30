@@ -210,3 +210,4 @@ node tests/e2e/run.mjs interview-learning interview-katas design-learning story-
 ```
 
 The suites exercise real navigation, reload recovery, keyboard controls, time budgets and phone layouts. Existing `katas`, `cards`, `interactive`, `feedback`, `mobile`, `gate`, `smoke` and `gamedev` suites cover execution and shared behavior.
+
