@@ -8,7 +8,7 @@
 </head>
 <body>
 <p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
-<p class="crumb"><a href="index.html#playbook">Senior Playbook</a> · lesson 3 of 3 · 25 min</p>
+<p class="crumb"><a href="index.html#playbook">Senior Playbook</a> · lesson 4 of 4 · 25 min</p>
 <h1>Interviewing in the AI era</h1>
 <p class="sum">What changed, how to use AI honestly, and how to show judgment.</p>
 <div class="sec">
@@ -37,7 +37,7 @@
 <h2>Check your understanding</h2>
 <div class="box"><div class="q">1. Why are interviews shifting toward design discussions and review-the-diff rounds?</div><ol class="opts"><li><b>A.</b> Because whiteboard coding is too expensive to run</li><li><b>B.</b> Because code generation is cheap, so judgment and verification are what is scarce</li><li><b>C.</b> Because AI cannot write any code at all</li><li><b>D.</b> Because candidates asked for easier formats</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
 <div class="box"><div class="q">2. Before you prompt an assistant in an AI-allowed round, what must you do first?</div><ol class="opts"><li><b>A.</b> State your approach and the edge cases you will check</li><li><b>B.</b> Clear the chat history so the model starts fresh</li><li><b>C.</b> Ask the interviewer which model to use</li><li><b>D.</b> Write the full solution by hand as a backup</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
-<p class="nav"><a href="behavioral.html">← Behavioral answers that land</a></p>
+<p class="nav"><a href="project-deep-dive.html">← The project deep dive</a></p>
 <h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Spot and fix the AI bug</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> The range stops one page too early (len(items) - size). And decide what a size of 0 or a negative number should do: slicing is forgiving, so bad input silently returns garbage unless you check it.</p><p><b>Reference solution:</b></p><pre>def chunk(items, size):
     if not isinstance(size, int) or size &lt;= 0:
         raise ValueError('size must be a positive integer')
@@ -45,7 +45,7 @@
 <div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Walk through it, state edge cases, run targeted tests, and explain the complexity</p><div>The evaluation is on verification and understanding. Speed of generation is no longer a differentiator.</div></div>
 <div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Because code generation is cheap, so judgment and verification are what is scarce</p><div>When generation is free, interviews probe what is still scarce: judgment, verification, system thinking.</div></div>
 <div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>A.</b> State your approach and the edge cases you will check</p><div>Think first, then prompt. Narrating the approach and edge cases up front is part of what is evaluated.</div></div>
-<p class="nav"><a href="behavioral.html">← Behavioral answers that land</a></p>
+<p class="nav"><a href="project-deep-dive.html">← The project deep dive</a></p>
 <p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
 </body>
 </html>

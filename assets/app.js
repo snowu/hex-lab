@@ -818,7 +818,7 @@ function mockSummary() {
   return { h, by, seen: new Set(h.map((a) => a.id)), avg, weakest: w && { kind: w[0], n: w[1].n, avg: w[1].avg } };
 }
 const ago = (ts) => { const m = Math.round((Date.now() - ts) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' d ago'; };
-const MOCK_HUE = { 'Full-stack': 100, Databases: 200, 'Coding under pressure': 165, Behavioral: 255, 'System Design': 150, 'Neonomics / Open Banking': 44, 'Scale & Cloud': 215, 'AI Era': 320 };
+const MOCK_HUE = { 'Project deep dive': 280, 'Full-stack': 100, Databases: 200, 'Coding under pressure': 165, Behavioral: 255, 'System Design': 150, 'Neonomics / Open Banking': 44, 'Scale & Cloud': 215, 'AI Era': 320 };
 function viewMock(autoAI) {
   document.title = 'Mock interview · Hex Lab';
   let kind = store.get('mockkind', ''), q = null, t0 = 0, iv = null, secs = 0, rec = null, paused = false;

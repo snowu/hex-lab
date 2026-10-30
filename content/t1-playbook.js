@@ -52,13 +52,97 @@ Strong: "Checkout p99 was 4.2s and we were losing ~3% of carts. I profiled it, f
          time was repeated currency lookups, proposed a 5-minute cache with explicit invalidation,
          wrote the design doc, and got buy-in despite the team preferring a rewrite. p99 dropped to
          900ms. I'd now add a metric for cache hit rate from day one; we discovered a stale-rate bug late."</code></pre>
-<p>Keep each answer around <b>2 minutes</b>. Practice with the <a href="#/mock">mock interview</a> page, and record yourself once. It is uncomfortable and very effective.</p>` },
+<p>Keep each answer around <b>2 minutes</b>. Practice with the <a href="#/mock">mock interview</a> page, and record yourself once. It is uncomfortable and very effective.</p>
+<h3>What senior behavioural rounds actually score</h3>
+<p>The questions sound generic; the rubric is not. Each one probes a specific senior competency, and a story that is fine for a mid-level role (“I implemented X”) scores low because the scope is too small.</p>
+<table><tr><th>Competency</th><th>Typical question</th><th>What a strong answer contains</th></tr>
+<tr><td>Influence without authority</td><td>“How did you get buy-in for a change others resisted?”</td><td>Whose constraint you understood first, the evidence you brought (a prototype, numbers, a pilot), how you made it cheap to say yes</td></tr>
+<tr><td>Prioritisation</td><td>“Everything is urgent. What do you do?”</td><td>An explicit rule (customer impact, risk, reversibility), what you said <i>no</i> to and how you told people</td></tr>
+<tr><td>Disagree and commit</td><td>“Tell me about a decision you disagreed with.”</td><td>You argued with data, the decision went the other way, you committed fully and set a check to revisit it</td></tr>
+<tr><td>Mentoring / multiplying</td><td>“How have you grown other engineers?”</td><td>A named person or practice, what changed in <i>their</i> output, and that it outlasted you</td></tr>
+<tr><td>Ambiguity</td><td>“Tell me about a project with unclear requirements.”</td><td>How you created clarity: the question you asked, the assumption you wrote down, the smallest slice you shipped to learn</td></tr>
+<tr><td>Ownership</td><td>“Tell me about something outside your remit.”</td><td>You noticed it, nobody asked, you fixed the system and not only the symptom</td></tr></table>
+<h3>The senior traps</h3>
+<ul>
+<li><b>“We” all the way through.</b> Interviewers cannot hire your team. Say “we” for context, “I” for your decisions.</li>
+<li><b>Too small.</b> A bug you fixed alone is a mid-level story. Senior stories cross team boundaries or change how people work.</li>
+<li><b>No tension.</b> A story where everyone agreed and nothing went wrong shows nothing. Pick ones with a real trade-off or a real opponent.</li>
+<li><b>Villains.</b> Never make a colleague the bad guy. Describe their constraint fairly; that <i>is</i> the signal.</li>
+<li><b>Rehearsed and rigid.</b> Expect “what would you do differently?” and “what did the other person think?” after every story. Prepare the follow-ups, not a script.</li>
+</ul>
+<h3>“Why are you leaving?” and “Why us?”</h3>
+<p>Answer toward something, not away from something: what you want to work on next and why this team has it. One honest sentence about what is missing now is fine; criticism of your current employer is not. For “why us”, name something specific you read (their API docs, an engineering post, a product decision) and connect it to your experience.</p>
+<div class="callout"><b>Build the bank:</b> the <a href="#/stories">Story bank</a> tags each story with these competencies and shows the gaps. Aim for at least one story per row of the table above, and two for the ones the role emphasises.</div>` },
+        { type: 'quiz', q: 'Interviewer: “Tell me about a time you got buy-in for a change others resisted.” Which opening sets up the strongest answer?',
+          options: ['“I was the most senior person, so I made the call.”', '“The on-call team was against moving to the new queue because they would carry the pager. I started by asking what would make it safe for them.”', '“Everyone agreed after I explained it clearly.”', '“My manager backed me, so the team followed.”'],
+          answer: 1, explain: 'Influence without authority starts from the other side’s constraint. Authority, a manager’s backing, or “everyone agreed” all skip the skill being tested.' },
         { type: 'quiz', q: 'In a conflict story, which ending is strongest?',
           options: ['“In the end I was proven right.”', '“We compromised.”', '“I understood their constraint, proposed an experiment, and we both changed our view based on the data. We kept the working agreement afterwards.”', '“I escalated to my manager who decided.”'],
           answer: 2, explain: 'Strong conflict stories show empathy, evidence, and a durable outcome, not winning.' },
         { type: 'quiz', q: '“Tell me about a failure.” Which is the best choice?',
           options: ['A fake failure that is secretly a strength', 'A real failure with real cost, your part in it, and a concrete system or habit you changed afterwards', 'Blame an unclear spec', 'Say you do not have major failures'],
           answer: 1, explain: 'Interviewers are looking for honesty and learning loops. A good failure story ends with a changed system, not a changed mood.' },
+      ],
+    },
+    {
+      id: 'project-deep-dive', title: 'The project deep dive', minutes: 15,
+      summary: 'Walk through your strongest project and survive the drill-down.',
+      checks: [
+        { q: 'Ten minutes into your project deep dive the interviewer asks: “Why Postgres and not DynamoDB?” You did not make that choice; it predates you. Best answer?',
+          options: ['Defend Postgres as if you had chosen it', 'Say it was before your time and move on', 'Say it predates you, then give your own view of the trade-off for this workload and whether you would choose it again', 'Say the team lead decided, so ask them'],
+          answer: 2, explain: 'Honesty about who decided, plus your own reasoning about the trade-off, shows judgment. Pretending or deflecting both fail the probe.' },
+        { q: 'Which choice of project gives the deep dive the most room to show senior signals?',
+          options: ['The largest system your company runs, even though you worked on one small part', 'A project where you made the key design decisions, it had real trade-offs and constraints, and you can give numbers from production', 'The newest project, because it uses the most modern technology', 'A side project, because you know every line'],
+          answer: 1, explain: 'The round scores your decisions and your depth. Pick the project where you owned the hard choices and can go three levels down, not the most impressive logo.' },
+      ],
+      sections: [
+        { type: 'text', html: `
+<p>“Walk me through the most technically complex project you have worked on.” At senior level this is often the round that decides the loop, because it is the hardest to fake: the interviewer keeps drilling until they find the edge of what you actually know.</p>
+<h3>Pick the right project</h3>
+<ul>
+<li><b>You made the key decisions</b>, not just implemented them.</li>
+<li><b>Real constraints and trade-offs</b>: scale, money, latency, a legacy system, a deadline, a regulator.</li>
+<li><b>Something went wrong</b> and you changed course. Projects with no surprises have nothing to dig into.</li>
+<li><b>You can give numbers</b>: traffic, latency, error rates, cost, team size, timeline.</li>
+<li>Ideally <b>recent</b> (last 2-3 years) and relevant to the role.</li>
+</ul>
+<h3>The structure (about 10 minutes before questions)</h3>
+<ol>
+<li><b>One-minute pitch:</b> the problem, who it was for, why it mattered (in money, users or risk), and your role.</li>
+<li><b>The system in one picture:</b> draw it. Five to seven boxes, data flow, where the hard part lives.</li>
+<li><b>Two or three decisions you made:</b> the options, what each cost, why you chose, and what you would revisit.</li>
+<li><b>What went wrong:</b> the incident, the wrong assumption, the migration that fought back, and what you changed.</li>
+<li><b>Results with numbers</b>, then what you would do differently today.</li>
+</ol>
+<h3>How the interviewer drills</h3>
+<table><tr><th>Probe</th><th>What they are checking</th></tr>
+<tr><td>“Why X and not Y?”</td><td>You considered alternatives and know their costs</td></tr>
+<tr><td>“How exactly does that part work?”</td><td>Depth: keys, schemas, failure handling, not just box names</td></tr>
+<tr><td>“What happens at 10× traffic?”</td><td>You know where your own system breaks first</td></tr>
+<tr><td>“What was your part, specifically?”</td><td>Ownership versus proximity</td></tr>
+<tr><td>“What would you change?”</td><td>Reflection; “nothing” is a red flag</td></tr>
+<tr><td>“How did you know it worked?”</td><td>Metrics, tests, rollout, observability</td></tr></table>
+<p>Expect them to go three levels down on one decision. Prepare that depth for each decision you mention, and do not mention decisions you cannot defend.</p>
+<h3>When you reach the edge of what you know</h3>
+<p>Say so, then reason: “I did not own the replication setup. My understanding is it was async with a ~1s lag, which is why we read balances from the primary. If I were designing it I would check…” Honest edges plus reasoning score well. Bluffing is the fastest way to fail this round, because the interviewer keeps digging until the bluff shows.</p>
+<h3>Confidentiality</h3>
+<p>You can describe architecture and trade-offs without customer names, internal code names or exact revenue. Say “a large Nordic bank” and “low millions of requests per day”. Interviewers expect this and respect it.</p>` },
+        { type: 'quiz', q: 'You describe a cache you added. The interviewer asks how you handled invalidation, and the honest answer is a 5-minute TTL with no explicit invalidation. Best response?',
+          options: ['Describe event-driven invalidation as if you had built it', 'Explain the TTL, why staleness up to 5 minutes was acceptable for that data, what broke or could break, and what you would add if it were not acceptable', 'Say invalidation is not important for most caches', 'Change the subject to the database design'],
+          answer: 1, explain: 'A simple choice with a stated reason and known limits is a good answer. Inventing a more impressive design fails at the next follow-up question.' },
+        { type: 'quiz', q: 'Interviewer: “What would you do differently?” Which answer is strongest?',
+          options: ['“Honestly, I think we got it right.”', '“Use a newer framework.”', '“Ship the reconciliation job in the first release instead of the third. We found a status drift bug in production that it would have caught in week one, and I now put reconciliation into the first milestone of any money-moving system.”', '“Have more people on the team.”'],
+          answer: 2, explain: 'A specific change, the evidence that motivated it, and a habit you carry forward. “Nothing” or generic wishes show no reflection.' },
+        { type: 'reveal', title: 'Worksheet: prepare your deep dive', html: `<ol>
+<li>Write the one-minute pitch. Read it aloud and time it.</li>
+<li>Draw the architecture from memory in under two minutes.</li>
+<li>List three decisions. For each: two alternatives, the cost of your choice, the revisit condition.</li>
+<li>For each decision, write the answer to “how exactly does that work?” two levels further down (schema, keys, failure behaviour).</li>
+<li>Write the numbers: traffic, latency, error rate, cost, timeline, team size. Mark which ones you are sure of.</li>
+<li>Write the “what went wrong” story in STAR+ form.</li>
+<li>Answer “what breaks at 10×?” and “what would you change?” in one sentence each.</li>
+<li>Rehearse it on the <a href="#/mock">mock interview</a> page (Project deep dive), or with the <a href="#/mock/ai">AI interviewer</a>, which asks follow-ups.</li>
+</ol>` },
       ],
     },
     {

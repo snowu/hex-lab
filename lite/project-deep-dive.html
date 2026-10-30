@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The project deep dive · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#playbook">Senior Playbook</a> · lesson 3 of 4 · 8 min</p>
+<h1>The project deep dive</h1>
+<p class="sum">Walk through your strongest project and survive the drill-down.</p>
+<div class="sec">
+<p>“Walk me through the most technically complex project you have worked on.” At senior level this is often the round that decides the loop, because it is the hardest to fake: the interviewer keeps drilling until they find the edge of what you actually know.</p>
+<h3>Pick the right project</h3>
+<ul>
+<li><b>You made the key decisions</b>, not just implemented them.</li>
+<li><b>Real constraints and trade-offs</b>: scale, money, latency, a legacy system, a deadline, a regulator.</li>
+<li><b>Something went wrong</b> and you changed course. Projects with no surprises have nothing to dig into.</li>
+<li><b>You can give numbers</b>: traffic, latency, error rates, cost, team size, timeline.</li>
+<li>Ideally <b>recent</b> (last 2-3 years) and relevant to the role.</li>
+</ul>
+<h3>The structure (about 10 minutes before questions)</h3>
+<ol>
+<li><b>One-minute pitch:</b> the problem, who it was for, why it mattered (in money, users or risk), and your role.</li>
+<li><b>The system in one picture:</b> draw it. Five to seven boxes, data flow, where the hard part lives.</li>
+<li><b>Two or three decisions you made:</b> the options, what each cost, why you chose, and what you would revisit.</li>
+<li><b>What went wrong:</b> the incident, the wrong assumption, the migration that fought back, and what you changed.</li>
+<li><b>Results with numbers</b>, then what you would do differently today.</li>
+</ol>
+<h3>How the interviewer drills</h3>
+<table><tr><th>Probe</th><th>What they are checking</th></tr>
+<tr><td>“Why X and not Y?”</td><td>You considered alternatives and know their costs</td></tr>
+<tr><td>“How exactly does that part work?”</td><td>Depth: keys, schemas, failure handling, not just box names</td></tr>
+<tr><td>“What happens at 10× traffic?”</td><td>You know where your own system breaks first</td></tr>
+<tr><td>“What was your part, specifically?”</td><td>Ownership versus proximity</td></tr>
+<tr><td>“What would you change?”</td><td>Reflection; “nothing” is a red flag</td></tr>
+<tr><td>“How did you know it worked?”</td><td>Metrics, tests, rollout, observability</td></tr></table>
+<p>Expect them to go three levels down on one decision. Prepare that depth for each decision you mention, and do not mention decisions you cannot defend.</p>
+<h3>When you reach the edge of what you know</h3>
+<p>Say so, then reason: “I did not own the replication setup. My understanding is it was async with a ~1s lag, which is why we read balances from the primary. If I were designing it I would check…” Honest edges plus reasoning score well. Bluffing is the fastest way to fail this round, because the interviewer keeps digging until the bluff shows.</p>
+<h3>Confidentiality</h3>
+<p>You can describe architecture and trade-offs without customer names, internal code names or exact revenue. Say “a large Nordic bank” and “low millions of requests per day”. Interviewers expect this and respect it.</p></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">You describe a cache you added. The interviewer asks how you handled invalidation, and the honest answer is a 5-minute TTL with no explicit invalidation. Best response?</div><ol class="opts"><li><b>A.</b> Describe event-driven invalidation as if you had built it</li><li><b>B.</b> Explain the TTL, why staleness up to 5 minutes was acceptable for that data, what broke or could break, and what you would add if it were not acceptable</li><li><b>C.</b> Say invalidation is not important for most caches</li><li><b>D.</b> Change the subject to the database design</li></ol><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Interviewer: “What would you do differently?” Which answer is strongest?</div><ol class="opts"><li><b>A.</b> “Honestly, I think we got it right.”</li><li><b>B.</b> “Use a newer framework.”</li><li><b>C.</b> “Ship the reconciliation job in the first release instead of the third. We found a status drift bug in production that it would have caught in week one, and I now put reconciliation into the first milestone of any money-moving system.”</li><li><b>D.</b> “Have more people on the team.”</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><h3>Worksheet: prepare your deep dive</h3><ol>
+<li>Write the one-minute pitch. Read it aloud and time it.</li>
+<li>Draw the architecture from memory in under two minutes.</li>
+<li>List three decisions. For each: two alternatives, the cost of your choice, the revisit condition.</li>
+<li>For each decision, write the answer to “how exactly does that work?” two levels further down (schema, keys, failure behaviour).</li>
+<li>Write the numbers: traffic, latency, error rate, cost, timeline, team size. Mark which ones you are sure of.</li>
+<li>Write the “what went wrong” story in STAR+ form.</li>
+<li>Answer “what breaks at 10×?” and “what would you change?” in one sentence each.</li>
+<li>Rehearse it on the <a href="../index.html?full#/mock">mock interview</a> page (Project deep dive), or with the <a href="../index.html?full#/mock/ai">AI interviewer</a>, which asks follow-ups.</li>
+</ol></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Ten minutes into your project deep dive the interviewer asks: “Why Postgres and not DynamoDB?” You did not make that choice; it predates you. Best answer?</div><ol class="opts"><li><b>A.</b> Defend Postgres as if you had chosen it</li><li><b>B.</b> Say it was before your time and move on</li><li><b>C.</b> Say it predates you, then give your own view of the trade-off for this workload and whether you would choose it again</li><li><b>D.</b> Say the team lead decided, so ask them</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
+<div class="box"><div class="q">2. Which choice of project gives the deep dive the most room to show senior signals?</div><ol class="opts"><li><b>A.</b> The largest system your company runs, even though you worked on one small part</li><li><b>B.</b> A project where you made the key design decisions, it had real trade-offs and constraints, and you can give numbers from production</li><li><b>C.</b> The newest project, because it uses the most modern technology</li><li><b>D.</b> A side project, because you know every line</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<p class="nav"><a href="behavioral.html">← Behavioral answers that land</a> · <a href="ai-era-interviews.html">Interviewing in the AI era →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Explain the TTL, why staleness up to 5 minutes was acceptable for that data, what broke or could break, and what you would add if it were not acceptable</p><div>A simple choice with a stated reason and known limits is a good answer. Inventing a more impressive design fails at the next follow-up question.</div></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>C.</b> “Ship the reconciliation job in the first release instead of the third. We found a status drift bug in production that it would have caught in week one, and I now put reconciliation into the first milestone of any money-moving system.”</p><div>A specific change, the evidence that motivated it, and a habit you carry forward. “Nothing” or generic wishes show no reflection.</div></div>
+<div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>C.</b> Say it predates you, then give your own view of the trade-off for this workload and whether you would choose it again</p><div>Honesty about who decided, plus your own reasoning about the trade-off, shows judgment. Pretending or deflecting both fail the probe.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>B.</b> A project where you made the key design decisions, it had real trade-offs and constraints, and you can give numbers from production</p><div>The round scores your decisions and your depth. Pick the project where you owned the hard choices and can go three levels down, not the most impressive logo.</div></div>
+<p class="nav"><a href="behavioral.html">← Behavioral answers that land</a> · <a href="ai-era-interviews.html">Interviewing in the AI era →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>
