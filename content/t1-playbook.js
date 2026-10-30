@@ -73,7 +73,7 @@ Strong: "Checkout p99 was 4.2s and we were losing ~3% of carts. I profiled it, f
 <h3>“Why are you leaving?” and “Why us?”</h3>
 <p>Answer toward something, not away from something: what you want to work on next and why this team has it. One honest sentence about what is missing now is fine; criticism of your current employer is not. For “why us”, name something specific you read (their API docs, an engineering post, a product decision) and connect it to your experience.</p>
 <div class="callout"><b>Build the bank:</b> the <a href="#/stories">Story bank</a> tags each story with these competencies and shows the gaps. Aim for at least one story per row of the table above, and two for the ones the role emphasises.</div>` },
-        { type: 'quiz', q: 'Interviewer: “Tell me about a time you got buy-in for a change others resisted.” Which opening sets up the strongest answer?',
+        { pid: 'q-buyin', type: 'quiz', q: 'Interviewer: “Tell me about a time you got buy-in for a change others resisted.” Which opening sets up the strongest answer?',
           options: ['“I was the most senior person, so I made the call.”', '“The on-call team was against moving to the new queue because they would carry the pager. I started by asking what would make it safe for them.”', '“Everyone agreed after I explained it clearly.”', '“My manager backed me, so the team followed.”'],
           answer: 1, explain: 'Influence without authority starts from the other side’s constraint. Authority, a manager’s backing, or “everyone agreed” all skip the skill being tested.' },
         { type: 'quiz', q: 'In a conflict story, which ending is strongest?',

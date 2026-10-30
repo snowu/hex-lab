@@ -23,7 +23,7 @@ TRACKS.push({
           { title: '5. Deep dives', html: `<p>Pick the 1-2 hardest parts (the interviewer will nudge you). Typical: data partitioning, hot keys, exactly-once effects, fan-out, ranking, consistency between stores.</p>` },
           { title: '6. Failure, scale, operate', html: `<p>What breaks first? Retries, timeouts, backpressure, degradation modes, observability (RED/USE metrics, traces), rollout/rollback, cost. This step is what separates senior from mid.</p>` },
         ] },
-        { type: 'text', html: `
+        { pid: 'design-clock', type: 'text', html: `
 <h3>Running the clock (45-minute round)</h3>
 <table><tr><th>Minutes</th><th>Phase</th><th>You are done when…</th></tr>
 <tr><td>0-5</td><td>Clarify &amp; scope</td><td>3-4 functional requirements written down, out-of-scope list said out loud</td></tr>
@@ -50,7 +50,7 @@ TRACKS.push({
 <li><b>Defending instead of updating:</b> when the interviewer adds a constraint, change the design and say why. Changing your mind with a reason is a strength.</li>
 </ul>
 <div class="callout"><b>Practise it timed:</b> the <a href="#/design">Design lab</a> has 10 reps that walk these six steps with a clock, hints and a reference to compare against. Start with the warm-up (URL shortener), then the rate limiter and webhooks, then the hard ones (ledger, pay by bank, offline sync).</div>` },
-        { type: 'quiz', q: 'Minute 22. You have a clean high-level diagram. The interviewer asks: “What happens when one merchant sends 50× normal traffic?” What is the best response?',
+        { pid: 'q-steer', type: 'quiz', q: 'Minute 22. You have a clean high-level diagram. The interviewer asks: “What happens when one merchant sends 50× normal traffic?” What is the best response?',
           options: ['Finish explaining the rest of the diagram first, then come back to it', 'Treat it as a steer: go deep on hot keys and per-tenant limits (rate limiting, partitioning, isolation), then return to your plan', 'Say it is an edge case outside the requirements', 'Add an autoscaling group and move on'],
           answer: 1, explain: 'A question in the middle of a design round is usually the interviewer pointing at the deep dive they want. Following it is how you show depth.' },
         { type: 'quiz', q: 'You are at minute 10 and have only drawn boxes. The interviewer asks “what about a bank that is down?”. Best response?',
@@ -90,7 +90,7 @@ TRACKS.push({
 <tr><td>Causal</td><td>A reply is never visible before the message it answers</td><td>Track dependencies (version vectors), or route causally related data together</td></tr>
 <tr><td>Eventual</td><td>Replicas converge if writes stop; any read may be stale</td><td>Async replication, caches, CDNs</td></tr></table>
 <p>Map features to guarantees: a balance check before a withdrawal needs <b>linearizable</b> (or a conditional write that enforces it); “I just edited my profile” needs <b>read-your-writes</b>; a feed that flickers between replicas needs <b>monotonic reads</b>; a like counter is fine <b>eventual</b>.</p>` },
-        { type: 'quiz', q: 'A user refreshes their transaction list and sees a payment, refreshes again and it is gone, then it reappears. Reads are load-balanced across async replicas. Which guarantee is missing?',
+        { pid: 'q-monotonic', type: 'quiz', q: 'A user refreshes their transaction list and sees a payment, refreshes again and it is gone, then it reappears. Reads are load-balanced across async replicas. Which guarantee is missing?',
           options: ['Linearizability for all writes', 'Monotonic reads: successive reads hit replicas at different lag, so time appears to go backwards', 'Causal consistency between users', 'Durability of the primary'],
           answer: 1, explain: 'Each replica is internally consistent; the problem is jumping between them. Pin the session to one replica or carry the last-seen version so lagging replicas are skipped.' },
         { type: 'quiz', q: 'A user updates their profile, then immediately reloads and sees old data. You use read replicas. What is the most likely cause and the lightest fix?',
@@ -147,7 +147,7 @@ exhausted -> dead-letter + alert + dashboard "replay"</code></pre><p>The <b>tran
         { type: 'quiz', q: 'Why use the transactional outbox instead of “commit to DB, then publish to the queue” in the same function?',
           options: ['It is faster', 'Because a crash between the commit and the publish loses the event (or publishing first can announce something that never committed)', 'Queues cannot be used with databases', 'It gives exactly-once delivery'],
           answer: 1, explain: 'You cannot atomically write to two systems. The outbox makes the DB the source of truth; a relay publishes at-least-once, and consumers dedupe.' },
-        { type: 'text', html: `<div class="callout"><b>Your turn:</b> run the same six steps on a clock in the <a href="#/design">Design lab</a>. The webhooks rep checks you against this design; the rate limiter, notifications and job scheduler reps reuse the same building blocks in new combinations.</div>` },
+        { pid: 'your-turn', type: 'text', html: `<div class="callout"><b>Your turn:</b> run the same six steps on a clock in the <a href="#/design">Design lab</a>. The webhooks rep checks you against this design; the rate limiter, notifications and job scheduler reps reuse the same building blocks in new combinations.</div>` },
       ],
     },
   ],
