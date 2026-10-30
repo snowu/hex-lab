@@ -1,11 +1,45 @@
 name: Validate content
-on: [push, pull_request]
-# A new push supersedes the previous run on the same branch: stop the stale one
+# PRs are validated by the pull_request run; push only covers main (merges and direct pushes),
+# so a push to a PR branch no longer runs everything twice.
+on:
+  push: { branches: [main] }
+  pull_request:
+# A new push supersedes the previous run on the same PR or branch: stop the stale one
 # instead of letting two full validations queue behind each other.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 jobs:
+  # Which parts of the repo this PR touches. The native jobs compile every C/C++/Zig solution
+  # (minutes); a lesson-only PR skips them. Pushes to main always run everything.
+  changes:
+    runs-on: ubuntu-latest
+    permissions: { contents: read, pull-requests: read }
+    outputs:
+      native: ${{ github.event_name == 'push' || steps.filter.outputs.native == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: filter
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            native:
+              - '.github/**'
+              - 'index.html'
+              - 'drills/**'
+              - 'content/drills-*.js'
+              - 'content/g*.js'          # game-dev lessons (checked C++/Zig snippets) and game-*.js
+              - 'content/katas/**'
+              - 'content/native-projects*'
+              - 'content/native-projects/**'
+              - 'assets/game/**'
+              - 'docs/native-*'
+              - 'scripts/native/**'
+              - 'scripts/*drills*'
+              - 'scripts/validate-snippets.mjs'
+              - 'scripts/validate-native-*.mjs'
+              - 'scripts/test-local-runner.mjs'
   # Pure content + Python/SQL checks: no compilers needed.
   content:
     runs-on: ubuntu-latest
@@ -23,6 +57,8 @@ jobs:
       - run: node scripts/gen-lite.mjs --check
   # Drills and snippets compile real C/C++/Zig, so they need the toolchain.
   drills:
+    needs: changes
+    if: needs.changes.outputs.native == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,17 +66,15 @@ jobs:
         with: { node-version: 22 }
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
-      - name: Install Zig 0.17.0
-        run: |
-          curl -fsSL -o zig.tar.xz https://ziglang.org/download/0.17.0/zig-x86_64-linux-0.17.0.tar.xz
-          echo "1cbe9df9f27e6b78d14ccbca43b6703a404ef79ef1c463de901d7f088d4e2026  zig.tar.xz" | sha256sum -c -
-          mkdir -p "$HOME/zig" && tar -xJf zig.tar.xz -C "$HOME/zig" --strip-components=1
-          echo "$HOME/zig" >> "$GITHUB_PATH"
+      - uses: ./.github/actions/setup-zig
+        with: { version: 0.17.0, sha256: 1cbe9df9f27e6b78d14ccbca43b6703a404ef79ef1c463de901d7f088d4e2026 }
       - run: node scripts/validate-drills.mjs --require
       - run: node scripts/validate-snippets.mjs --require
       - run: node scripts/gen-drills.mjs --check
   # Native catalog checks other than the big compile-everything matrix.
   native-catalog:
+    needs: changes
+    if: needs.changes.outputs.native == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,12 +82,8 @@ jobs:
         with: { node-version: 22 }
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
-      - name: Install Zig 0.17.0
-        run: |
-          curl -fsSL -o zig.tar.xz https://ziglang.org/download/0.17.0/zig-x86_64-linux-0.17.0.tar.xz
-          echo "1cbe9df9f27e6b78d14ccbca43b6703a404ef79ef1c463de901d7f088d4e2026  zig.tar.xz" | sha256sum -c -
-          mkdir -p "$HOME/zig" && tar -xJf zig.tar.xz -C "$HOME/zig" --strip-components=1
-          echo "$HOME/zig" >> "$GITHUB_PATH"
+      - uses: ./.github/actions/setup-zig
+        with: { version: 0.17.0, sha256: 1cbe9df9f27e6b78d14ccbca43b6703a404ef79ef1c463de901d7f088d4e2026 }
       - run: node scripts/validate-native-katas.mjs --require
       - run: node scripts/test-local-runner.mjs
       - run: node scripts/validate-native-projects.mjs
@@ -67,6 +97,8 @@ jobs:
   # starter. Sharded by language — the script already filters on the language name,
   # and per-shard --require-all keeps the same strictness as the unsharded run.
   native-matrix:
+    needs: changes
+    if: needs.changes.outputs.native == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
@@ -77,10 +109,6 @@ jobs:
         with: { node-version: 22 }
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
-      - name: Install Zig 0.17.0
-        run: |
-          curl -fsSL -o zig.tar.xz https://ziglang.org/download/0.17.0/zig-x86_64-linux-0.17.0.tar.xz
-          echo "1cbe9df9f27e6b78d14ccbca43b6703a404ef79ef1c463de901d7f088d4e2026  zig.tar.xz" | sha256sum -c -
-          mkdir -p "$HOME/zig" && tar -xJf zig.tar.xz -C "$HOME/zig" --strip-components=1
-          echo "$HOME/zig" >> "$GITHUB_PATH"
+      - uses: ./.github/actions/setup-zig
+        with: { version: 0.17.0, sha256: 1cbe9df9f27e6b78d14ccbca43b6703a404ef79ef1c463de901d7f088d4e2026 }
       - run: node scripts/native/validate.mjs --require-all ${{ matrix.language }}
