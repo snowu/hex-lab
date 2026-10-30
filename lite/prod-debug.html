@@ -8,7 +8,7 @@
 </head>
 <body>
 <p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
-<p class="crumb"><a href="index.html#gdprod">Production &amp; Tooling</a> · lesson 1 of 4 · 15 min</p>
+<p class="crumb"><a href="index.html#gdprod">Production &amp; Tooling</a> · lesson 1 of 5 · 15 min</p>
 <h1>Debugging and profiling games</h1>
 <p class="sum">Make the invisible visible: debug drawing, in-game tools, time control, reproducible bugs and finding the real bottleneck.</p>
 <div class="sec">
@@ -42,14 +42,14 @@
 <h2>Check your understanding</h2>
 <div class="box"><div class="q">1. A jump feels wrong by a single frame and you cannot see why at full speed. Which built-in tool helps most?</div><ol class="opts"><li><b>A.</b> A bigger monitor</li><li><b>B.</b> Time control: pause and single-step one frame at a time through the jump to inspect timers</li><li><b>C.</b> More log levels</li><li><b>D.</b> A faster computer</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
 <div class="box"><div class="q">2. Health sometimes goes negative deep in combat and the visible glitch appears ten seconds later. What is the durable fix?</div><ol class="opts"><li><b>A.</b> Clamp it to zero where it is displayed</li><li><b>B.</b> Print it every frame</li><li><b>C.</b> Lower the damage everywhere</li><li><b>D.</b> Assert the invariant where damage is applied so the corruption crashes loudly at its cause</li></ol><p class="tolink" id="q6"><a href="#a6">answer 6 ↓</a></p></div>
-<p class="nav"><a href="prod-testing.html">Testing a game →</a></p>
+<p class="nav"><a href="prod-frames.html">Frame pacing, threads and job systems →</a></p>
 <h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Spot the debuggability problems</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> One is noise, one is non-reproducibility, one hides the cause.</p><ul><li><b>Line 2:</b> Printing per frame per enemy floods the log so the one useful line is buried. Log changes and events (state transitions, damage taken), behind a debug category switch.</li><li><b>Line 3:</b> Unseeded global randomness in the simulation: the stun happens at random frames, so a bug that follows it cannot be reproduced. Use a seeded generator owned by the simulation (and record the seed).</li><li><b>Line 6:</b> Clamping hp to zero hides the real bug: something made it negative. Assert the invariant (<code>assert(hp >= 0)</code>) where damage is applied so you find who overdamaged.</li></ul></div>
 <div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Make the game deterministic and record inputs and the seed, so the next occurrence arrives as a replay</p><div>A deterministic recording turns intermittent bugs into reproducible ones and makes them testable.</div></div>
 <div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Lower the render resolution: if frame time drops a lot it is GPU-bound (fill rate), if not it is probably CPU-bound</p><div>Resolution only changes pixel work. If the frame time does not move, the bottleneck is elsewhere (logic, draw calls).</div></div>
 <div class="ans" id="a4"><p><b>4. Quick check</b> <a href="#q4">back ↑</a></p><p><b>B.</b> Players notice hitches, and an average of 60 fps can hide a 200 ms spike every few seconds</p><div>Stutter is about the tail of the distribution (99th percentile), not the mean.</div></div>
 <div class="ans" id="a5"><p><b>5. Check 1</b> <a href="#q5">back ↑</a></p><p><b>B.</b> Time control: pause and single-step one frame at a time through the jump to inspect timers</p><div>Stepping frame by frame exposes off-by-one timing that real-time observation hides.</div></div>
 <div class="ans" id="a6"><p><b>6. Check 2</b> <a href="#q6">back ↑</a></p><p><b>D.</b> Assert the invariant where damage is applied so the corruption crashes loudly at its cause</p><div>A crash at the point of corruption beats weird behaviour later; never hide the cause with a clamp.</div></div>
-<p class="nav"><a href="prod-testing.html">Testing a game →</a></p>
+<p class="nav"><a href="prod-frames.html">Frame pacing, threads and job systems →</a></p>
 <p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
 </body>
 </html>

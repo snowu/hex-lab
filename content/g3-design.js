@@ -62,6 +62,7 @@ TRACKS.push({
           options: ['Lower the boss HP by 50%, always', 'Telegraph attacks, add a checkpoint right before the boss, and shorten the retry time', 'Remove the boss', 'Add a text tutorial before the boss'], answer: 1, explain: 'Legibility (telegraphing) plus fast recovery fixes the cause of frustration. Pure HP tuning may make the boss trivial for others without making failure understandable.' },
         { pid: 'q-flow-2', type: 'quiz', q: 'You introduce a new enemy. What does the “introduce, develop, twist, conclude” pattern say to do first?',
           options: ['Put it in the hardest arena', 'Show it in a safe spot where the player can observe it and fail cheaply', 'Explain it in a popup', 'Combine it with three other enemies'], answer: 1, explain: 'The first beat is safe exposure. Complexity and risk come in the following beats.' },
+        { pid: 'go-deeper', type: 'text', html: `<div class="callout tip"><b>Go deeper:</b><ul><li><a href="#/lesson/ai-fun">AI that is fun: fairness, directors and testing</a>: AI that is fun: fairness, directors and pacing difficulty.</li></ul></div>` },
       ],
     },
     {
@@ -91,6 +92,7 @@ TRACKS.push({
           options: ['A longer cooldown', 'Hit stop (freezing a few frames on contact) combined with a short sound and flash', 'A bigger sprite', 'Slower walking'], answer: 1, explain: 'A few frames of freeze communicates mass and impact. It is a standard in fighting and action games.' },
         { pid: 'q-juice-2', type: 'quiz', q: 'A game adds screen shake on every footstep and players complain of nausea. What is the lesson?',
           options: ['Remove all juice', 'Scale feedback to the importance of the event and offer options to reduce shake', 'Make the shake faster', 'Players should adapt'], answer: 1, explain: 'Juice should be proportional and optional. Reserve strong effects for big moments.' },
+        { pid: 'go-deeper', type: 'text', html: `<div class="callout tip"><b>Go deeper:</b><ul><li><a href="#/lesson/gfx-audio">Audio as a system</a>: audio as a system: variation, mixing and ducking, half of the feel.</li><li><a href="#/lesson/gfx-animation">Animation systems in code</a>: anticipation, hit frames and cancel windows in animation code.</li></ul></div>` },
       ],
     },
     {
