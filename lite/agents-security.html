@@ -8,7 +8,7 @@
 </head>
 <body>
 <p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
-<p class="crumb"><a href="index.html#ai">AI-Era Engineering</a> · lesson 3 of 4 · 25 min</p>
+<p class="crumb"><a href="index.html#ai">AI-Era Engineering</a> · lesson 3 of 5 · 25 min</p>
 <h1>Agents, tools &amp; prompt-injection security</h1>
 <p class="sum">Least privilege for LLM tools; never trust model output.</p>
 <div class="sec">
@@ -20,7 +20,16 @@
 <li><b>Separate read from write.</b> Reading is cheap; writes (payments, emails, deletes) need confirmation or a human-in-the-loop for high-risk actions.</li>
 <li><b>Limit the lethal trifecta:</b> private data + untrusted content + an exfiltration channel (outbound requests/links). Remove at least one.</li>
 <li><b>Budget and observe.</b> Cap steps, tokens and spend; log every tool call with its arguments for audit.</li>
-</ol></div>
+</ol>
+<h3>MCP and third-party tools</h3>
+<p>The <b>Model Context Protocol</b> (MCP) is an open protocol, introduced by Anthropic in 2024 and now widely supported, for connecting models to tools and data. An MCP <b>server</b> exposes tools (actions), resources (data) and prompts; an MCP <b>client</b> inside the AI application discovers them and offers them to the model. It plays the role for AI tools that a common driver interface plays for hardware: one integration, many applications.</p>
+<p>The security view: an MCP server is <b>code and text you are trusting</b>, like a dependency.</p>
+<ul>
+<li><b>Tool descriptions are prompt input.</b> A malicious or compromised server can put instructions in a tool’s description or results. Review servers like packages: source, maintainer, pinned versions.</li>
+<li><b>Scope the credentials.</b> Give each server the narrowest token for the current user, never a shared admin key.</li>
+<li><b>Mixing servers mixes trust.</b> A server that reads untrusted content (web, email) plus one that can send data out recreates the lethal trifecta across two tools.</li>
+<li><b>Keep the server-side checks.</b> Authorisation, allowlists and confirmation for writes belong in the server and the API behind it, not in the model’s good behaviour.</li>
+</ul></div>
 <div class="sec"><div class="box"><p class="kind">Challenge (Python): Guard a tool call</p><p>Implement <code>validate_tool_call(call, registry)</code>. <code>call</code> is a dict <code>{'tool', 'args'}</code> coming from a model; <code>registry</code> maps tool names to <code>{'args': {name: 'string' | 'number'}, 'max_amount': optional}</code>. Return <code>{'ok': True}</code> if the tool exists, the args have <b>exactly</b> the declared keys with the declared types, and, if <code>max_amount</code> is set, <code>args['amount']</code> is a finite number between 0 (exclusive) and <code>max_amount</code> (inclusive). Otherwise return <code>{'ok': False, 'reason': '...'}</code> with any non-empty reason. Never raise: the input is untrusted.</p><p><b>Starter:</b></p><pre>def validate_tool_call(call, registry):
     pass
 </pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
@@ -28,7 +37,7 @@
 <h2>Check your understanding</h2>
 <div class="box"><div class="q">1. A support agent can read private tickets, fetch arbitrary URLs, and POST to the open internet. Which change best breaks the “lethal trifecta”?</div><ol class="opts"><li><b>A.</b> Tell the model to be careful with private data</li><li><b>B.</b> Remove the exfiltration leg: disable arbitrary outbound posts or confine them to an allowlisted endpoint</li><li><b>C.</b> Give the agent a larger context window</li><li><b>D.</b> Raise the temperature so outputs vary more</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
 <div class="box"><div class="q">2. The model asks your backend to run delete_workspace with an unexpected extra argument. What must happen before anything executes?</div><ol class="opts"><li><b>A.</b> Execute it immediately since the model chose it</li><li><b>B.</b> Ask the model whether the arguments look safe</li><li><b>C.</b> Log the call after executing it to save latency</li><li><b>D.</b> Validate the tool arguments server-side against a schema and allowlist scoped to that user’s permissions</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
-<p class="nav"><a href="rag-evals.html">← RAG &amp; evaluation</a> · <a href="review-ai-code.html">Reviewing AI-written code →</a></p>
+<p class="nav"><a href="rag-evals.html">← RAG &amp; evaluation</a> · <a href="llm-production.html">LLM features in production →</a></p>
 <h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Guard a tool call</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> Check isinstance(tool, str) before using it as a dict key (a list would raise TypeError). bool is a subclass of int in Python, so exclude it explicitly. math.isfinite handles NaN and infinity.</p><p><b>Reference solution:</b></p><pre>import math
 
 def validate_tool_call(call, registry):
@@ -57,7 +66,7 @@ def validate_tool_call(call, registry):
 <div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Remove or gate the send capability (confirmation, allowlisted recipients) so injected instructions cannot cause irreversible exfiltration</p><div>You cannot rely on the model to resist injection. Architect so a successful injection has limited blast radius: least privilege, confirmations, and breaking the exfiltration channel.</div></div>
 <div class="ans" id="a3"><p><b>3. Check 1</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Remove the exfiltration leg: disable arbitrary outbound posts or confine them to an allowlisted endpoint</p><div>The lethal trifecta is private data plus untrusted content plus an exfiltration channel. Removing one leg limits what an injection can achieve.</div></div>
 <div class="ans" id="a4"><p><b>4. Check 2</b> <a href="#q4">back ↑</a></p><p><b>D.</b> Validate the tool arguments server-side against a schema and allowlist scoped to that user’s permissions</p><div>Model output is untrusted input. Least privilege means validating every tool call and scoping tools to the end user, not a superuser.</div></div>
-<p class="nav"><a href="rag-evals.html">← RAG &amp; evaluation</a> · <a href="review-ai-code.html">Reviewing AI-written code →</a></p>
+<p class="nav"><a href="rag-evals.html">← RAG &amp; evaluation</a> · <a href="llm-production.html">LLM features in production →</a></p>
 <p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
 </body>
 </html>

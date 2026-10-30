@@ -8,7 +8,7 @@
 </head>
 <body>
 <p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
-<p class="crumb"><a href="index.html#reliability">Distributed Systems &amp; Reliability</a> · lesson 3 of 3 · 5 min</p>
+<p class="crumb"><a href="index.html#reliability">Distributed Systems &amp; Reliability</a> · lesson 3 of 5 · 5 min</p>
 <h1>Observability &amp; incident stories</h1>
 <p class="sum">What to measure, and how to narrate an incident like a senior.</p>
 <div class="sec">
@@ -24,11 +24,11 @@
 <h2>Check your understanding</h2>
 <div class="box"><div class="q">1. Which alert best catches a real user-facing problem before customers complain?</div><ol class="opts"><li><b>A.</b> CPU above 80% on one host</li><li><b>B.</b> Disk usage trending up over a week</li><li><b>C.</b> SLO burn rate: error rate and latency against the objective, such as 99.9% under 2s</li><li><b>D.</b> Number of deploys per day</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div>
 <div class="box"><div class="q">2. Your incident review draft says: "We diagnosed the bug, then rolled back, then told support." What is wrong with that order?</div><ol class="opts"><li><b>A.</b> Nothing; diagnosis must always come first</li><li><b>B.</b> Mitigation comes first: roll back or flag off to restore service, then diagnose with data and narrate detect, mitigate, diagnose, fix, learn</li><li><b>C.</b> Support should never be told about incidents</li><li><b>D.</b> Rollbacks are too risky to do early</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div>
-<p class="nav"><a href="sagas-breakers.html">← Sagas, circuit breakers, timeouts</a></p>
+<p class="nav"><a href="sagas-breakers.html">← Sagas, circuit breakers, timeouts</a> · <a href="coordination.html">Coordination: leaders, leases, quorums and clocks →</a></p>
 <h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Quick check</b> <a href="#q1">back ↑</a></p><p><b>B.</b> Roll back (or flag off) to restore service, then investigate</p><div>Mitigate before diagnosing. Rollback is cheap and reversible, so make it the default after a fresh deploy.</div></div>
 <div class="ans" id="a2"><p><b>2. Check 1</b> <a href="#q2">back ↑</a></p><p><b>C.</b> SLO burn rate: error rate and latency against the objective, such as 99.9% under 2s</p><div>Alert on symptoms (SLO burn rate), not causes (CPU). RED metrics for services and USE for resources keep the signal on what users feel.</div></div>
 <div class="ans" id="a3"><p><b>3. Check 2</b> <a href="#q3">back ↑</a></p><p><b>B.</b> Mitigation comes first: roll back or flag off to restore service, then diagnose with data and narrate detect, mitigate, diagnose, fix, learn</p><div>Senior incident order is mitigate first, diagnose second. Rollback is cheap and reversible, and the story runs detect, mitigate, diagnose, fix, learn.</div></div>
-<p class="nav"><a href="sagas-breakers.html">← Sagas, circuit breakers, timeouts</a></p>
+<p class="nav"><a href="sagas-breakers.html">← Sagas, circuit breakers, timeouts</a> · <a href="coordination.html">Coordination: leaders, leases, quorums and clocks →</a></p>
 <p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
 </body>
 </html>

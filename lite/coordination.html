@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coordination: leaders, leases, quorums and clocks · Hex Lab lite</title>
+<link rel="stylesheet" href="lite.css">
+</head>
+<body>
+<p class="top"><a href="index.html">Hex Lab lite</a> · <a href="cards.html">cards</a> · <a href="mock.html">mock</a> · <a href="links.html">links</a> · <a href="../index.html?full">full app</a></p>
+<p class="crumb"><a href="index.html#reliability">Distributed Systems &amp; Reliability</a> · lesson 4 of 5 · 30 min</p>
+<h1>Coordination: leaders, leases, quorums and clocks</h1>
+<p class="sum">Exactly one worker, fencing tokens, quorums, consensus and why wall clocks lie.</p>
+<div class="sec">
+<p>Designs regularly need “exactly one of these at a time”: one scheduler firing the nightly batch, one consumer per partition, one worker refreshing a bank’s token. That is coordination, and it is where confident designs quietly break.</p>
+<h3>Leader election with leases</h3>
+<p>A <b>lease</b> is a lock with an expiry: the holder must renew it before the time-to-live runs out, or someone else may take it. Leases are how you survive a holder that crashes. They are usually provided by a coordination service built on consensus (etcd, ZooKeeper, Consul), by a database (a row with an expiry, Postgres advisory locks), or by a managed primitive (a DynamoDB conditional write, a Durable Object).</p>
+<h3>The paused-process problem and fencing tokens</h3>
+<pre><code>A acquires lease (token 33) ── GC pause 30s ────────────────── wakes, writes with 33 ✗
+                     lease expires ── B acquires (token 34), writes with 34 ✓</code></pre>
+<p>A cannot know it was paused. Checking the lease right before the write does not help: the pause can happen between the check and the write. The fix lives in the <b>resource</b>: every lease grant comes with a <b>fencing token</b> that only grows, and the storage rejects any write carrying a token lower than one it has already accepted. In SQL that is a conditional write: <code>UPDATE jobs SET ... WHERE id = :id AND fence &lt;= :token</code>.</p>
+<p>Rule: <b>a lock tells you who should act; only the resource can enforce it.</b> Locks that only aim to save duplicate work (two workers sending the same reminder email) can skip fencing if duplicates are harmless. Locks that protect correctness (money, state transitions) cannot.</p>
+<h3>Quorums</h3>
+<p>With <b>N</b> replicas, a write waits for <b>W</b> acknowledgements and a read asks <b>R</b> replicas. If <code>R + W &gt; N</code>, every read set overlaps every write set, so a read can find the latest value (by version). Typical: N = 3, W = 2, R = 2. Lower W or R buys latency and availability and gives up that overlap. Quorums are also why clusters have odd sizes: 3 nodes tolerate 1 failure, 5 tolerate 2, and 4 still tolerate only 1.</p>
+<h3>Consensus, in one paragraph</h3>
+<p>Consensus (Raft, Paxos) lets a group agree on one ordered log despite crashes. Raft in brief: nodes elect a leader for a numbered <b>term</b> with a majority vote; the leader appends entries and commits each one once a majority has stored it; a new leader must hold every committed entry. You almost never implement it. You <b>use</b> it via etcd, ZooKeeper, a consensus-backed database (Spanner, CockroachDB) or Kafka’s controller quorum (KRaft), and you should know what it costs: a majority round trip on every write, and no progress without a majority.</p>
+<h3>Clocks lie</h3>
+<ul>
+<li><b>Wall clocks</b> drift and jump (NTP corrections, leap seconds, VM pauses). Never order events across machines by wall-clock timestamps, and never measure durations with them. Use a monotonic clock for timeouts.</li>
+<li><b>Lamport clocks</b>: each node keeps a counter, increments it on every event, and on receiving a message sets it to <code>max(local, received) + 1</code>. If A happened before B, A’s number is smaller. The reverse is not guaranteed.</li>
+<li><b>Vector clocks</b> keep one counter per node, so you can tell “happened before” apart from “concurrent” and detect conflicts.</li>
+<li><b>Hybrid logical clocks</b> combine a wall-clock part with a logical counter: close to real time, but still ordered. CockroachDB and others use them.</li>
+<li>In practice the simplest ordering is often a <b>sequence from one authority</b>: a database sequence, a Kafka partition offset, a version column. Prefer that when you can.</li>
+</ul>
+<h3>Saying it in an interview</h3>
+<p>“I need one scheduler. I would take a lease in etcd or a Postgres row with an expiry, renew it at a third of the TTL, and carry the lease revision as a fencing token on every write the scheduler makes, so a paused old leader cannot double-fire. I would not build my own election.”</p></div>
+<div class="sec"><div class="box"><p class="kind">Challenge (Python): Leases with fencing tokens</p><p>A worker that holds a lock can pause (GC, a slow disk, a network partition) for longer than its lease. The lease expires, another worker takes over, and then the first one wakes up and writes anyway. Fencing tokens stop that write.</p>
+<p>Implement two classes:</p>
+<ul>
+<li><code>LockService(now=time.monotonic)</code> with <code>acquire(owner, ttl)</code>. If the lock is free or its lease has expired, grant it and return a new fencing token: an integer that is <b>strictly larger</b> than every token issued before (start at 1). If the same owner still holds an unexpired lease, extend it to <code>now() + ttl</code> and return the <b>same</b> token. If someone else holds an unexpired lease, return <code>None</code>. A lease expires when <code>now() &gt;= expiry</code>.</li>
+<li><code>FencedStore()</code> with <code>write(key, value, token)</code> and <code>read(key)</code> (returns <code>None</code> if missing). The store remembers the highest token it has accepted. A write with a smaller token raises <code>StaleTokenError</code> (already defined) and changes nothing. Equal or larger tokens are accepted.</li>
+</ul><p><b>Starter:</b></p><pre>import time
+
+class StaleTokenError(Exception):
+    pass
+
+class LockService:
+    def __init__(self, now=time.monotonic):
+        pass
+
+    def acquire(self, owner, ttl):
+        pass
+
+class FencedStore:
+    def __init__(self):
+        pass
+
+    def write(self, key, value, token):
+        pass
+
+    def read(self, key):
+        pass
+</pre><p class="tolink" id="q1"><a href="#a1">answer 1 ↓</a></p><p class="note">Running and testing your code needs the full app.</p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Two services stamp events with their own wall-clock time and you merge the streams by timestamp. Sometimes a “refund” appears before the “payment” it refunds. Why, and what is the fix?</div><ol class="opts"><li><b>A.</b> The database is losing events; add replication</li><li><b>B.</b> Clock skew between machines; order by a logical or authoritative sequence (a per-payment version, a Lamport counter, or a single log’s offsets) instead of wall-clock time</li><li><b>C.</b> The events are too frequent; add batching</li><li><b>D.</b> Timezones; store everything in UTC</li></ol><p class="tolink" id="q2"><a href="#a2">answer 2 ↓</a></p></div></div>
+<div class="sec"><div class="box"><p class="kind">Quick check</p><div class="q">Your team proposes a 4-node etcd cluster “for extra safety” instead of 3 nodes. What do you say?</div><ol class="opts"><li><b>A.</b> Good idea: 4 nodes tolerate 2 failures</li><li><b>B.</b> It tolerates the same single failure as 3 nodes (a majority of 4 is 3) while adding write latency and cost; use 3, or 5 to tolerate 2 failures</li><li><b>C.</b> etcd only supports 4 nodes</li><li><b>D.</b> More nodes always means more availability</li></ol><p class="tolink" id="q3"><a href="#a3">answer 3 ↓</a></p></div></div>
+<h2>Check your understanding</h2>
+<div class="box"><div class="q">1. Worker A holds a 10-second lease, then pauses for 30 seconds in a GC pause. Worker B takes the lease and writes. A wakes up and writes too. What prevents A’s write from landing?</div><ol class="opts"><li><b>A.</b> A shorter lease, such as 1 second</li><li><b>B.</b> A fencing token: the storage rejects writes carrying a token smaller than the largest it has seen</li><li><b>C.</b> Checking the lease again just before writing</li><li><b>D.</b> Synchronising the clocks with NTP</li></ol><p class="tolink" id="q4"><a href="#a4">answer 4 ↓</a></p></div>
+<div class="box"><div class="q">2. A replicated store has N = 3 replicas. Which read/write quorum setting guarantees that every read overlaps the latest successful write?</div><ol class="opts"><li><b>A.</b> W = 1, R = 1</li><li><b>B.</b> W = 2, R = 1</li><li><b>C.</b> W = 2, R = 2</li><li><b>D.</b> W = 1, R = 2</li></ol><p class="tolink" id="q5"><a href="#a5">answer 5 ↓</a></p></div>
+<p class="nav"><a href="observability-incidents.html">← Observability &amp; incident stories</a> · <a href="overload.html">Overload, backpressure and safe rollouts →</a></p>
+<h2 id="key">Answer key</h2><div class="ans" id="a1"><p><b>1. Leases with fencing tokens</b> <a href="#q1">back ↑</a></p><p><b>Hint:</b> LockService keeps (owner, token, expiry) and a counter. Grant when there is no holder or now() >= expiry; renew only when the holder is the same owner and the lease is still valid. FencedStore keeps one max_token and checks it before writing.</p><p><b>Reference solution:</b></p><pre>import time
+
+class StaleTokenError(Exception):
+    pass
+
+class LockService:
+    def __init__(self, now=time.monotonic):
+        self.now = now
+        self.counter = 0
+        self.holder = None  # (owner, token, expiry)
+
+    def acquire(self, owner, ttl):
+        t = self.now()
+        if self.holder is not None and t &lt; self.holder[2]:
+            if self.holder[0] != owner:
+                return None
+            self.holder = (owner, self.holder[1], t + ttl)
+            return self.holder[1]
+        self.counter += 1
+        self.holder = (owner, self.counter, t + ttl)
+        return self.counter
+
+class FencedStore:
+    def __init__(self):
+        self.max_token = 0
+        self.data = {}
+
+    def write(self, key, value, token):
+        if token &lt; self.max_token:
+            raise StaleTokenError(f'token {token} &lt; {self.max_token}')
+        self.max_token = token
+        self.data[key] = value
+
+    def read(self, key):
+        return self.data.get(key)</pre><p>The lock alone is not enough: a lease only says who <i>should</i> act, and a paused process cannot know its lease expired. The protected resource has to check the token. In practice the token is the lock’s revision (etcd’s mod_revision, a ZooKeeper zxid, or a row version in Postgres) and the check is a conditional write: <code>UPDATE ... WHERE fence &lt;= :token</code>.</p></div>
+<div class="ans" id="a2"><p><b>2. Quick check</b> <a href="#q2">back ↑</a></p><p><b>B.</b> Clock skew between machines; order by a logical or authoritative sequence (a per-payment version, a Lamport counter, or a single log’s offsets) instead of wall-clock time</p><div>UTC removes timezone confusion but not skew. Machines disagree on “now” by milliseconds or more, so causally related events need a logical order from one authority or a logical clock.</div></div>
+<div class="ans" id="a3"><p><b>3. Quick check</b> <a href="#q3">back ↑</a></p><p><b>B.</b> It tolerates the same single failure as 3 nodes (a majority of 4 is 3) while adding write latency and cost; use 3, or 5 to tolerate 2 failures</p><div>A majority of 4 is 3, so only one node can fail, the same as with 3 nodes. Odd sizes give the best fault tolerance per node.</div></div>
+<div class="ans" id="a4"><p><b>4. Check 1</b> <a href="#q4">back ↑</a></p><p><b>B.</b> A fencing token: the storage rejects writes carrying a token smaller than the largest it has seen</p><div>A paused process cannot know its lease expired, and any check-then-write has a gap. Only the resource enforcing a monotonically increasing token closes it.</div></div>
+<div class="ans" id="a5"><p><b>5. Check 2</b> <a href="#q5">back ↑</a></p><p><b>C.</b> W = 2, R = 2</p><div>Reads see the latest write when R + W > N. With N = 3, W = 2 and R = 2 gives 4 > 3, so at least one replica in every read quorum has the write.</div></div>
+<p class="nav"><a href="observability-incidents.html">← Observability &amp; incident stories</a> · <a href="overload.html">Overload, backpressure and safe rollouts →</a></p>
+<p class="foot">Lite version for e-readers and older browsers: read-only, nothing is saved. Code challenges, simulations and progress tracking need the <a href="../index.html?full">full app</a>.</p>
+</body>
+</html>
